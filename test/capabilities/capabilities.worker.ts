@@ -1,7 +1,14 @@
 // Measures, in a worker, what WebCodecs offers for each codec in the matrix.
-import { type Capabilities, CODECS, WORKER_FEATURES } from "./matrix.js";
+import { decodes } from "./decodes.js";
+import {
+  type Capabilities,
+  CODECS,
+  type CodecId,
+  DECODE_FIXTURES,
+  WORKER_FEATURES,
+} from "./matrix.js";
 
-type Measured = Pick<Capabilities, "worker" | "decode" | "encode">;
+type Measured = Pick<Capabilities, "worker" | "decode" | "decodes" | "encode">;
 
 async function supported(api: unknown, config: object): Promise<boolean> {
   if (typeof api !== "function") return false;
@@ -15,11 +22,12 @@ async function supported(api: unknown, config: object): Promise<boolean> {
   }
 }
 
-self.onmessage = async () => {
+self.onmessage = async (event: MessageEvent<Record<CodecId, Blob>>) => {
   const scope = globalThis as unknown as Record<string, unknown>;
-  const result = { worker: {}, decode: {}, encode: {} } as {
+  const result = { worker: {}, decode: {}, decodes: {}, encode: {} } as {
     worker: Record<string, boolean>;
     decode: Record<string, boolean>;
+    decodes: Record<string, boolean>;
     encode: Record<string, boolean>;
   };
   for (const feature of WORKER_FEATURES)
@@ -43,6 +51,9 @@ self.onmessage = async () => {
       result.decode[id] = await supported(scope["AudioDecoder"], audio);
       result.encode[id] = await supported(scope["AudioEncoder"], { ...audio, bitrate: 128_000 });
     }
+  }
+  for (const { id } of CODECS) {
+    result.decodes[id] = await decodes(event.data[id], DECODE_FIXTURES[id].track);
   }
   postMessage(result as Measured);
 };

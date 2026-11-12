@@ -22,13 +22,18 @@ export interface MediaWorkerContract {
     readonly output: VideoProbe;
   };
   /**
-   * Checks that this browser can decode the tracks of a file (docs/adr/0001).
-   * The front check runs first, under the same limits as a probe, so
-   * mediabunny never reads a file it hasn't bounded. It rejects with
-   * `UNSUPPORTED_CODEC` or `UNSUPPORTED_ENVIRONMENT`, and decodes nothing.
+   * Checks that this browser can decode the tracks of a probed file, and
+   * decodes its first video frame to prove it (docs/adr/0001). The front
+   * check runs first, under the same limits as a probe, so mediabunny never
+   * reads a file it hasn't bounded. It rejects with `UNSUPPORTED_CODEC`,
+   * `UNSUPPORTED_ENVIRONMENT` or `DECODE_FAILED`.
    */
   readonly support: {
-    readonly input: { readonly file: Blob; readonly limits: PolicyLimits };
+    readonly input: {
+      readonly file: Blob;
+      readonly limits: PolicyLimits;
+      readonly probe: VideoProbe;
+    };
     readonly output: undefined;
   };
 }

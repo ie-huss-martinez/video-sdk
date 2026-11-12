@@ -1,0 +1,236 @@
+import { type EncodedPacket, EncodedPacketSink, type InputVideoTrack } from "mediabunny";
+import { abortError } from "../../core/errors/error-helpers.js";
+import { isVideoError, VideoError } from "../../core/errors/video-error.js";
+
+/** The most packets waiting in the decoder's own queue (docs/adr/0002). */
+export const MAX_DECODE_QUEUE = 8;
+/** The most decoded frames waiting for their consumer while packets are fed (docs/adr/0002). */
+export const MAX_QUEUED_FRAMES = 4;
+/**
+ * How far a decoded frame's coded size may exceed the probe's, in pixels in
+ * each dimension. Decoders pad frames to their own alignment: Chromium
+ * measured 1280 × 738 for H.264 and 1344 × 720 for VP9, both showing
+ * 1280 × 720 (docs/adr/0001). The visible picture gets no allowance.
+ */
+export const CODED_PADDING = 128;
+
+/**
+ * Counts the `VideoFrame`s this worker's decoders have output and not yet
+ * closed, and the deepest the decoder's queue has been, for the tests that
+ * prove every frame is closed on every path (docs/adr/0002).
+ *
+ * @internal
+ */
+export const videoFrameLedger = { open: 0, peakDecodeQueue: 0 };
+
+/**
+ * What a decoded frame must stay within: the probe's coded size and the
+ * track's walked timestamps, in microseconds (docs/adr/0001).
+ */
+export interface FrameBounds {
+  readonly codedWidth: number;
+  readonly codedHeight: number;
+  readonly firstTimestamp: number;
+  readonly lastTimestamp: number;
+}
+
+/** Which frames to decode, by presentation time in microseconds. */
+export interface FrameRange {
+  /** The first timestamp to deliver, inclusive. */
+  readonly from: number;
+  /** The timestamp to stop before, exclusive. */
+  readonly to: number;
+  /** Stop after delivering this many frames. */
+  readonly limit?: number;
+}
+
+/**
+ * Decodes the frames of `range` from a video track with WebCodecs, in the
+ * worker, and lends each one to `onFrame` in presentation order (docs/adr/0001,
+ * docs/adr/0002). Decoding starts at the key packet before `range.from`.
+ *
+ * - **Bounded:** at most {@link MAX_DECODE_QUEUE} packets wait in the
+ *   decoder, with back-pressure on its `dequeue` event, and no packet is fed
+ *   while {@link MAX_QUEUED_FRAMES} decoded frames wait for `onFrame`.
+ * - **Borrowed frames:** a frame is closed as soon as `onFrame` settles, so
+ *   every frame is closed in one place. `onFrame` clones a frame to keep it,
+ *   and then owns the clone.
+ * - **Checked:** a frame whose visible picture is larger than `bounds`, whose
+ *   coded size exceeds them by more than {@link CODED_PADDING}, or whose
+ *   timestamp is outside the track's walked range, closes everything and
+ *   fails with `INVALID_VIDEO`. Frames
+ *   outside `range` are closed without being delivered.
+ * - **Closed on every path:** on success, failure, a consumer that throws, or
+ *   cancellation, every frame waiting is closed, and so is the decoder.
+ *
+ * Throws `VideoError`: `DECODE_FAILED` with `details.codec` when the browser
+ * fails to decode, `INVALID_VIDEO` for a frame out of bounds, and `ABORTED`
+ * or the abort reason's code when cancelled. Whatever `onFrame` throws is
+ * passed on as it is. Resolves with the number of frames delivered.
+ *
+ * @internal
+ */
+export async function decodeVideoFrames(
+  track: InputVideoTrack,
+  config: VideoDecoderConfig,
+  bounds: FrameBounds,
+  range: FrameRange,
+  onFrame: (frame: VideoFrame) => void | Promise<void>,
+  signal?: AbortSignal,
+): Promise<number> {
+  const limit = range.limit ?? Number.POSITIVE_INFINITY;
+  const waiting: VideoFrame[] = [];
+  let failure: unknown;
+  /** What the consumer threw, which is passed on as it is. */
+  let consumerFailure: unknown;
+  let delivered = 0;
+  let wake: (() => void) | undefined;
+  const notify = () => {
+    const resolve = wake;
+    wake = undefined;
+    resolve?.();
+  };
+  const close = (frame: VideoFrame) => {
+    frame.close();
+    videoFrameLedger.open -= 1;
+  };
+
+  const decoder = new VideoDecoder({
+    output(frame) {
+      videoFrameLedger.open += 1;
+      waiting.push(frame);
+      notify();
+    },
+    error(error) {
+      failure ??= new VideoError("DECODE_FAILED", "The browser couldn't decode the video track.", {
+        details: { codec: config.codec },
+        cause: error,
+      });
+      notify();
+    },
+  });
+  decoder.addEventListener("dequeue", notify);
+  signal?.addEventListener("abort", notify);
+
+  const check = () => {
+    if (signal?.aborted) throw abortError(signal);
+    if (failure !== undefined) throw failure;
+  };
+  /** Waits for the decoder, cancellation or a failure, unless `ready` already holds. */
+  const until = async (ready: () => boolean) => {
+    while (!ready()) {
+      check();
+      await new Promise<void>((resolve) => {
+        wake = resolve;
+        if (ready() || signal?.aborted || failure !== undefined) notify();
+      });
+    }
+    check();
+  };
+  /** Lends every waiting frame to the consumer, in order. */
+  const drain = async () => {
+    while (waiting.length > 0) {
+      const frame = waiting.shift() as VideoFrame;
+      try {
+        const visible = frame.visibleRect;
+        const width = visible?.width ?? frame.codedWidth;
+        const height = visible?.height ?? frame.codedHeight;
+        if (
+          width > bounds.codedWidth ||
+          height > bounds.codedHeight ||
+          frame.codedWidth > bounds.codedWidth + CODED_PADDING ||
+          frame.codedHeight > bounds.codedHeight + CODED_PADDING
+        ) {
+          throw new VideoError(
+            "INVALID_VIDEO",
+            "A decoded frame is larger than the probe allows.",
+            {
+              details: { reason: "frame-size" },
+            },
+          );
+        }
+        if (frame.timestamp < bounds.firstTimestamp || frame.timestamp > bounds.lastTimestamp) {
+          throw new VideoError(
+            "INVALID_VIDEO",
+            "A decoded frame is outside the track's timestamps.",
+            {
+              details: { reason: "frame-timestamp" },
+            },
+          );
+        }
+        if (frame.timestamp >= range.from && frame.timestamp < range.to && delivered < limit) {
+          delivered += 1;
+          try {
+            await onFrame(frame);
+          } catch (error) {
+            consumerFailure = error;
+            throw error;
+          }
+        }
+      } finally {
+        close(frame);
+      }
+      check();
+    }
+  };
+
+  try {
+    configure(decoder, config);
+    const sink = new EncodedPacketSink(track);
+    const start =
+      (await sink.getKeyPacket(range.from / 1_000_000)) ?? (await sink.getFirstPacket());
+    let packet: EncodedPacket | null = start;
+    while (packet !== null && delivered < limit) {
+      check();
+      // Packets after the range can't hold frames in it, once the decoder
+      // has seen a key packet past its end.
+      if (packet.type === "key" && packet !== start && packet.microsecondTimestamp >= range.to)
+        break;
+      await until(
+        () => decoder.decodeQueueSize < MAX_DECODE_QUEUE && waiting.length < MAX_QUEUED_FRAMES,
+      );
+      decoder.decode(packet.toEncodedVideoChunk());
+      videoFrameLedger.peakDecodeQueue = Math.max(
+        videoFrameLedger.peakDecodeQueue,
+        decoder.decodeQueueSize,
+      );
+      await drain();
+      packet = await sink.getNextPacket(packet);
+    }
+    if (delivered < limit) {
+      await decoder.flush();
+      await drain();
+    }
+    check();
+    return delivered;
+  } catch (error) {
+    if (isVideoError(error) || (consumerFailure !== undefined && error === consumerFailure)) {
+      throw error;
+    }
+    if (failure !== undefined) throw failure;
+    if (signal?.aborted) throw abortError(signal);
+    throw new VideoError("DECODE_FAILED", "The browser couldn't decode the video track.", {
+      details: { codec: config.codec },
+      cause: error,
+    });
+  } finally {
+    signal?.removeEventListener("abort", notify);
+    for (const frame of waiting.splice(0)) close(frame);
+    if (decoder.state !== "closed") decoder.close();
+  }
+}
+
+function configure(decoder: VideoDecoder, config: VideoDecoderConfig): void {
+  try {
+    decoder.configure(config);
+  } catch (cause) {
+    throw new VideoError(
+      "DECODE_FAILED",
+      "The browser couldn't set up a decoder for the video track.",
+      {
+        details: { codec: config.codec },
+        cause,
+      },
+    );
+  }
+}

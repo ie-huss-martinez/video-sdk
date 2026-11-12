@@ -12,10 +12,10 @@ import type { MediaWorkerContract } from "./contract.js";
 export function mediaWorkerHandlers(): WorkerHandlers<MediaWorkerContract> {
   return {
     probe: ({ file, limits }, { signal }) => probeFile(file, videoLimits.resolve(limits), signal),
-    async support({ file, limits }) {
+    async support({ file, limits, probe }, { signal }) {
       // The same front check as a probe, before mediabunny reads the file.
-      const front = await frontCheck(file, videoLimits.resolve(limits));
-      await checkDecoderSupport(file, front.container);
+      await frontCheck(file, videoLimits.resolve(limits));
+      await checkDecoderSupport(file, probe, signal);
       return undefined;
     },
   };

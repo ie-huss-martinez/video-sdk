@@ -2,6 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-11-12
+- **Amended:** 2026-11-12, when decoding was built: a decoded frame's visible picture must fit the probe exactly, and its coded size may carry the decoder's alignment padding.
 
 ## Context
 
@@ -92,7 +93,10 @@ Only then does the worker open the file with mediabunny.
 - **Configuring:** `VideoDecoder` and `AudioDecoder` are configured from the track's decoder configuration, after `isConfigSupported`. A codec the browser can't decode fails with `UNSUPPORTED_CODEC` and `details.codec`.
 - **Feeding:** the SDK's own loop reads packets from `EncodedPacketSink` and feeds the decoder. Both the decoder's queue and the decoded-frame queue are bounded, and every `VideoFrame` and `AudioData` is closed on every path ([ADR 0002](0002-workers-and-assets.md)).
 - **The output is checked against the probe.** This is the video counterpart of rule 5 of ADR 0031.
-  - **Video:** a decoded `VideoFrame` larger than the probe's coded size, or with a timestamp outside the track's walked range, is closed and fails with `INVALID_VIDEO`. For dimensions the tolerance is zero.
+  - **Video:** a decoded `VideoFrame` is closed and fails with `INVALID_VIDEO` when:
+    - its visible picture is larger than the probe's coded size. The tolerance is zero;
+    - its coded size exceeds the probe's by more than 128 pixels in either dimension. Decoders pad frames to their own alignment: Chromium decodes 1280 × 720 H.264 into 1280 × 738 frames and VP9 into 1344 × 720 ones, both with a 1280 × 720 visible picture;
+    - its timestamp is outside the track's walked range.
   - **Audio:** an `AudioData` must have the configured sample rate and channel count, and at most the codec's largest frame:
 
     | Codec | Most frames per packet |
