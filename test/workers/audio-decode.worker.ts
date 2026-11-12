@@ -2,6 +2,7 @@
 // a file's audio track and reports what it delivered, and the ledger of open
 // AudioData, so tests can prove every chunk is closed on every path.
 import { exposeWorker } from "@hussmartinez/sdk-core";
+import { EncodedPacketSink } from "mediabunny";
 import { audioDataLedger, decodeAudioData } from "../../src/adapters/mediabunny/audio-decoder.js";
 import { familyOf, openInput, pickTracks } from "../../src/adapters/mediabunny/tracks.js";
 import { probeFile } from "../../src/adapters/probe.js";
@@ -24,7 +25,15 @@ export interface AudioDecodeRequest {
 export interface AudioDecodeContract {
   readonly decode: {
     readonly input: AudioDecodeRequest;
-    readonly output: { readonly chunks: number; readonly frames: number; readonly first: number };
+    readonly output: {
+      readonly chunks: number;
+      readonly frames: number;
+      readonly first: number;
+      /** Each chunk's time as delivered, and its length in microseconds. */
+      readonly placed: (readonly [number, number])[];
+      /** The first packet's time. */
+      readonly firstPacket: number;
+    };
   };
   readonly ledger: {
     readonly input: undefined;
@@ -44,6 +53,7 @@ exposeWorker<AudioDecodeContract>({
       let chunks = 0;
       let frames = 0;
       let first = Number.NaN;
+      const placed: [number, number][] = [];
       const { description: _description, ...bare } = config;
       await decodeAudioData(
         audio,
@@ -56,8 +66,9 @@ exposeWorker<AudioDecodeContract>({
           from: request.from ?? Number.NEGATIVE_INFINITY,
           to: request.to ?? Number.POSITIVE_INFINITY,
         },
-        (data) => {
-          if (chunks === 0) first = data.timestamp;
+        (data, timestamp) => {
+          if (chunks === 0) first = timestamp;
+          placed.push([timestamp, (data.numberOfFrames * 1_000_000) / data.sampleRate]);
           const index = chunks;
           chunks += 1;
           frames += data.numberOfFrames;
@@ -66,7 +77,9 @@ exposeWorker<AudioDecodeContract>({
         },
         controller.signal,
       );
-      return { chunks, frames, first };
+      const sink = new EncodedPacketSink(audio);
+      const firstPacket = (await sink.getFirstPacket())?.microsecondTimestamp ?? Number.NaN;
+      return { chunks, frames, first, placed, firstPacket };
     } finally {
       input.dispose();
     }

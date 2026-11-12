@@ -2,7 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-11-12
-- **Amended:** 2026-11-12, when decoding was built: a decoded frame's visible picture must fit the probe exactly, and its coded size may carry the decoder's alignment padding. Then, before export was built: what the encoding order gives in each engine, as measured, and how a configuration is chosen and proved.
+- **Amended:** 2026-11-12, when decoding was built: a decoded frame's visible picture must fit the probe exactly, and its coded size may carry the decoder's alignment padding. Then, before export was built: what the encoding order gives in each engine, as measured, and how a configuration is chosen and proved. Then, when export's tests read audio back: decoded audio is placed by the stream.
 
 ## Context
 
@@ -92,6 +92,7 @@ Only then does the worker open the file with mediabunny.
 
 - **Configuring:** `VideoDecoder` and `AudioDecoder` are configured from the track's decoder configuration, after `isConfigSupported`. A codec the browser can't decode fails with `UNSUPPORTED_CODEC` and `details.codec`.
 - **Feeding:** the SDK's own loop reads packets from `EncodedPacketSink` and feeds the decoder. Both the decoder's queue and the decoded-frame queue are bounded, and every `VideoFrame` and `AudioData` is closed on every path ([ADR 0002](0002-workers-and-assets.md)).
+- **Decoded audio is placed by the stream,** not by the decoder's timestamps alone. Each chunk keeps its own timestamp when that's within half a chunk of where the chunks before it end, and otherwise goes there; the first goes where its packet is. In the pinned image, WebKit's Opus decoder stamps every chunk away from its packet, and its AAC decoder stamps chunks seconds away for an MP4 with an edit list. Audio chunks follow each other without gaps, so the stream says where each belongs.
 - **The output is checked against the probe.** This is the video counterpart of rule 5 of ADR 0031.
   - **Video:** a decoded `VideoFrame` is closed and fails with `INVALID_VIDEO` when:
     - its visible picture is larger than the probe's coded size. The tolerance is zero;

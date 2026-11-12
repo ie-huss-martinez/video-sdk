@@ -10,7 +10,7 @@ import { MAX_DECODE_QUEUE, MAX_QUEUED_FRAMES } from "./video-decoder.js";
  *
  * @internal
  */
-export const audioDataLedger = { open: 0, peakDecodeQueue: 0 };
+export const audioDataLedger = { open: 0, peakDecodeQueue: 0, restamped: 0 };
 
 /**
  * The most frames one decoded chunk may hold, by codec (docs/adr/0001): the
@@ -41,6 +41,12 @@ export interface AudioRange {
  *   `MAX_QUEUED_FRAMES` decoded chunks wait for `onData`.
  * - **Borrowed chunks:** a chunk is closed as soon as `onData` settles;
  *   `onData` clones one to keep it.
+ * - **Placed by the stream:** `onData` gets each chunk's time with it. It's
+ *   the chunk's own timestamp when that's within half a chunk of where the
+ *   chunks before it end, and otherwise that end. WebKit's decoder stamps
+ *   chunks seconds away from their packets; chunks are always contiguous,
+ *   so the stream says where each belongs. The first is placed by its
+ *   packet.
  * - **Checked:** a chunk whose sample rate or channel count differs from
  *   `config`, or which holds more frames than its codec's largest frame,
  *   closes everything and fails with `INVALID_VIDEO`. Chunks wholly outside
@@ -58,7 +64,7 @@ export async function decodeAudioData(
   track: InputAudioTrack,
   config: AudioDecoderConfig,
   range: AudioRange,
-  onData: (data: AudioData) => void | Promise<void>,
+  onData: (data: AudioData, timestamp: number) => void | Promise<void>,
   signal?: AbortSignal,
 ): Promise<number> {
   const maxFrames = maxFramesPerChunk(config.codec);
@@ -66,6 +72,8 @@ export async function decodeAudioData(
   let failure: unknown;
   let consumerFailure: unknown;
   let delivered = 0;
+  /** Where the next chunk belongs, in microseconds: the first packet's time, then each chunk's end. */
+  let expected: number | undefined;
   let wake: (() => void) | undefined;
   const notify = () => {
     const resolve = wake;
@@ -121,11 +129,18 @@ export async function decodeAudioData(
             details: { reason: "audio-chunk" },
           });
         }
-        const end = data.timestamp + (data.numberOfFrames * 1_000_000) / data.sampleRate;
-        if (end > range.from && data.timestamp < range.to) {
+        const duration = (data.numberOfFrames * 1_000_000) / data.sampleRate;
+        let timestamp = data.timestamp;
+        if (expected !== undefined && Math.abs(timestamp - expected) > duration / 2) {
+          timestamp = expected;
+          audioDataLedger.restamped += 1;
+        }
+        expected = timestamp + duration;
+        const end = timestamp + duration;
+        if (end > range.from && timestamp < range.to) {
           delivered += 1;
           try {
-            await onData(data);
+            await onData(data, timestamp);
           } catch (error) {
             consumerFailure = error;
             throw error;
@@ -160,6 +175,7 @@ export async function decodeAudioData(
       await until(
         () => decoder.decodeQueueSize < MAX_DECODE_QUEUE && waiting.length < MAX_QUEUED_FRAMES,
       );
+      expected ??= packet.microsecondTimestamp;
       decoder.decode(packet.toEncodedAudioChunk());
       audioDataLedger.peakDecodeQueue = Math.max(
         audioDataLedger.peakDecodeQueue,
