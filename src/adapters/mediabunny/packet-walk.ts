@@ -16,7 +16,7 @@ const ABORT_EVERY = 1_024;
  * @internal
  */
 export interface PacketWalk {
-  /** The earliest presentation timestamp of the tracks walked, in microseconds. */
+  /** The video track's earliest presentation timestamp, in microseconds. */
   readonly start: number;
   /** The length in microseconds from `start`: the larger of the header's and the walk's. */
   readonly duration: number;
@@ -99,7 +99,9 @@ export async function walkPackets(
         if (count % ABORT_EVERY === 0) throwIfAborted(signal);
         // Whole microseconds, so that rounding can't move a packet across a second.
         const time = packet.microsecondTimestamp;
-        start = Math.min(start, time);
+        // A source's time starts at its first video frame: audio before it,
+        // such as Opus's codec delay, is pre-roll the decoder drops.
+        if (track === video) start = Math.min(start, time);
         end = Math.max(end, time + packet.microsecondDuration);
         maxPacketSize = Math.max(maxPacketSize, packet.byteLength);
         const second = Math.floor(time / 1_000_000);
