@@ -37,8 +37,14 @@ export interface DecodeContract {
   };
   readonly ledger: {
     readonly input: undefined;
-    readonly output: { readonly open: number; readonly peakDecodeQueue: number };
+    readonly output: {
+      readonly open: number;
+      readonly peakDecodeQueue: number;
+      readonly stalls: number;
+    };
   };
+  /** Starts counting the queue's peak and the stalls afresh, for one test. */
+  readonly resetLedger: { readonly input: undefined; readonly output: undefined };
 }
 
 /** Another codec's configuration, without this one's description. */
@@ -85,4 +91,9 @@ exposeWorker<DecodeContract>({
     }
   },
   ledger: () => ({ ...videoFrameLedger }),
+  resetLedger() {
+    videoFrameLedger.peakDecodeQueue = 0;
+    videoFrameLedger.stalls = 0;
+    return undefined;
+  },
 });

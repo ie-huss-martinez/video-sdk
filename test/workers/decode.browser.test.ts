@@ -1,6 +1,9 @@
 import { createWorkerClient } from "@hussmartinez/sdk-core";
-import { afterEach, describe, expect, it } from "vitest";
-import { MAX_STALLED_DECODE_QUEUE } from "../../src/adapters/mediabunny/video-decoder.js";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import {
+  MAX_DECODE_QUEUE,
+  MAX_STALLED_DECODE_QUEUE,
+} from "../../src/adapters/mediabunny/video-decoder.js";
 import { isVideoError, VideoError } from "../../src/index.js";
 import landscapeVp8 from "../fixtures/video/landscape-vp8.webm?url";
 import type { DecodeContract, DecodeRequest } from "./decode.worker.js";
@@ -26,10 +29,17 @@ describe("decoding video frames in a worker", () => {
     throw new Error("expected the decode to fail");
   };
 
+  beforeEach(async () => {
+    await client.call("resetLedger", undefined);
+  });
+
   afterEach(async () => {
     const ledger = await client.call("ledger", undefined);
     expect(ledger.open, "frames left open").toBe(0);
-    expect(ledger.peakDecodeQueue).toBeLessThanOrEqual(MAX_STALLED_DECODE_QUEUE);
+    // The queue grows past its bound only by one packet per stall, and never past the hard cap.
+    expect(ledger.peakDecodeQueue).toBeLessThanOrEqual(
+      Math.min(MAX_DECODE_QUEUE + ledger.stalls, MAX_STALLED_DECODE_QUEUE),
+    );
   });
 
   it("decodes every frame, in presentation order, at the probe's size", async () => {
@@ -50,6 +60,16 @@ describe("decoding video frames in a worker", () => {
     // As Firefox does with frame-threaded VP8 on a machine with many cores.
     const { timestamps } = await decode({ lag: 12 });
     expect(timestamps).toHaveLength(60);
+    expect((await client.call("ledger", undefined)).stalls).toBeGreaterThanOrEqual(4);
+  });
+
+  it("fails fast with DECODE_FAILED when a decoder holds the hard cap without output", async () => {
+    const started = performance.now();
+    const error = await failure({ lag: MAX_STALLED_DECODE_QUEUE + 8 });
+    expect(isVideoError(error, "DECODE_FAILED")).toBe(true);
+    expect((error as VideoError).details).toMatchObject({ reason: "stalled" });
+    // 24 stalls of 50 ms each, not the processing time's minutes.
+    expect(performance.now() - started).toBeLessThan(5_000);
   });
 
   it("stops after a limit", async () => {

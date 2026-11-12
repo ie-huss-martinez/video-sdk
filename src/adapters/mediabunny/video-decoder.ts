@@ -19,12 +19,14 @@ export const MAX_QUEUED_FRAMES = 4;
 
 /**
  * Counts the `VideoFrame`s this worker's decoders have output and not yet
- * closed, and the deepest the decoder's queue has been, for the tests that
- * prove every frame is closed on every path (docs/adr/0002).
+ * closed, the deepest the decoder's queue has been, and how many times a
+ * stalled decoder was given one more packet, for the tests that prove every
+ * frame is closed on every path and the queue grows only on a stall
+ * (docs/adr/0002).
  *
  * @internal
  */
-export const videoFrameLedger = { open: 0, peakDecodeQueue: 0 };
+export const videoFrameLedger = { open: 0, peakDecodeQueue: 0, stalls: 0 };
 
 /**
  * What a decoded frame must stay within: the probe's coded size and the
@@ -57,7 +59,9 @@ export interface FrameRange {
  *   while {@link MAX_QUEUED_FRAMES} decoded frames wait for `onFrame`. A
  *   decoder that holds a full queue without output gets one more packet at a
  *   time, up to {@link MAX_STALLED_DECODE_QUEUE}, so one that needs more
- *   packets in flight than that bound can't deadlock.
+ *   packets in flight than that bound can't deadlock. One that still holds
+ *   them all without output fails with `DECODE_FAILED` and
+ *   `details.reason: "stalled"`.
  * - **Borrowed frames:** a frame is closed as soon as `onFrame` settles, so
  *   every frame is closed in one place. `onFrame` clones a frame to keep it,
  *   and then owns the clone.
@@ -70,7 +74,8 @@ export interface FrameRange {
  *   cancellation, every frame waiting is closed, and so is the decoder.
  *
  * Throws `VideoError`: `DECODE_FAILED` with `details.codec` when the browser
- * fails to decode, `INVALID_VIDEO` for a frame out of bounds, and `ABORTED`
+ * fails to decode, and `details.reason: "stalled"` when it stops producing
+ * frames, `INVALID_VIDEO` for a frame out of bounds, and `ABORTED`
  * or the abort reason's code when cancelled. Whatever `onFrame` throws is
  * passed on as it is. Resolves with the number of frames delivered.
  *
@@ -155,9 +160,16 @@ export async function decodeVideoFrames(
    */
   let queueLimit = MAX_DECODE_QUEUE;
   const onStall = () => {
-    if (waiting.length === 0 && decoder.decodeQueueSize >= queueLimit) {
-      queueLimit = Math.min(queueLimit + 1, MAX_STALLED_DECODE_QUEUE);
+    if (waiting.length > 0 || decoder.decodeQueueSize < queueLimit) return;
+    if (queueLimit >= MAX_STALLED_DECODE_QUEUE) {
+      throw new VideoError(
+        "DECODE_FAILED",
+        "The browser's decoder stopped producing frames for the video track.",
+        { details: { codec: config.codec, reason: "stalled" } },
+      );
     }
+    queueLimit += 1;
+    videoFrameLedger.stalls += 1;
   };
   /** Lends every waiting frame to the consumer, in order. */
   const drain = async () => {
