@@ -45,6 +45,24 @@ export default [
     limit: "60 kB",
   },
   {
+    // The export worker, inlined and loaded on the first export
+    // (docs/adr/0002, docs/adr/0005): the readers and decoders as in the
+    // media worker, the compose step and mixer, and mediabunny's MP4 and
+    // WebM muxers (docs/adr/0001).
+    name: "Export worker, inlined (lazy)",
+    path: "dist/lazy/export-inline-worker-*.js",
+    brotli: true,
+    limit: "90 kB",
+  },
+  {
+    // The page's side of an export, loaded on the first export: the worker
+    // client and the stall-based processing time.
+    name: "Export runner (lazy)",
+    path: "dist/lazy/runner-*.js",
+    brotli: true,
+    limit: "2 kB",
+  },
+  {
     // The page's audio player, loaded on the first play of a plan with audio
     // (docs/adr/0006): scheduling windows, the lead, gapless switches and the
     // watchdog. It measures about 1.7 kB.

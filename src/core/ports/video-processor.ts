@@ -1,5 +1,20 @@
+import type { VideoLimitName } from "../errors/video-limits.js";
 import type { VideoPlan } from "../model/plan.js";
 import type { VideoProgressOptions } from "./options.js";
+
+/**
+ * Options for one export.
+ *
+ * @public
+ */
+export interface VideoExportOptions extends VideoProgressOptions {
+  /**
+   * Called once for each limit the export reaches the warning of, such as
+   * `maxFileSize` when the file grows past its warning size. The export goes
+   * on; past the maximum it fails with the limit's code.
+   */
+  readonly onWarning?: (limit: VideoLimitName) => void;
+}
 
 /**
  * The container an export asks for. The codecs are chosen by what the
@@ -49,9 +64,11 @@ export interface VideoProcessor {
   /**
    * Exports a plan. The file holds exactly the plan's frames and audio, and
    * only the metadata the plan sets: nothing from a source is copied into it
-   * (ADR 0005). A cancelled export returns no file.
+   * (ADR 0005). A cancelled export returns no file. A file that grows past
+   * the policy's `maxFileSize` fails with `FILE_TOO_LARGE`, as soon as it
+   * does, and returns no file either.
    */
-  export(job: VideoExportJob, options?: VideoProgressOptions): Promise<Blob>;
+  export(job: VideoExportJob, options?: VideoExportOptions): Promise<Blob>;
   /** Releases the processor and its worker. Pending calls reject, and later calls throw. */
   destroy(): Promise<void>;
 }

@@ -32,6 +32,12 @@ export interface VideoProcessorHarness {
   inspect(file: Blob): Promise<InspectedExport>;
   /** How far an exported frame's source time may be from the plan's, in microseconds. */
   readonly timeTolerance: number;
+  /**
+   * Why exports can't be checked in this browser here, such as one that
+   * encodes a codec it can't decode back, or `undefined` when they can. The
+   * tests skip with the reason.
+   */
+  unavailable?(): Promise<string | undefined>;
 }
 
 function expected(plan: VideoPlan): { source: string; time: number }[] {
@@ -49,7 +55,9 @@ function expected(plan: VideoPlan): { source: string; time: number }[] {
  */
 export function describeVideoProcessorContract(name: string, harness: VideoProcessorHarness): void {
   describe(`${name}: the VideoProcessor contract`, () => {
-    it("exports exactly the plan's frames, in order, and nothing that was cut", async () => {
+    it("exports exactly the plan's frames, in order, and nothing that was cut", async (context) => {
+      const reason = await harness.unavailable?.();
+      if (reason) context.skip(reason);
       const { processor, a, b, teardown } = await harness.setup();
       // Pieces of two sources, cut and reordered: whatever lies outside them was cut.
       const plan = planOf(
@@ -70,7 +78,9 @@ export function describeVideoProcessorContract(name: string, harness: VideoProce
       await teardown();
     });
 
-    it("writes only the metadata the plan sets", async () => {
+    it("writes only the metadata the plan sets", async (context) => {
+      const reason = await harness.unavailable?.();
+      if (reason) context.skip(reason);
       const { processor, a, teardown } = await harness.setup();
       const plan: VideoPlan = {
         ...planOf(clipOf("x", a, 0, 10)),
@@ -81,7 +91,9 @@ export function describeVideoProcessorContract(name: string, harness: VideoProce
       await teardown();
     });
 
-    it("reports progress that only moves forward and ends at 1", async () => {
+    it("reports progress that only moves forward and ends at 1", async (context) => {
+      const reason = await harness.unavailable?.();
+      if (reason) context.skip(reason);
       const { processor, a, teardown } = await harness.setup();
       const progress: number[] = [];
       await processor.export(
@@ -93,7 +105,9 @@ export function describeVideoProcessorContract(name: string, harness: VideoProce
       await teardown();
     });
 
-    it("runs one export at a time, rejecting another with BUSY", async () => {
+    it("runs one export at a time, rejecting another with BUSY", async (context) => {
+      const reason = await harness.unavailable?.();
+      if (reason) context.skip(reason);
       const { processor, a, teardown } = await harness.setup();
       const plan = planOf(clipOf("x", a, 0, 40));
       const first = processor.export({ plan });
@@ -103,7 +117,9 @@ export function describeVideoProcessorContract(name: string, harness: VideoProce
       await teardown();
     });
 
-    it("rejects a cancelled export with ABORTED, before it starts or partway through", async () => {
+    it("rejects a cancelled export with ABORTED, before it starts or partway through", async (context) => {
+      const reason = await harness.unavailable?.();
+      if (reason) context.skip(reason);
       const { processor, a, teardown } = await harness.setup();
       const plan = planOf(clipOf("x", a, 0, 60));
       expect(
@@ -119,14 +135,18 @@ export function describeVideoProcessorContract(name: string, harness: VideoProce
       await teardown();
     });
 
-    it("rejects a clip whose source isn't open with TypeError", async () => {
+    it("rejects a clip whose source isn't open with TypeError", async (context) => {
+      const reason = await harness.unavailable?.();
+      if (reason) context.skip(reason);
       const { processor, a, teardown } = await harness.setup();
       const plan = planOf({ ...clipOf("x", a, 0, 10), source: "not-open" });
       expect(await rejection(processor.export({ plan }))).toBeInstanceOf(TypeError);
       await teardown();
     });
 
-    it("rejects calls after destroy", async () => {
+    it("rejects calls after destroy", async (context) => {
+      const reason = await harness.unavailable?.();
+      if (reason) context.skip(reason);
       const { processor, a, teardown } = await harness.setup();
       await processor.destroy();
       await expect(processor.export({ plan: planOf(clipOf("x", a, 0, 10)) })).rejects.toThrow();

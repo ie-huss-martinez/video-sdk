@@ -13,6 +13,8 @@ export type { VideoEngineOptions } from "./adapters/video-engine.js";
 export { createVideoEngine } from "./adapters/video-engine.js";
 export type { VideoOutputOptions } from "./adapters/video-output.js";
 export { createVideoOutput } from "./adapters/video-output.js";
+export type { VideoProcessorOptions } from "./adapters/video-processor.js";
+export { createVideoProcessor } from "./adapters/video-processor.js";
 export type { VideoErrorCode } from "./core/errors/video-error.js";
 export { isVideoError, VideoError } from "./core/errors/video-error.js";
 export type {
@@ -110,6 +112,7 @@ export { backingSize, MAX_PIXEL_RATIO } from "./core/ports/video-output.js";
 export type {
   VideoExportContainer,
   VideoExportJob,
+  VideoExportOptions,
   VideoExportQuality,
   VideoProcessor,
 } from "./core/ports/video-processor.js";

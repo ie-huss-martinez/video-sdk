@@ -1,16 +1,15 @@
 import type { WorkerHandlers } from "@hussmartinez/sdk-core";
-import { mixWindow, type SourceSamples, sourceSpan } from "../../core/audio/mix.js";
 import { abortError, asVideoError } from "../../core/errors/error-helpers.js";
 import { VideoError } from "../../core/errors/video-error.js";
-import { videoLimits } from "../../core/errors/video-limits.js";
 import { IDENTITY_TRANSFORM, type VideoClip, type VideoPlan } from "../../core/model/plan.js";
 import type { VideoProbe } from "../../core/model/source.js";
-import { type Composition, composeFrame } from "../../core/playback/compose.js";
+import { composeFrame } from "../../core/playback/compose.js";
 import { createFrameScheduler } from "../../core/playback/scheduler.js";
 import { mediaTimeAt, type PlaybackAnchor } from "../../core/playback/timeline.js";
-import { frontCheck } from "../front-check/front-check.js";
-import { type FrameReader, openFrameReader } from "../mediabunny/frame-reader.js";
+import { paint } from "../canvas/paint.js";
+import { mixAudioWindow } from "./audio-window.js";
 import type { MediaWorkerContract, PlaybackSource } from "./contract.js";
+import { createReaderCache } from "./readers.js";
 
 /** The playback methods of the media worker's contract. */
 type PlaybackMethods = Pick<
@@ -44,49 +43,6 @@ export interface PlaybackHooks {
   readonly afterDraw?: (drawn: DrawnFrame) => void;
 }
 
-/**
- * Decodes a span of a source's audio, in source samples counted from the
- * probe's `start`, into planar channels. Each chunk is copied out and closed
- * by the decoder at once; samples outside the span are dropped, and any the
- * file doesn't have stay silent.
- */
-async function decodeSpan(
-  audio: NonNullable<FrameReader["audio"]>,
-  probe: VideoProbe,
-  sourceRate: number,
-  span: { readonly start: number; readonly end: number },
-  signal: AbortSignal,
-): Promise<SourceSamples> {
-  const length = span.end - span.start;
-  const channels = Array.from(
-    { length: probe.audio?.channels ?? 1 },
-    () => new Float32Array(length),
-  );
-  let scratch = new Float32Array(0);
-  await audio.decode(
-    {
-      from: probe.start + (span.start * 1_000_000) / sourceRate,
-      to: probe.start + (span.end * 1_000_000) / sourceRate,
-    },
-    (data) => {
-      if (scratch.length < data.numberOfFrames) scratch = new Float32Array(data.numberOfFrames);
-      const offset =
-        Math.round(((data.timestamp - probe.start) * sourceRate) / 1_000_000) - span.start;
-      const skip = Math.max(0, -offset);
-      const take = Math.min(data.numberOfFrames, length - offset) - skip;
-      if (take <= 0) return;
-      for (const [planeIndex, channel] of channels.entries()) {
-        if (planeIndex >= data.numberOfChannels) break;
-        const view = scratch.subarray(0, data.numberOfFrames);
-        data.copyTo(view, { planeIndex, format: "f32-planar" });
-        channel.set(view.subarray(skip, skip + take), offset + skip);
-      }
-    },
-    signal,
-  );
-  return { sampleRate: sourceRate, start: span.start, channels };
-}
-
 /** Wall-clock milliseconds since the epoch, which a page and its workers agree on. */
 export function wallClock(): number {
   return performance.timeOrigin + performance.now();
@@ -107,37 +63,6 @@ function animationFrame(signal: AbortSignal): Promise<void> {
   });
 }
 
-/** Paints a composed picture: black outside the output frame, the picture clipped to it. */
-function paint(
-  context: OffscreenCanvasRenderingContext2D,
-  image: CanvasImageSource,
-  composition: Composition,
-): void {
-  const { canvas } = context;
-  const { viewport, source } = composition;
-  context.setTransform(1, 0, 0, 1, 0, 0);
-  context.fillStyle = "#000";
-  context.fillRect(0, 0, canvas.width, canvas.height);
-  context.save();
-  context.beginPath();
-  context.rect(viewport.x, viewport.y, viewport.width, viewport.height);
-  context.clip();
-  context.translate(composition.centerX, composition.centerY);
-  context.rotate((composition.rotation * Math.PI) / 180);
-  context.drawImage(
-    image,
-    source.x,
-    source.y,
-    source.width,
-    source.height,
-    -composition.width / 2,
-    -composition.height / 2,
-    composition.width,
-    composition.height,
-  );
-  context.restore();
-}
-
 /**
  * The media worker's playback (docs/adr/0006): it draws into the canvas the
  * page transferred, with the frame scheduler as the decoder's consumer.
@@ -148,7 +73,6 @@ function paint(
 export function playbackHandlers(hooks: PlaybackHooks = {}): WorkerHandlers<PlaybackMethods> {
   let context: OffscreenCanvasRenderingContext2D | undefined;
   let sources = new Map<string, PlaybackSource>();
-  const readers = new Map<string, { readonly file: Blob; readonly reader: Promise<FrameReader> }>();
   let anchor: PlaybackAnchor | null = null;
   /** The plan's output, for keeping the picture through a resize. */
   let output: VideoPlan["output"] | undefined;
@@ -158,22 +82,7 @@ export function playbackHandlers(hooks: PlaybackHooks = {}): WorkerHandlers<Play
   let throughBitmaps = false;
   let bitmapQueue: Promise<void> = Promise.resolve();
 
-  const readerFor = (id: string): Promise<FrameReader> => {
-    const source = sources.get(id);
-    if (!source) return Promise.reject(new TypeError(`The source "${id}" isn't loaded.`));
-    const open = readers.get(id);
-    if (open && open.file === source.file) return open.reader;
-    const reader = (async () => {
-      // The same front check as a probe, before mediabunny reads the file.
-      await frontCheck(source.file, videoLimits.resolve(source.limits));
-      return openFrameReader(source.file, source.probe);
-    })();
-    readers.set(id, { file: source.file, reader });
-    reader.catch(() => {
-      if (readers.get(id)?.reader === reader) readers.delete(id);
-    });
-    return reader;
-  };
+  const { readerFor, setSources } = createReaderCache();
 
   const drawFrame = (frame: VideoFrame, clip: VideoClip, plan: VideoPlan) => {
     if (!context) return;
@@ -277,32 +186,15 @@ export function playbackHandlers(hooks: PlaybackHooks = {}): WorkerHandlers<Play
     async audio({ from, count, rate }, { signal }) {
       const plan = loadedPlan;
       if (!plan) throw new TypeError("No plan is loaded.");
-      const samples = await Promise.all(
-        plan.clips.map(async (clip, index) => {
-          const source = sources.get(clip.source);
-          const sourceRate = source?.probe.audio?.sampleRate;
-          if (!source || clip.muted || sourceRate === undefined) return null;
-          const span = sourceSpan(plan, index, rate, from, count, sourceRate);
-          if (!span) return null;
-          const reader = await readerFor(clip.source);
-          if (!reader.audio) return null;
-          return decodeSpan(reader.audio, source.probe, sourceRate, span, signal);
-        }),
-      );
-      return { channels: mixWindow(plan, rate, from, count, (index) => samples[index] ?? null) };
+      return {
+        channels: await mixAudioWindow(plan, sources, readerFor, from, count, rate, signal),
+      };
     },
     load({ plan, sources: next }) {
       output = plan.output;
       loadedPlan = plan;
       sources = new Map(next.map((source) => [source.id, source]));
-      for (const [id, open] of readers) {
-        if (sources.get(id)?.file === open.file) continue;
-        readers.delete(id);
-        void open.reader.then(
-          (reader) => reader.dispose(),
-          () => {},
-        );
-      }
+      setSources(sources);
       scheduler.load(plan, new Map(next.map((source) => [source.id, source.probe.start])));
       return undefined;
     },

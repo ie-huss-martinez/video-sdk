@@ -64,6 +64,9 @@ export function createVideoEngine(options?: VideoEngineOptions): VideoEngine;
 export function createVideoOutput(options: VideoOutputOptions): VideoOutput;
 
 // @public
+export function createVideoProcessor(options: VideoProcessorOptions): VideoProcessor;
+
+// @public
 export function createVideoReducer(sourceInfo: (id: string) => VideoSourceInfo | undefined): Reducer<VideoPlan, VideoCommand>;
 
 // @public
@@ -375,6 +378,11 @@ export interface VideoExportJob {
 }
 
 // @public
+export interface VideoExportOptions extends VideoProgressOptions {
+    readonly onWarning?: (limit: VideoLimitName) => void;
+}
+
+// @public
 export type VideoExportQuality = "low" | "medium" | "high";
 
 // @public
@@ -677,7 +685,13 @@ export interface VideoProbeOptions extends VideoCallOptions {
 // @public
 export interface VideoProcessor {
     destroy(): Promise<void>;
-    export(job: VideoExportJob, options?: VideoProgressOptions): Promise<Blob>;
+    export(job: VideoExportJob, options?: VideoExportOptions): Promise<Blob>;
+}
+
+// @public
+export interface VideoProcessorOptions {
+    readonly engine: VideoEngine;
+    readonly filePolicy?: VideoFilePolicy;
 }
 
 // @public
