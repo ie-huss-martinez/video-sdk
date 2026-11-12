@@ -26,6 +26,7 @@ export async function probeFile(
   const walk = await walkPackets(file, front, policy, signal);
   return {
     container: front.container,
+    start: walk.start,
     duration: walk.duration,
     tracks: front.tracks,
     indexSize: front.indexSize,

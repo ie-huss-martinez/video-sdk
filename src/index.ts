@@ -51,6 +51,7 @@ export { checkProbe, decodingBound } from "./core/model/probe-limits.js";
 export type {
   AudioTrackProbe,
   VideoContainer,
+  VideoPeaks,
   VideoProbe,
   VideoRotation,
   VideoSourceInfo,

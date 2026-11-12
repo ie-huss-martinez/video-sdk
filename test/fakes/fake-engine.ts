@@ -64,6 +64,7 @@ export function createFakeEngine(): FakeEngine {
     const pad = (size: number) => size + (size % 16 === 0 ? 0 : 16 - (size % 16));
     const probe: VideoProbe = {
       container: spec.container ?? "mp4",
+      start: 0,
       duration: Math.max(walked, declared),
       tracks: spec.tracks ?? (spec.audio ? 2 : 1),
       indexSize: 64 * spec.frames,
@@ -108,6 +109,20 @@ export function createFakeEngine(): FakeEngine {
       const info = sourceInfo(id, probe);
       sources.set(id, info);
       return info;
+    },
+    async peaks(id, options) {
+      assertAlive();
+      throwIfAborted(options?.signal);
+      const source = sources.get(id);
+      if (!source) throw new TypeError(`The source "${id}" isn't open.`);
+      if (source.audio === null) return null;
+      // A steady tone at an eighth of full scale, as the generated fixtures hold.
+      const buckets = Math.ceil(source.duration / 10_000);
+      return {
+        bucketDuration: 10_000,
+        min: new Float32Array(buckets).fill(-0.125),
+        max: new Float32Array(buckets).fill(0.125),
+      };
     },
     async close(id) {
       assertAlive();

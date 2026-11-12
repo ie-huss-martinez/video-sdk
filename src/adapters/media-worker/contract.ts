@@ -1,5 +1,5 @@
 import type { VideoLimitName } from "../../core/errors/video-limits.js";
-import type { VideoProbe } from "../../core/model/source.js";
+import type { VideoPeaks, VideoProbe } from "../../core/model/source.js";
 
 /**
  * A resolved file policy's limits, as plain data: a `FilePolicy` holds
@@ -35,5 +35,18 @@ export interface MediaWorkerContract {
       readonly probe: VideoProbe;
     };
     readonly output: undefined;
+  };
+  /**
+   * Decodes a probed file's audio and builds its waveform peaks, or `null`
+   * without audio (docs/adr/0002). The front check runs first, as for
+   * `support`.
+   */
+  readonly peaks: {
+    readonly input: {
+      readonly file: Blob;
+      readonly limits: PolicyLimits;
+      readonly probe: VideoProbe;
+    };
+    readonly output: VideoPeaks | null;
   };
 }

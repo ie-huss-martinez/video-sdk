@@ -29,6 +29,7 @@ const NTSC = { num: 30_000, den: 1_001 };
 function probe(overrides: Partial<VideoProbe> = {}): VideoProbe {
   return {
     container: "mp4",
+    start: 0,
     duration: 10_000_000,
     tracks: 2,
     indexSize: 50_000,

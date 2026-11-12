@@ -52,7 +52,7 @@ exposeWorker<DecodeContract>({
     try {
       const { video } = await pickTracks(input, probe.container);
       const config = (await video.getDecoderConfig()) as VideoDecoderConfig;
-      const bounds = await frameBounds(video, probe);
+      const bounds = frameBounds(probe);
       const timestamps: number[] = [];
       const sizes: [number, number][] = [];
       await decodeVideoFrames(

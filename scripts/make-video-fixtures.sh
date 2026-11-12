@@ -37,6 +37,10 @@ ffmpeg -y -v error -display_rotation:v:0 -90 -i landscape.mp4 -c copy "${exact[@
 ffmpeg -y -v error -f lavfi -i "$(pattern 1280x720 2)" -f lavfi -i "$(tone 2)" \
   -c:v libvpx -deadline good -cpu-used 5 -crf 60 -b:v 500k -threads 1 -g 30 \
   "${opus[@]}" "${exact[@]}" -shortest landscape-vp8.webm
+# The same picture without audio, in VP8, for the engine contract.
+ffmpeg -y -v error -f lavfi -i "$(pattern 1280x720 2)" \
+  -c:v libvpx -deadline good -cpu-used 5 -crf 60 -b:v 500k -threads 1 -g 30 \
+  "${exact[@]}" silent-vp8.webm
 # HEVC, which Chromium and Firefox don't decode: for UNSUPPORTED_CODEC.
 ffmpeg -y -v error -f lavfi -i "$(pattern 320x180 0.5)" -f lavfi -i "$(tone 0.5)" \
   -c:v libx265 -preset ultrafast -crf 45 -pix_fmt yuv420p -tag:v hvc1 \
@@ -55,5 +59,11 @@ ffmpeg -y -v error -f lavfi -i "$(pattern 64x36 0.2)" -f lavfi -i "$(tone 0.2)" 
 ffmpeg -y -v error -f lavfi -i "$(pattern 64x36 0.2)" -f lavfi -i "$(tone 0.2)" \
   -c:v libvpx-vp9 -deadline good -cpu-used 5 -crf 60 -b:v 0 -threads 1 -row-mt 0 \
   "${opus[@]}" "${exact[@]}" -shortest tiny.webm
+
+# Tiny VP8 and Opus whose timestamps start at 1 s, for sources whose time
+# doesn't begin at 0.
+ffmpeg -y -v error -f lavfi -i "$(pattern 64x36 0.2)" -f lavfi -i "$(tone 0.2)" \
+  -c:v libvpx -deadline good -cpu-used 5 -crf 60 -b:v 100k -threads 1 \
+  "${opus[@]}" "${exact[@]}" -shortest -output_ts_offset 1 offset.webm
 
 ls -l

@@ -57,8 +57,15 @@ export interface AudioTrackProbe {
 export interface VideoProbe {
   readonly container: VideoContainer;
   /**
-   * The length in microseconds: the larger of what the header claims and
-   * what the packet walk found, so a header can't lower it.
+   * Where the source's time begins, in the container's microseconds: the
+   * earliest presentation timestamp of the tracks the SDK uses. Source times
+   * in the plan, video frame bounds and waveform buckets all count from it,
+   * so a file whose timestamps don't start at 0 stays in sync (ADR 0003).
+   */
+  readonly start: number;
+  /**
+   * The length in microseconds, from `start`: the larger of what the header
+   * claims and what the packet walk found, so a header can't lower it.
    */
   readonly duration: number;
   /** Every track in the file, of every kind, including those not used. */
@@ -139,4 +146,22 @@ export function rotateSize(
  */
 export function addRotations(a: VideoRotation, b: VideoRotation): VideoRotation {
   return ((a + b) % 360) as VideoRotation;
+}
+
+/**
+ * A source's waveform overview: the lowest and highest sample of each bucket
+ * of time, across all channels, so that drawing a waveform never decodes
+ * audio again (docs/adr/0002). Bucket `i` covers the source's time from
+ * `i × bucketDuration` microseconds, counted from the probe's `start`.
+ * Samples are clamped to [-1, 1], so a waveform always fits its lane even
+ * when decoded audio goes over full scale, and samples that aren't numbers
+ * are left out.
+ *
+ * @public
+ */
+export interface VideoPeaks {
+  /** How long each bucket is, in microseconds. */
+  readonly bucketDuration: number;
+  readonly min: Float32Array;
+  readonly max: Float32Array;
 }
