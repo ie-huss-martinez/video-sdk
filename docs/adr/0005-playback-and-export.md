@@ -2,7 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-11-12
-- **Amended:** 2026-11-12, when audio playback was built: the context runs at the device's rate. Earlier, when audio mixing was built: the resampler's kernel and its table, exact-position evaluation so windows join without a seam, and the order of resampling, channel mixing and gain.
+- **Amended:** 2026-11-12, when export was built: how audio is interleaved, what the file is collected in, the metadata's date and creation time, and what loads when. Earlier, when audio playback was built: the context runs at the device's rate. Earlier, when audio mixing was built: the resampler's kernel and its table, exact-position evaluation so windows join without a seam, and the order of resampling, channel mixing and gain.
 
 ## Context
 
@@ -94,6 +94,15 @@ A generated "flash and beep" fixture has white flash frames and short tones at k
    - The encoders' chunks are written by mediabunny into a `StreamTarget` ([ADR 0001](0001-video-engines.md)).
    - MP4 puts its index at the end (`fastStart: false`), so the file is written in one pass and never held twice. The header's final sizes are patched where the muxer writes them.
    - The worker collects the written parts into the output `Blob`.
+
+#### As built
+
+- **Audio is interleaved with the video:** after each output frame, the audio is mixed and encoded up to that frame's end, in windows of a tenth of a second. A muxer holds packets of one track until the other catches up, so encoding all the video first would hold the whole video in memory.
+- **The file is collected in parts** as the muxer writes them, through a `StreamTarget`. MP4 without fast start writes in order, then goes back to patch the media box's size in its header: the patch is copied into the parts it covers. The parts become the `Blob`.
+- **Metadata:** the title, description, artist and comment are written when set. The date is written only when it's a calendar date, `YYYY-MM-DD`, because containers store dates, not free text. mediabunny writes the current time as the creation time unless told not to, so it's always set to none.
+- **The queues:** the encoders' queues hold at most 8 frames or chunks, and at most 16 encoded chunks wait for the muxer before the encoders wait.
+- **What loads when:** `createVideoProcessor` is in the root entry, small. The export runner and the export worker load on the first export, from lazy chunks. Each processor has its own export worker, which stops after `sdk-core`'s idle timeout.
+- **The time limit is a stall:** `maxProcessingTime` runs from the last progress, so a long export isn't cut off, and one that stops encoding fails with `PROCESSING_TIME_EXCEEDED`.
 
 #### One compose step for the preview and the export
 

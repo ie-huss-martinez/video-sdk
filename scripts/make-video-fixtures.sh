@@ -56,6 +56,18 @@ ffmpeg -y -v error -f lavfi -i "color=black:size=256x32:rate=30:duration=4,forma
   -f lavfi -i "$beeps" \
   -c:v libvpx -deadline good -cpu-used 5 -crf 10 -b:v 200k -threads 1 -g 30 \
   "${opus[@]}" "${exact[@]}" -shortest numbered-beeps.webm
+# Two numbered sources for the export tests, 3 seconds each with a steady
+# Opus tone: a shows frame numbers 0–89 with 440 Hz, and b shows them plus
+# 128, which sets the top block, with 880 Hz. An exported frame's number
+# says which source and which frame it came from.
+for spec in "a 0 440" "b 128 880"; do
+  set -- $spec
+  marked="geq=lum='if(mod(trunc((N+$2)/pow(2\\,7-trunc(X/32)))\\,2)\\,235\\,16)':cb=128:cr=128"
+  ffmpeg -y -v error -f lavfi -i "color=black:size=256x32:rate=30:duration=3,format=yuv420p,$marked" \
+    -f lavfi -i "sine=frequency=$3:sample_rate=48000:duration=3" \
+    -c:v libvpx -deadline good -cpu-used 5 -crf 10 -b:v 200k -threads 1 -g 30 \
+    "${opus[@]}" "${exact[@]}" -shortest "export-$1.webm"
+done
 # HEVC, which Chromium and Firefox don't decode: for UNSUPPORTED_CODEC.
 ffmpeg -y -v error -f lavfi -i "$(pattern 320x180 0.5)" -f lavfi -i "$(tone 0.5)" \
   -c:v libx265 -preset ultrafast -crf 45 -pix_fmt yuv420p -tag:v hvc1 \

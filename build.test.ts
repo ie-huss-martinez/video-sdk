@@ -151,7 +151,8 @@ describe("the media worker (docs/adr/0001, docs/adr/0002)", () => {
     expect(chunk(player[0] as string).code).toContain("src/adapters/playback-audio.ts");
     expect(chunk("index.js").code).not.toContain("src/adapters/playback-audio.ts");
     expect(chunk("index.js").code).toContain("src/adapters/lazy-playback-audio.ts");
-    expect(chunk("index.js").dynamicImports).toHaveLength(2);
+    // The media worker, the audio player, the export runner and the export worker.
+    expect(chunk("index.js").dynamicImports).toHaveLength(4);
   });
 
   it("bundles mediabunny only into the worker, never into the entries", () => {
@@ -183,6 +184,37 @@ describe("the media worker (docs/adr/0001, docs/adr/0002)", () => {
   });
 });
 
+describe("the export worker (docs/adr/0002, docs/adr/0005)", () => {
+  const exportChunk = () => {
+    const found = files.find((file) =>
+      /^lazy\/export-inline-worker-[\w-]+\.js$/.test(file.fileName),
+    );
+    if (found?.type !== "chunk") throw new Error("the inlined export worker chunk wasn't built");
+    return found;
+  };
+
+  it("is inlined in its own lazy chunk, loaded with the export runner on the first export", () => {
+    expect(exportChunk().code).toContain("hm-video-export");
+    const lazy = chunk("index.js").dynamicImports;
+    expect(lazy).toContain(exportChunk().fileName);
+    expect(lazy.filter((name) => name.startsWith("lazy/runner-"))).toHaveLength(1);
+    expect(chunk("index.js").code).not.toContain("src/adapters/export-worker/export-plan.ts");
+  });
+
+  it("bundles mediabunny's muxers, with its licence notice, and can't make requests or start workers", () => {
+    const code = workerCode("export-inline-worker");
+    expect(code).toMatch(
+      /\/\*![\s\S]*?Vanilagy and contributors[\s\S]*?Mozilla Public[\s\S]*?\*\//,
+    );
+    expect(code).not.toMatch(
+      /(?<![\w$.])fetch\s*\(|fetchFn|XMLHttpRequest|importScripts|WebSocket|WebTransport|EventSource/,
+    );
+    expect(code).not.toMatch(/new\s+Worker\s*\(|createObjectURL/);
+    expect(code).not.toMatch(CODE_GENERATION);
+    expect(code).not.toMatch(/sourceMappingURL=/);
+  });
+});
+
 describe("mediabunny's licence (docs/adr/0001)", () => {
   it("keeps mediabunny's MPL-2.0 notice with its code in the worker", () => {
     expect(workerCode()).toMatch(
@@ -211,9 +243,10 @@ describe("mediabunny's licence (docs/adr/0001)", () => {
 });
 
 /** The media worker's own source, which Vite inlines as a string literal. */
-function workerCode(): string {
-  const found = files.find((file) => /^lazy\/inline-worker-[\w-]+\.js$/.test(file.fileName));
-  if (found?.type !== "chunk") throw new Error("the inlined worker chunk wasn't built");
+/** The source of an inlined worker, from its lazy chunk: the media worker's by default. */
+function workerCode(name = "inline-worker"): string {
+  const found = files.find((file) => new RegExp(`^lazy/${name}-[\\w-]+\\.js$`).test(file.fileName));
+  if (found?.type !== "chunk") throw new Error(`the inlined ${name} chunk wasn't built`);
   const code = found.code;
   const start = code.indexOf("var jsContent = ") + "var jsContent = ".length;
   let end = start + 1;
