@@ -36,12 +36,14 @@ export interface ExportWriter {
  * write may overwrite bytes already collected: it's copied into the parts
  * it covers.
  */
-function collector() {
+function collector(counted: (size: number) => void) {
   const parts: Uint8Array<ArrayBuffer>[] = [];
   const offsets: number[] = [];
   let end = 0;
   const write = ({ data, position }: StreamTargetChunk) => {
     if (position === end) {
+      // Checked before it's kept: past `maxFileSize`, nothing more is collected.
+      counted(end + data.length);
       parts.push(data.slice());
       offsets.push(position);
       end += data.length;
@@ -80,6 +82,7 @@ function tags(metadata: VideoMetadata): MetadataTags {
  * Starts writing an export.
  *
  * @param withAudio - Whether the file has an audio track. A plan without audio writes none.
+ * @param counted - Called with the file's size before each part is kept; it throws to stop the file.
  * @internal
  */
 export async function createExportWriter(
@@ -87,8 +90,9 @@ export async function createExportWriter(
   metadata: VideoMetadata,
   frameRate: number,
   withAudio: boolean,
+  counted: (size: number) => void,
 ): Promise<ExportWriter> {
-  const target = collector();
+  const target = collector(counted);
   const output = new Output({
     format:
       candidate.container === "mp4"

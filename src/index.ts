@@ -112,6 +112,7 @@ export { backingSize, MAX_PIXEL_RATIO } from "./core/ports/video-output.js";
 export type {
   VideoExportContainer,
   VideoExportJob,
+  VideoExportOptions,
   VideoExportQuality,
   VideoProcessor,
 } from "./core/ports/video-processor.js";

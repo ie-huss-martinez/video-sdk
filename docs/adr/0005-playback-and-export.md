@@ -118,7 +118,8 @@ A generated "flash and beep" fixture has white flash frames and short tones at k
 #### Back-pressure and memory
 
 - **The encoder's queue is bounded at 8 frames** ([ADR 0002](0002-workers-and-assets.md)), and every write to the muxer is awaited. So export runs as fast as the encoder allows, never in real time, and without playing anything aloud.
-- **Memory is the queues plus the output:** the collected `Blob` parts. The browser may keep them on disk. The size check against `maxFileSize` bounds them.
+- **Memory is the queues plus the output:** the collected `Blob` parts. The browser may keep them on disk.
+  - **The file is counted as it's written.** Before each part is kept, its size is checked against `maxFileSize`. When the file passes the maximum, the export stops at once with `FILE_TOO_LARGE`, the output is cancelled, and no partial `Blob` is returned. When it passes the warning, `onWarning("maxFileSize")` is called once, even when one write passes both.
 
 #### Progress, cancellation and failure
 

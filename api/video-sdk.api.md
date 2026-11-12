@@ -378,6 +378,11 @@ export interface VideoExportJob {
 }
 
 // @public
+export interface VideoExportOptions extends VideoProgressOptions {
+    readonly onWarning?: (limit: VideoLimitName) => void;
+}
+
+// @public
 export type VideoExportQuality = "low" | "medium" | "high";
 
 // @public
@@ -680,7 +685,7 @@ export interface VideoProbeOptions extends VideoCallOptions {
 // @public
 export interface VideoProcessor {
     destroy(): Promise<void>;
-    export(job: VideoExportJob, options?: VideoProgressOptions): Promise<Blob>;
+    export(job: VideoExportJob, options?: VideoExportOptions): Promise<Blob>;
 }
 
 // @public

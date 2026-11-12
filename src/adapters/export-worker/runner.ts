@@ -2,7 +2,7 @@ import { createWorkerClient, type WorkerClient, type WorkerLike } from "@hussmar
 import { asVideoError } from "../../core/errors/error-helpers.js";
 import { VideoError } from "../../core/errors/video-error.js";
 import type { VideoFilePolicy } from "../../core/errors/video-limits.js";
-import type { VideoProgressOptions } from "../../core/ports/options.js";
+import type { VideoExportOptions } from "../../core/ports/video-processor.js";
 import type { ExportWorkerContract } from "./contract.js";
 import type { ExportRequest } from "./export-plan.js";
 
@@ -14,9 +14,9 @@ import type { ExportRequest } from "./export-plan.js";
  */
 export interface ExportRunner {
   run(
-    request: ExportRequest,
+    request: Omit<ExportRequest, "limits">,
     policy: VideoFilePolicy,
-    options: VideoProgressOptions,
+    options: VideoExportOptions,
   ): Promise<Blob>;
   destroy(): void;
 }
@@ -73,13 +73,21 @@ export function createExportRunner(startWorker: () => WorkerLike): ExportRunner 
       });
       const stall = stallSignal(policy, options.signal);
       try {
-        return await client.call("export", request, {
-          signal: stall.signal,
-          onProgress: (fraction) => {
-            stall.progressed();
-            options.onProgress?.(fraction);
+        return await client.call(
+          "export",
+          { ...request, limits: policy.limits },
+          {
+            signal: stall.signal,
+            onProgress: (update) => {
+              if (typeof update === "number") {
+                stall.progressed();
+                options.onProgress?.(update);
+              } else {
+                options.onWarning?.(update.warning);
+              }
+            },
           },
-        });
+        );
       } catch (error) {
         throw error instanceof TypeError ? error : asVideoError(error);
       } finally {

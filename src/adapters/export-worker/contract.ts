@@ -1,3 +1,4 @@
+import type { VideoLimitName } from "../../core/errors/video-limits.js";
 import type { ExportRequest } from "./export-plan.js";
 
 /**
@@ -9,6 +10,7 @@ export interface ExportWorkerContract {
   readonly export: {
     readonly input: ExportRequest;
     readonly output: Blob;
-    readonly progress: number;
+    /** The fraction of frames encoded, or a limit whose warning the export reached. */
+    readonly progress: number | { readonly warning: VideoLimitName };
   };
 }

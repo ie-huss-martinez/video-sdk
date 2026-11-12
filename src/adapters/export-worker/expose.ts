@@ -9,7 +9,8 @@ import { exportPlan } from "./export-plan.js";
 export function exposeExportWorker(options?: ExposeWorkerOptions): void {
   exposeWorker<ExportWorkerContract>(
     {
-      export: (request, { signal, progress }) => exportPlan(request, progress, signal),
+      export: (request, { signal, progress }) =>
+        exportPlan(request, progress, signal, (limit) => progress({ warning: limit })),
     },
     options,
   );

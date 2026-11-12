@@ -1,5 +1,6 @@
 import { abortError, throwIfAborted } from "../../core/errors/error-helpers.js";
 import { isVideoError, VideoError } from "../../core/errors/video-error.js";
+import { type VideoLimitName, videoLimits } from "../../core/errors/video-limits.js";
 import {
   audioBitrate,
   type ExportCandidate,
@@ -15,7 +16,7 @@ import { TIMESTAMP_TOLERANCE } from "../../core/playback/scheduler.js";
 import type { VideoExportContainer, VideoExportQuality } from "../../core/ports/video-processor.js";
 import { paint } from "../canvas/paint.js";
 import { mixAudioWindow } from "../media-worker/audio-window.js";
-import type { PlaybackSource } from "../media-worker/contract.js";
+import type { PlaybackSource, PolicyLimits } from "../media-worker/contract.js";
 import { createReaderCache } from "../media-worker/readers.js";
 import { createExportWriter, type ExportWriter } from "../mediabunny/export-writer.js";
 import { MAX_DECODE_QUEUE } from "../mediabunny/video-decoder.js";
@@ -34,6 +35,8 @@ export interface ExportRequest {
   readonly sources: readonly PlaybackSource[];
   readonly container?: VideoExportContainer;
   readonly quality?: VideoExportQuality;
+  /** The policy the export runs under: the file may grow to `maxFileSize`. */
+  readonly limits: PolicyLimits;
 }
 
 /** The most encoder chunks waiting for the muxer before the encoders wait (docs/adr/0002). */
@@ -227,6 +230,7 @@ export async function exportPlan(
   request: ExportRequest,
   onProgress: (fraction: number) => void,
   signal: AbortSignal,
+  onWarning: (limit: VideoLimitName) => void = () => {},
 ): Promise<Blob> {
   const { plan } = request;
   const quality = request.quality ?? "medium";
@@ -244,10 +248,28 @@ export async function exportPlan(
   let videoEncoder: VideoEncoder | undefined;
   let audioEncoder: AudioEncoder | undefined;
   let failure: unknown;
+  /** The file's size limit, once the file passed it: no other failure replaces it. */
+  let tooLarge: unknown;
+  const policy = videoLimits.resolve(request.limits);
+  let warned = false;
+  const counted = (size: number) => {
+    // One write can cross the warning and the maximum at once: it still warns.
+    if (!warned && size >= policy.limits.maxFileSize.warning) {
+      warned = true;
+      onWarning("maxFileSize");
+    }
+    try {
+      policy.check("maxFileSize", size);
+    } catch (error) {
+      tooLarge ??= error;
+      throw error;
+    }
+  };
   let writes: Promise<void> = Promise.resolve();
   let pendingWrites = 0;
   const check = () => {
     if (signal.aborted) throw abortError(signal);
+    if (tooLarge !== undefined) throw tooLarge;
     if (failure !== undefined) throw failure;
   };
   const write = (add: () => Promise<void>) => {
@@ -272,6 +294,7 @@ export async function exportPlan(
       plan.metadata,
       output.frameRate.num / output.frameRate.den,
       withAudio,
+      counted,
     );
     const activeWriter = writer;
     const encodeFailed = (codec: string) => (error: unknown) => {
@@ -434,6 +457,7 @@ export async function exportPlan(
     return file;
   } catch (error) {
     await writer?.cancel().catch(() => {});
+    if (tooLarge !== undefined) throw tooLarge;
     if (isVideoError(error) || error instanceof TypeError) throw error;
     if (failure !== undefined) throw failure;
     if (signal.aborted) throw abortError(signal);
