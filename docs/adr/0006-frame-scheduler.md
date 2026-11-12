@@ -14,7 +14,7 @@ Measured in the pinned browser image, in Chromium, Firefox and WebKit:
 - **`requestAnimationFrame` exists in dedicated workers** in all three, at the display's rate (about 60 a second headless).
 - **An `AudioContext` starts `suspended`** until a user gesture lets it run, as browsers' autoplay rules require. `getOutputTimestamp()` exists in all three and reports zeros while suspended. Headless, `outputLatency` reports 0 and `baseLatency` 0 to 10 milliseconds.
 - **A context created at another sample rate**, such as 44.1 kHz, keeps it in all three.
-- **Drawing a `VideoFrame` into a worker's 2D `OffscreenCanvas`** worked in Firefox and WebKit. In Chromium, a synthetic test with a frame made from an empty canvas threw, which says nothing about decoded frames; the capability matrix confirms decoded frames before the code relies on it.
+- **A decoded frame draws into a worker's 2D `OffscreenCanvas`** in all three, both with `drawImage(frame)` and through `createImageBitmap(frame)`. The [capability matrix](../capabilities.md) checks it on every run: it decodes a real VP8 frame from `landscape-vp8.webm` with the SDK's decoder, draws it each way onto a cleared canvas, and reads the centre pixel back opaque.
 
 ## Decision
 
@@ -39,6 +39,7 @@ Both sides compute media time the same way, `M + (now − P) × 1,000` microseco
   It then **waits, inside the consumer, until the clock reaches that time,** then draws it, then returns, and the decoder closes it.
 - **So back-pressure comes for free.** While the scheduler waits for the next frame's time, the decoder holds at most 4 frames ahead and stops feeding packets. Memory stays at the queue bounds, at any length of footage.
 - **Drawing** goes through the pure `composeFrame(plan, frame)`, shared with export ([ADR 0005](0005-playback-and-export.md)): the source's and clip's rotation, the crop and the fit, at the stage's size times the device pixel ratio. A frame is drawn on the worker's `requestAnimationFrame`, at most once per animation frame.
+- **How a frame is drawn:** `drawImage(frame)`, straight from the borrowed frame, in every engine, because the matrix shows all three support it. If `drawImage` throws for a frame, the worker draws that frame through `createImageBitmap(frame)` instead, closes the bitmap at once, and keeps using the bitmap path for the rest of that worker's life. The matrix shows that path working in all three as well. Either way the decoder still closes the frame when the consumer returns.
 
 ### Dropping late frames
 
@@ -57,7 +58,23 @@ Both sides compute media time the same way, `M + (now − P) × 1,000` microseco
 - **Seeking** aborts the running decoders, whose frames the decoder then closes ([ADR 0001](0001-video-engines.md)). It decodes from the key packet before the target, through `decodeVideoFrames`' range, and draws the latest frame at or before the target as soon as it's decoded. If playing, the clock's anchor moves to the target, and playback continues from there.
 - **Seeks are coalesced.** A seek that arrives while another decodes replaces it: the earlier one is aborted, and only the latest target is drawn. Scrubbing is a stream of such seeks, and silent ([ADR 0005](0005-playback-and-export.md)).
 - **An edit during playback** loads the new plan, then seeks to the current position under it. A playhead past the new plan's end moves to the end ([ADR 0003](0003-clip-plan-document-model.md)).
-- **The end:** when the clock reaches the plan's end, playback stops with the playhead there, and the state becomes `stopped`.
+
+### Hidden pages
+
+Chromium and WebKit throttle or stop `requestAnimationFrame` in hidden documents, including in the workers they started, while audio keeps playing.
+
+- **While hidden, the clock runs on and video pauses.** The page tells the worker when `document.visibilityState` changes.
+  - The worker stops its decoders, which close their frames, and decodes and queues nothing for frames nobody will see. The canvas keeps the last frame drawn.
+  - Audio keeps playing and keeps the clock, and its windows are still scheduled ahead.
+  - A plan without audio keeps its performance clock running too, so playback stays where it would have been.
+- **`position()` reports the clock while hidden,** not the last frame drawn, so the playhead the host shows is where the sound is.
+- **On becoming visible again,** the worker resyncs exactly like a seek to `position()`. It decodes from the key packet before it, draws that frame, and goes on playing.
+- **The test:** a pure decision on a fake clock. Hidden means nothing is decoded and the clock advances; visible again means a seek to the clock's position.
+
+### Stepping, and the end of the plan
+
+- **Next frame and previous frame** pause playback if it's running. They seek to the current output frame plus or minus one, clamped to the plan's first and last frames. The frame is drawn exactly: it's a seek, so the latest source frame at or before that time is drawn, and a seek's frame is never dropped. Stepping past either end does nothing.
+- **At the plan's end,** playback stops: the state becomes `stopped`, the playhead is at the end, and the last frame stays drawn. The output fires an `ended` event once, each time playback reaches the end, never on a seek or a step to it. `play()` from the end starts again from the beginning ([ADR 0003](0003-clip-plan-document-model.md)).
 
 ### What crosses between the page and the worker
 
@@ -65,7 +82,8 @@ Both sides compute media time the same way, `M + (now − P) × 1,000` microseco
 |---|---|---|---|
 | Page | Worker | The transferred canvas | Once per mount |
 | Page | Worker | The plan, and the sources' `Blob`s and probes | On load and on every edit |
-| Page | Worker | Play, pause, seek, and clock anchors | On each, and every 250 ms while playing |
+| Page | Worker | Play, pause, seek, steps, and clock anchors | On each, and every 250 ms while playing |
+| Page | Worker | Whether the page is visible | On every change |
 | Worker | Page | Dropped frames, and errors | With each anchor's reply |
 | Worker | Page | Audio windows | Ahead of the clock (ADR 0005) |
 
@@ -78,7 +96,7 @@ No full-size frame ever crosses ([ADR 0002](0002-workers-and-assets.md)).
 
 ### Tests
 
-- **The scheduler's decisions are pure functions,** tested without a browser on a fake clock: which frame to draw, which to drop, when a cut pre-rolls, and how seeks coalesce.
+- **The scheduler's decisions are pure functions,** tested without a browser on a fake clock: which frame to draw, which to drop, when a cut pre-rolls, how seeks coalesce, what stepping targets, when `ended` fires, and what happens while hidden.
 - **In every engine,** a frame-numbered fixture plays, seeks and is edited during playback, and the worker reads back what it drew. It must be the frame the plan places at the clock, or a dropped frame counted.
 - **The frame ledger is zero** after play, pause, seek, an edit during playback, stop and destroy ([ADR 0002](0002-workers-and-assets.md)).
 

@@ -1,5 +1,6 @@
 // Measures, in a worker, what WebCodecs offers for each codec in the matrix.
 import { decodes } from "./decodes.js";
+import { draws } from "./draws.js";
 import {
   type Capabilities,
   CODECS,
@@ -8,7 +9,7 @@ import {
   WORKER_FEATURES,
 } from "./matrix.js";
 
-type Measured = Pick<Capabilities, "worker" | "decode" | "decodes" | "encode">;
+type Measured = Pick<Capabilities, "worker" | "decode" | "decodes" | "encode" | "draw">;
 
 async function supported(api: unknown, config: object): Promise<boolean> {
   if (typeof api !== "function") return false;
@@ -55,5 +56,7 @@ self.onmessage = async (event: MessageEvent<Record<CodecId, Blob>>) => {
   for (const { id } of CODECS) {
     result.decodes[id] = await decodes(event.data[id], DECODE_FIXTURES[id].track);
   }
-  postMessage(result as Measured);
+  // A real decoded frame, drawn: the scheduler's whole design rests on it.
+  const drawn = await draws(event.data.vp8);
+  postMessage({ ...result, draw: drawn } as Measured);
 };

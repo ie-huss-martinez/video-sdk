@@ -22,6 +22,7 @@ describe.skipIf(!inject("browserImage"))(`the capability matrix in ${server.brow
       decode: expected.decode,
       decodes: expected.decodes,
       encode: expected.encode,
+      draw: expected.draw,
     });
   });
 

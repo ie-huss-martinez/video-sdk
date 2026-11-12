@@ -40,6 +40,12 @@ export interface Capabilities {
   /** Whether a real file in the codec decodes, through the SDK's decoder for video. */
   readonly decodes: Record<CodecId, boolean>;
   readonly encode: Record<CodecId, boolean>;
+  /**
+   * Whether a decoded VP8 frame draws into a worker's 2D `OffscreenCanvas`
+   * and reads back opaque: directly, and through `createImageBitmap(frame)`
+   * (docs/adr/0006).
+   */
+  readonly draw: { readonly videoFrame: boolean; readonly imageBitmap: boolean };
 }
 
 /** The fixture each codec is decoded from, and which of its tracks. */
@@ -82,12 +88,14 @@ export const MATRIX: Record<Engine, Capabilities> = {
     decode: { h264: true, hevc: false, vp8: true, vp9: true, av1: true, aac: true, opus: true },
     decodes: { h264: true, hevc: false, vp8: true, vp9: true, av1: true, aac: true, opus: true },
     encode: { h264: true, hevc: false, vp8: true, vp9: true, av1: true, aac: false, opus: true },
+    draw: { videoFrame: true, imageBitmap: true },
   },
   firefox: {
     ...ALL_FEATURES,
     decode: { h264: true, hevc: false, vp8: true, vp9: true, av1: true, aac: true, opus: true },
     decodes: { h264: true, hevc: false, vp8: true, vp9: true, av1: true, aac: true, opus: true },
     encode: { h264: true, hevc: false, vp8: true, vp9: true, av1: true, aac: false, opus: true },
+    draw: { videoFrame: true, imageBitmap: true },
   },
   // WebKit on Linux answers from the image's GStreamer plugins, which claim
   // every codec here, HEVC included.
@@ -96,6 +104,7 @@ export const MATRIX: Record<Engine, Capabilities> = {
     decode: { h264: true, hevc: true, vp8: true, vp9: true, av1: true, aac: true, opus: true },
     decodes: { h264: true, hevc: true, vp8: true, vp9: true, av1: true, aac: true, opus: true },
     encode: { h264: true, hevc: true, vp8: true, vp9: true, av1: true, aac: true, opus: true },
+    draw: { videoFrame: true, imageBitmap: true },
   },
 };
 
@@ -145,6 +154,17 @@ export function renderCapabilities(): string {
         `${codec.label}, from \`${DECODE_FIXTURES[codec.id].file}\``,
         (engine) => MATRIX[engine].decodes[codec.id],
       ),
+    ),
+    "",
+    "## Drawing a decoded frame in a worker",
+    "",
+    "Whether a decoded VP8 frame, from `landscape-vp8.webm`, draws into a worker's 2D `OffscreenCanvas` and reads back opaque, which playback's scheduler relies on (docs/adr/0006).",
+    "",
+    header,
+    row("`drawImage(frame)`", (engine) => MATRIX[engine].draw.videoFrame),
+    row(
+      "`createImageBitmap(frame)`, then `drawImage(bitmap)`",
+      (engine) => MATRIX[engine].draw.imageBitmap,
     ),
     "",
     "## Encoding",
