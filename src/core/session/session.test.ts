@@ -147,6 +147,17 @@ describe("the video session", () => {
     expect(engine.sources.size).toBe(1);
   });
 
+  it("counts inserts in flight against maxFiles, so concurrent inserts can't exceed it", async () => {
+    const { session, engine } = setup({ maxFiles: 2 });
+    await session.insert(file());
+    const results = await Promise.allSettled([session.insert(file()), session.insert(file())]);
+    expect(results.filter((result) => result.status === "fulfilled")).toHaveLength(1);
+    const [refused] = results.filter((result) => result.status === "rejected");
+    expect(code((refused as PromiseRejectedResult).reason)).toBe("TOO_MANY_FILES");
+    expect(engine.sources.size).toBe(2);
+    expect(session.getSnapshot().sources).toHaveLength(2);
+  });
+
   it("refuses an insert that would break maxClips or the plan's maxDuration, and closes its source", async () => {
     const clips = setup({ maxClips: 1 });
     await clips.session.insert(file());

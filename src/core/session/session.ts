@@ -303,7 +303,9 @@ export function createVideoSession(options: VideoSessionOptions): VideoSession {
       publish();
       try {
         throwIfAborted(signal);
-        policy.check("maxFiles", sources.size + 1);
+        // Inserts still in flight count too, this one included, so that
+        // inserts started together can't pass the check together.
+        policy.check("maxFiles", sources.size + inserting);
         const probe = await engine.probe(file, {
           filePolicy: policy,
           ...(signal ? { signal } : {}),
