@@ -286,6 +286,13 @@ async function playFromGesture(target: VideoOutput): Promise<void> {
 }
 
 /**
+ * Why the audio tests skip where there's no audio output. Firefox in the CI
+ * image has none until sdk-ci's image gains an audio sink.
+ */
+const NO_AUDIO_OUTPUT =
+  "no audio output: an AudioContext stays suspended even after a click (Firefox in the CI image, until sdk-ci adds an audio sink)";
+
+/**
  * Whether this browser can play audio here at all: a fresh context resumed
  * from a real click. Firefox in the CI image has no audio output, so its
  * contexts stay suspended even then.
@@ -365,7 +372,11 @@ describe("audio as the clock", () => {
     const blocks = probe.state === "suspended";
     await probe.close();
     // Where this browser lets audio start without a gesture, the unit tests cover blocking.
-    if (!blocks) context.skip();
+    if (!blocks) {
+      context.skip(
+        "this browser starts audio without a gesture here; the unit tests cover blocked audio",
+      );
+    }
     const real = await setup(numberedBeeps);
     output = real.output;
     trace();
@@ -382,7 +393,7 @@ describe("audio as the clock", () => {
   });
 
   it("draws each flash within one output frame of when its tone is heard, across cuts", async (context) => {
-    if (!(await audioOutputExists())) context.skip();
+    if (!(await audioOutputExists())) context.skip(NO_AUDIO_OUTPUT);
     const real = await setup(numberedBeeps);
     output = real.output;
     trace();
@@ -421,7 +432,7 @@ describe("audio as the clock", () => {
   });
 
   it("mutes during playback without a gap, and releases every window", async (context) => {
-    if (!(await audioOutputExists())) context.skip();
+    if (!(await audioOutputExists())) context.skip(NO_AUDIO_OUTPUT);
     const real = await setup(numberedBeeps);
     output = real.output;
     trace();
