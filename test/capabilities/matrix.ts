@@ -44,7 +44,7 @@ export const MEASURED = {
   playwright: "1.65.0",
   chromium: "Chromium 158",
   firefox: "Firefox 159",
-  webkit: "WebKit 27.2 (Linux, GStreamer)",
+  webkit: "WebKit 27.2 (Linux)",
 } as const;
 
 const ALL_FEATURES = {
@@ -70,10 +70,12 @@ export const MATRIX: Record<Engine, Capabilities> = {
     decode: { h264: true, hevc: false, vp8: true, vp9: true, av1: true, aac: true, opus: true },
     encode: { h264: true, hevc: false, vp8: true, vp9: true, av1: true, aac: false, opus: true },
   },
+  // WebKit on Linux answers from the image's GStreamer plugins, which claim
+  // every codec here, HEVC included.
   webkit: {
     ...ALL_FEATURES,
-    decode: { h264: false, hevc: false, vp8: true, vp9: false, av1: false, aac: false, opus: true },
-    encode: { h264: false, hevc: false, vp8: true, vp9: true, av1: false, aac: false, opus: true },
+    decode: { h264: true, hevc: true, vp8: true, vp9: true, av1: true, aac: true, opus: true },
+    encode: { h264: true, hevc: true, vp8: true, vp9: true, av1: true, aac: true, opus: true },
   },
 };
 
@@ -90,9 +92,9 @@ export function renderCapabilities(): string {
     "",
     "<!-- Generated from test/capabilities/matrix.ts by test/capabilities/capabilities.test.ts. Don't edit it by hand: change the matrix, then run `pnpm exec vitest run --project unit test/capabilities -u`. -->",
     "",
-    `What each browser engine in the test matrix offers the SDK, measured in a worker by \`test/capabilities/capabilities.browser.test.ts\` on every \`pnpm test:browser:all\` and in CI, with Playwright ${MEASURED.playwright}'s builds. A browser that changes fails that test.`,
+    `What each browser engine in the test matrix offers the SDK: Playwright ${MEASURED.playwright}'s builds, in the pinned browser test image of \`ci/Dockerfile\` (sdk-core ADR 0025), where CI runs. \`test/capabilities/capabilities.browser.test.ts\` measures it in a worker in that image, in CI and with \`pnpm test:browser:image\`, so a browser that changes fails a test. Elsewhere it skips, because another machine's browsers can differ.`,
     "",
-    "These are Playwright's builds, not every release of each browser. In particular, Playwright's WebKit on Linux is the GStreamer port, which decodes far fewer codecs than Safari on macOS and iOS. The SDK asks the browser it runs in, with `isConfigSupported`, before it opens a file or chooses an export's codecs (docs/adr/0001), so this table documents the test environment rather than limiting any browser.",
+    "These are Playwright's builds, not every release of each browser. Playwright's WebKit on Linux answers from the system's GStreamer plugins: in the image they claim every codec here, while on a machine with fewer plugins the same WebKit decodes only VP8 and Opus. Neither is Safari. Whether a claimed codec really decodes is tested when decoding lands. The SDK asks the browser it runs in, with `isConfigSupported`, before it opens a file or chooses an export's codecs (docs/adr/0001), so this table documents the test environment rather than limiting any browser.",
     "",
     "## APIs",
     "",

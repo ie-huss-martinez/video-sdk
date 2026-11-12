@@ -30,12 +30,12 @@ ffmpeg -y -v error -f lavfi -i "$(pattern 1280x720 2)" "${h264[@]}" "${exact[@]}
 # Stored 1280 × 720 and turned a quarter clockwise by the container.
 ffmpeg -y -v error -display_rotation:v:0 -90 -i landscape.mp4 -c copy "${exact[@]}" -f mov rotated.mov
 
-# VP8 and Opus, which every browser engine in the test matrix decodes,
-# including Playwright's WebKit on Linux (docs/capabilities.md).
+# VP8 and Opus, which every browser engine decodes, including Playwright's
+# WebKit on Linux with few GStreamer plugins (docs/capabilities.md).
 ffmpeg -y -v error -f lavfi -i "$(pattern 1280x720 2)" -f lavfi -i "$(tone 2)" \
   -c:v libvpx -deadline realtime -cpu-used 8 -crf 60 -b:v 500k -threads 1 -g 30 \
   "${opus[@]}" "${exact[@]}" -shortest landscape-vp8.webm
-# HEVC, which no engine in the test matrix decodes: for UNSUPPORTED_CODEC.
+# HEVC, which Chromium and Firefox don't decode: for UNSUPPORTED_CODEC.
 ffmpeg -y -v error -f lavfi -i "$(pattern 320x180 0.5)" -f lavfi -i "$(tone 0.5)" \
   -c:v libx265 -preset ultrafast -crf 45 -pix_fmt yuv420p -tag:v hvc1 \
   -x265-params log-level=error:pools=none:frame-threads=1 \

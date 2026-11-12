@@ -29,8 +29,13 @@ describeVideoEngineContract("video engine", {
   createEngine: () => createVideoEngine(),
   // VP8 and Opus, which every engine in the test matrix decodes (docs/capabilities.md).
   landscape: async () => new Blob([await bytes(landscapeVp8)]),
-  // HEVC, which none of them decodes.
-  undecodable: async () => new Blob([await bytes(hevcMp4)]),
+  // HEVC, where this browser can't decode it: Chromium and Firefox can't,
+  // while the image's WebKit claims it can (docs/capabilities.md).
+  async undecodable() {
+    const hevc = { codec: "hvc1.1.6.L93.B0", codedWidth: 320, codedHeight: 180 };
+    if ((await VideoDecoder.isConfigSupported(hevc)).supported) return undefined;
+    return new Blob([await bytes(hevcMp4)]);
+  },
   rotated: async () => new Blob([await bytes(rotatedMov)]),
   silent: async () => new Blob([await bytes(silentMp4)]),
   lyingHeader,

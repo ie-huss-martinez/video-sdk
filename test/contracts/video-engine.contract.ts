@@ -14,8 +14,12 @@ export interface VideoEngineHarness {
    * audio, in codecs every browser in the test matrix decodes.
    */
   landscape(): Promise<Blob>;
-  /** A valid file whose video codec this browser can't decode. */
-  undecodable(): Promise<Blob>;
+  /**
+   * A valid file whose video codec this browser can't decode, or
+   * `undefined` where every codec in the fixtures decodes, and the test
+   * that needs it skips.
+   */
+  undecodable(): Promise<Blob | undefined>;
   /** The same, stored 1280 × 720 with a container rotation of 90°. */
   rotated(): Promise<Blob>;
   /** 1280 × 720 at 30 frames per second, 2 seconds long, with no audio track. */
@@ -105,9 +109,13 @@ export function describeVideoEngineContract(name: string, harness: VideoEngineHa
       await engine.destroy();
     });
 
-    it("opens only files this browser can decode, naming the codec otherwise", async () => {
-      const engine = harness.createEngine();
+    it("opens only files this browser can decode, naming the codec otherwise", async (context) => {
       const file = await harness.undecodable();
+      if (file === undefined) {
+        context.skip("this browser claims to decode every codec in the fixtures");
+        return;
+      }
+      const engine = harness.createEngine();
       const probe = await engine.probe(file);
       const error = await rejection(engine.open("u", file, probe));
       expect(isVideoError(error, "UNSUPPORTED_CODEC")).toBe(true);

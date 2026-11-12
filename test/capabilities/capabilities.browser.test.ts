@@ -1,9 +1,11 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, inject, it } from "vitest";
 import { server } from "vitest/browser";
 import { type Engine, MATRIX, type PAGE_FEATURES } from "./matrix.js";
 
-// The capability matrix, checked in each engine (docs/capabilities.md).
-describe(`the capability matrix in ${server.browser}`, () => {
+// The capability matrix, checked in each engine (docs/capabilities.md). It
+// holds in the pinned browser image, where CI runs; another machine's
+// browsers can differ, so elsewhere these skip.
+describe.skipIf(!inject("browserImage"))(`the capability matrix in ${server.browser}`, () => {
   const expected = MATRIX[server.browser as Engine];
 
   it("matches what this engine offers in a worker", async () => {
