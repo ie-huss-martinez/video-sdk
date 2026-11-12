@@ -47,6 +47,15 @@ Whether a generated file in the codec really decodes: ten video frames through t
 | AAC-LC, from `landscape.mp4` | yes | yes | yes |
 | Opus, from `landscape.webm` | yes | yes | yes |
 
+## Drawing a decoded frame in a worker
+
+Whether a decoded VP8 frame, from `landscape-vp8.webm`, draws into a worker's 2D `OffscreenCanvas` and reads back opaque, which playback's scheduler relies on (docs/adr/0006).
+
+| | Chromium 158 | Firefox 159 | WebKit 27.2 (Linux) |
+|---|---|---|---|
+| `drawImage(frame)` | yes | yes | yes |
+| `createImageBitmap(frame)`, then `drawImage(bitmap)` | yes | yes | yes |
+
 ## Encoding
 
 | | Chromium 158 | Firefox 159 | WebKit 27.2 (Linux) |
