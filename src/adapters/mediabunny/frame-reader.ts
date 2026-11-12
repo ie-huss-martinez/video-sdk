@@ -26,7 +26,7 @@ export interface FrameReader {
   readonly audio: {
     decode(
       range: AudioRange,
-      onData: (data: AudioData) => void | Promise<void>,
+      onData: (data: AudioData, timestamp: number) => void | Promise<void>,
       signal: AbortSignal,
     ): Promise<number>;
   } | null;
@@ -79,7 +79,7 @@ export async function openFrameReader(file: Blob, probe: VideoProbe): Promise<Fr
       ? {
           decode: (
             range: AudioRange,
-            onData: (data: AudioData) => void | Promise<void>,
+            onData: (data: AudioData, timestamp: number) => void | Promise<void>,
             signal: AbortSignal,
           ) => decodeAudioData(audioTrack, audioConfig, range, onData, signal),
         }

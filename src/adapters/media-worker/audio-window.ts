@@ -60,10 +60,9 @@ async function decodeSpan(
       from: probe.start + (span.start * 1_000_000) / sourceRate,
       to: probe.start + (span.end * 1_000_000) / sourceRate,
     },
-    (data) => {
+    (data, timestamp) => {
       if (scratch.length < data.numberOfFrames) scratch = new Float32Array(data.numberOfFrames);
-      const offset =
-        Math.round(((data.timestamp - probe.start) * sourceRate) / 1_000_000) - span.start;
+      const offset = Math.round(((timestamp - probe.start) * sourceRate) / 1_000_000) - span.start;
       const skip = Math.max(0, -offset);
       const take = Math.min(data.numberOfFrames, length - offset) - skip;
       if (take <= 0) return;

@@ -26,7 +26,7 @@ export async function audioPeaks(
       audio,
       config,
       { from: Number.NEGATIVE_INFINITY, to: Number.POSITIVE_INFINITY },
-      (data) => {
+      (data, timestamp) => {
         if (
           buffers.length !== data.numberOfChannels ||
           (buffers[0]?.length ?? 0) < data.numberOfFrames
@@ -42,7 +42,7 @@ export async function audioPeaks(
           return view;
         });
         peaks.add({
-          timestamp: data.timestamp,
+          timestamp,
           sampleRate: data.sampleRate,
           numberOfFrames: data.numberOfFrames,
           channels,
