@@ -4,10 +4,10 @@ import { familyOf, openInput, pickTracks } from "./tracks.js";
 
 /**
  * Checks that this browser can decode the tracks the SDK uses from a file
- * that has passed the front check (ADR 0001, ADR 0002): WebCodecs' `VideoDecoder` and
- * `AudioDecoder` must exist where this runs, a worker, and each track's
- * decoder configuration must be supported. Nothing is decoded or configured;
- * `isConfigSupported` only asks.
+ * that has passed the front check (ADR 0001, ADR 0002): WebCodecs'
+ * `VideoDecoder` and `AudioDecoder` must exist where this runs, a worker, and
+ * each track's decoder configuration must be supported. Nothing is decoded or
+ * configured; `isConfigSupported` only asks.
  *
  * Throws `VideoError`: `UNSUPPORTED_ENVIRONMENT` with `details.feature`
  * without WebCodecs, `UNSUPPORTED_CODEC` with `details.codec` and
