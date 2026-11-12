@@ -44,13 +44,14 @@ describe("the media worker with guarded globals", () => {
         new Worker(new URL("./guarded.worker.ts", import.meta.url), { type: "module" }),
       errorClasses: { VideoError },
     });
-    expect(await client.call("tripGuard", undefined)).toBe(7);
+    expect(await client.call("tripGuard", undefined)).toBe(8);
     expect(await client.call("forbiddenCalls", undefined)).toEqual([
       "fetch",
       "XMLHttpRequest",
       "importScripts",
       "Worker",
       "WebSocket",
+      "WebTransport",
       "EventSource",
       "URL.createObjectURL",
     ]);

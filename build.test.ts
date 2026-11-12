@@ -160,7 +160,7 @@ describe("the media worker (docs/adr/0001, docs/adr/0002)", () => {
     // The worker's only inputs are the Blobs the page sends it (ADR 0028).
     const code = workerCode();
     expect(code).not.toMatch(
-      /(?<![\w$.])fetch\s*\(|fetchFn|XMLHttpRequest|importScripts|WebSocket/,
+      /(?<![\w$.])fetch\s*\(|fetchFn|XMLHttpRequest|importScripts|WebSocket|WebTransport|EventSource/,
     );
     expect(code).not.toMatch(/new\s+Worker\s*\(|createObjectURL/);
   });

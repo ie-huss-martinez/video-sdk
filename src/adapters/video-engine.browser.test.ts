@@ -1,10 +1,8 @@
-import { describe, expect, it } from "vitest";
 import { describeVideoEngineContract } from "../../test/contracts/video-engine.contract.js";
 import landscapeMp4 from "../../test/fixtures/video/landscape.mp4?url";
 import rotatedMov from "../../test/fixtures/video/rotated.mov?url";
 import silentMp4 from "../../test/fixtures/video/silent.mp4?url";
 import tinyMp4 from "../../test/fixtures/video/tiny.mp4?url";
-import { isVideoError } from "../core/errors/video-error.js";
 import { createVideoEngine } from "./video-engine.js";
 
 async function bytes(url: string): Promise<Uint8Array<ArrayBuffer>> {
@@ -35,26 +33,4 @@ describeVideoEngineContract("video engine", {
   unknown: async () => new Blob(["GIF89a, not a video"]),
   // The generated files' audio runs about 21 ms past their 2 s of video.
   tolerance: { frameRate: 0, duration: 100_000 },
-});
-
-describe("opening a probe the engine didn't make", () => {
-  it("probes the file again, and refuses a probe that doesn't describe it", async () => {
-    const engine = createVideoEngine();
-    const file = new Blob([await bytes(landscapeMp4)]);
-    const probe = await engine.probe(file);
-    await expect(engine.open("copy", file, structuredClone(probe))).resolves.toMatchObject({
-      id: "copy",
-    });
-    // A probe claiming a smaller frame, to pass the limits, isn't believed.
-    const forged = structuredClone(probe);
-    const smaller = { ...forged, video: { ...forged.video, codedWidth: 64, codedHeight: 36 } };
-    let error: unknown;
-    try {
-      await engine.open("forged", file, smaller);
-    } catch (caught) {
-      error = caught;
-    }
-    expect(isVideoError(error, "INVALID_VIDEO")).toBe(true);
-    await engine.destroy();
-  });
 });

@@ -18,6 +18,7 @@ for (const name of [
   "importScripts",
   "Worker",
   "WebSocket",
+  "WebTransport",
   "EventSource",
 ]) {
   Object.defineProperty(scope, name, { value: trap(name), configurable: true, writable: true });

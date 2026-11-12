@@ -66,17 +66,27 @@ export function createVideoEngine(options: VideoEngineOptions = {}): VideoEngine
   });
 }
 
-/** Whether two probes describe the same file. */
-function sameFile(a: VideoProbe, b: VideoProbe): boolean {
-  return (
-    a.container === b.container &&
-    a.duration === b.duration &&
-    a.video.codec === b.video.codec &&
-    a.video.codedWidth === b.video.codedWidth &&
-    a.video.codedHeight === b.video.codedHeight &&
-    a.video.packets === b.video.packets &&
-    a.audio?.codec === b.audio?.codec
+/**
+ * Whether two probes are the same, field by field. A probe is plain data:
+ * numbers, strings, `null` and objects of them.
+ */
+function sameProbe(a: unknown, b: unknown): boolean {
+  if (a === b) return true;
+  if (typeof a !== "object" || typeof b !== "object" || a === null || b === null) return false;
+  const keys = Object.keys(a);
+  if (keys.length !== Object.keys(b).length) return false;
+  return keys.every(
+    (key) =>
+      Object.hasOwn(b, key) &&
+      sameProbe((a as Record<string, unknown>)[key], (b as Record<string, unknown>)[key]),
   );
+}
+
+/** Freezes a probe and everything in it, so that a trusted probe can't change. */
+function freeze(probe: VideoProbe): VideoProbe {
+  Object.freeze(probe.video);
+  if (probe.audio) Object.freeze(probe.audio);
+  return Object.freeze(probe);
 }
 
 /**
@@ -129,7 +139,9 @@ export function createEngine(environment: EngineEnvironment): VideoEngine {
       (timed) => media.call("probe", { file, limits: policy.limits }, { signal: timed }),
       signal ? { signal } : {},
     );
-    trusted.add(probed);
+    // Frozen before it's trusted: a caller can't lower a value in it to pass
+    // the limits, then open the file with it.
+    trusted.add(freeze(probed));
     return probed;
   }
 
@@ -146,21 +158,25 @@ export function createEngine(environment: EngineEnvironment): VideoEngine {
         assertAlive();
         throwIfAborted(options.signal);
         if (sources.has(id)) throw new TypeError(`The source "${id}" is already open.`);
-        // A probe the caller rebuilt or copied: probe the file again, and
-        // make sure it describes the same file, so that limits were checked
-        // against what the file really holds.
+        // A probe the caller rebuilt or copied, such as one restored from a
+        // saved session: probe the file again, under the caller's policy,
+        // and open it with the fresh probe only if every field matches, so
+        // that limits were checked against what the file really holds.
+        let opened = given;
         if (!trusted.has(given)) {
-          const fresh = await probe(file, videoLimits.resolve(), options.signal);
-          if (!sameFile(fresh, given)) {
+          const policy = options.filePolicy ?? videoLimits.resolve();
+          const fresh = await probe(file, policy, options.signal);
+          if (!sameProbe(fresh, given)) {
             throw new VideoError("INVALID_VIDEO", "The probe doesn't describe this file.", {
-              details: { container: given.container, reason: "probe" },
+              details: { container: fresh.container, reason: "probe" },
             });
           }
+          opened = fresh;
         }
         throwIfAborted(options.signal);
         if (sources.has(id)) throw new TypeError(`The source "${id}" is already open.`);
-        sources.set(id, { file, probe: given });
-        return sourceInfo(id, given);
+        sources.set(id, { file, probe: opened });
+        return sourceInfo(id, opened);
       });
     },
     async close(id) {

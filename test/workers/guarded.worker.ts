@@ -24,6 +24,10 @@ exposeWorker<GuardedContract>({
         (globalThis as unknown as { importScripts: (url: string) => void }).importScripts("x.js"),
       () => new Worker("x.js"),
       () => new WebSocket("wss://example.com"),
+      () =>
+        new (globalThis as unknown as { WebTransport: new (url: string) => unknown }).WebTransport(
+          "https://example.com",
+        ),
       () => new EventSource("https://example.com"),
       () => URL.createObjectURL(new Blob()),
     ];

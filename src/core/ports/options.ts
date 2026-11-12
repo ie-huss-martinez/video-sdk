@@ -15,7 +15,8 @@ export interface VideoCallOptions {
 }
 
 /**
- * Options for probing a file.
+ * Options for probing a file, and for opening one whose probe the engine
+ * didn't make, which probes it again.
  *
  * @public
  */

@@ -324,7 +324,7 @@ export interface VideoCrop {
 export interface VideoEngine {
     close(id: string): Promise<void>;
     destroy(): Promise<void>;
-    open(id: string, file: Blob, probe: VideoProbe, options?: VideoCallOptions): Promise<VideoSourceInfo>;
+    open(id: string, file: Blob, probe: VideoProbe, options?: VideoProbeOptions): Promise<VideoSourceInfo>;
     probe(file: Blob, options?: VideoProbeOptions): Promise<VideoProbe>;
 }
 
