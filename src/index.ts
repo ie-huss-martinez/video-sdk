@@ -83,7 +83,11 @@ export type {
 } from "./core/operations/commands.js";
 export { createVideoReducer } from "./core/operations/commands.js";
 export type { Applied, Reducer } from "./core/operations/reducer-types.js";
-export type { VideoCallOptions, VideoProgressOptions } from "./core/ports/options.js";
+export type {
+  VideoCallOptions,
+  VideoProbeOptions,
+  VideoProgressOptions,
+} from "./core/ports/options.js";
 export type { VideoEngine } from "./core/ports/video-engine.js";
 export type {
   VideoOutput,

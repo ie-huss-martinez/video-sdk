@@ -322,7 +322,7 @@ export interface VideoEngine {
     close(id: string): Promise<void>;
     destroy(): Promise<void>;
     open(id: string, file: Blob, probe: VideoProbe, options?: VideoCallOptions): Promise<VideoSourceInfo>;
-    probe(file: Blob, options?: VideoCallOptions): Promise<VideoProbe>;
+    probe(file: Blob, options?: VideoProbeOptions): Promise<VideoProbe>;
 }
 
 // @public
@@ -602,6 +602,11 @@ export interface VideoProbe {
     readonly tracks: number;
     // (undocumented)
     readonly video: VideoTrackProbe;
+}
+
+// @public
+export interface VideoProbeOptions extends VideoCallOptions {
+    readonly filePolicy?: VideoFilePolicy;
 }
 
 // @public

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isVideoError, type VideoEngine } from "../../src/index.js";
+import { isVideoError, type VideoEngine, videoLimits } from "../../src/index.js";
 import { aborted, rejection } from "./helpers.js";
 
 /**
@@ -77,6 +77,25 @@ export function describeVideoEngineContract(name: string, harness: VideoEngineHa
       ).toBe(true);
       expect(
         isVideoError(await rejection(engine.probe(await harness.unknown())), "UNSUPPORTED_FORMAT"),
+      ).toBe(true);
+      await engine.destroy();
+    });
+
+    it("applies the policy's file-size and index limits itself", async () => {
+      const engine = harness.createEngine();
+      const file = await harness.landscape();
+      const tiny = (limit: "maxFileSize" | "maxIndexSize") => videoLimits.resolve({ [limit]: 10 });
+      expect(
+        isVideoError(
+          await rejection(engine.probe(file, { filePolicy: tiny("maxFileSize") })),
+          "FILE_TOO_LARGE",
+        ),
+      ).toBe(true);
+      expect(
+        isVideoError(
+          await rejection(engine.probe(file, { filePolicy: tiny("maxIndexSize") })),
+          "INDEX_TOO_LARGE",
+        ),
       ).toBe(true);
       await engine.destroy();
     });

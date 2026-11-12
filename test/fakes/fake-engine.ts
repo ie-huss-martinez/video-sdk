@@ -7,6 +7,7 @@ import {
   VideoError,
   type VideoProbe,
   type VideoSourceInfo,
+  videoLimits,
 } from "../../src/index.js";
 import { decodeFakeVideo } from "./fake-video.js";
 
@@ -51,6 +52,9 @@ export function createFakeEngine(): FakeEngine {
         throw new VideoError("INVALID_VIDEO", "The fake video's tracks are malformed.");
       }
       throwIfAborted(options?.signal);
+      const policy = options?.filePolicy ?? videoLimits.resolve();
+      policy.check("maxFileSize", file.size);
+      policy.check("maxIndexSize", 64 * spec.frames);
       const walked = frameTime(spec.frames, spec.rate);
       const declared = frameTime(spec.declaredFrames ?? spec.frames, spec.rate);
       const probe: VideoProbe = {

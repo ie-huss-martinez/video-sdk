@@ -96,6 +96,7 @@
     "fast-check": "catalog:",
     "husky": "catalog:",
     "lint-staged": "catalog:",
+    "mediabunny": "catalog:",
     "playwright": "catalog:",
     "publint": "catalog:",
     "react": "catalog:",
