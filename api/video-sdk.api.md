@@ -325,6 +325,7 @@ export interface VideoEngine {
     close(id: string): Promise<void>;
     destroy(): Promise<void>;
     open(id: string, file: Blob, probe: VideoProbe, options?: VideoProbeOptions): Promise<VideoSourceInfo>;
+    peaks(id: string, options?: VideoProbeOptions): Promise<VideoPeaks | null>;
     probe(file: Blob, options?: VideoProbeOptions): Promise<VideoProbe>;
 }
 
@@ -574,6 +575,15 @@ export interface VideoOutputSnapshot {
 
 // @public
 export type VideoOutputState = "stopped" | "playing" | "paused";
+
+// @public
+export interface VideoPeaks {
+    readonly bucketDuration: number;
+    // (undocumented)
+    readonly max: Float32Array;
+    // (undocumented)
+    readonly min: Float32Array;
+}
 
 // @public
 export interface VideoPlan {

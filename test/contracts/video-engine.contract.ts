@@ -22,7 +22,10 @@ export interface VideoEngineHarness {
   undecodable(): Promise<Blob | undefined>;
   /** The same, stored 1280 × 720 with a container rotation of 90°. */
   rotated(): Promise<Blob>;
-  /** 1280 × 720 at 30 frames per second, 2 seconds long, with no audio track. */
+  /**
+   * 1280 × 720 at 30 frames per second, 2 seconds long, with no audio track,
+   * in a codec every browser in the test matrix decodes.
+   */
   silent(): Promise<Blob>;
   /** 2 seconds of packets, whose header claims 1 second. */
   lyingHeader(): Promise<Blob>;
@@ -123,6 +126,32 @@ export function describeVideoEngineContract(name: string, harness: VideoEngineHa
         codec: probe.video.codec,
         track: "video",
       });
+      await engine.destroy();
+    });
+
+    it("builds waveform peaks for an open source's audio, and none without audio", async () => {
+      const engine = harness.createEngine();
+      const file = await harness.landscape();
+      const source = await engine.open("a", file, await engine.probe(file));
+      const peaks = await engine.peaks("a");
+      if (peaks === null) throw new Error("expected peaks for a file with audio");
+      expect(peaks.bucketDuration).toBeGreaterThan(0);
+      expect(peaks.min.length).toBe(peaks.max.length);
+      expect(peaks.max.length).toBe(Math.ceil(source.duration / peaks.bucketDuration));
+      for (let i = 0; i < peaks.max.length; i += 1) {
+        expect(peaks.min[i]).toBeGreaterThanOrEqual(-1);
+        expect(peaks.min[i]).toBeLessThanOrEqual(peaks.max[i] as number);
+        expect(peaks.max[i]).toBeLessThanOrEqual(1);
+      }
+      // The fixtures hold a steady tone at an eighth of full scale.
+      expect(Math.max(...peaks.max)).toBeCloseTo(0.125, 1);
+      const silent = await harness.silent();
+      await engine.open("s", silent, await engine.probe(silent));
+      expect(await engine.peaks("s")).toBeNull();
+      expect(await rejection(engine.peaks("never-opened"))).toBeInstanceOf(TypeError);
+      expect(
+        isVideoError(await rejection(engine.peaks("a", { signal: aborted() })), "ABORTED"),
+      ).toBe(true);
       await engine.destroy();
     });
 

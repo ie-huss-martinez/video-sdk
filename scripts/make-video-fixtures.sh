@@ -37,6 +37,10 @@ ffmpeg -y -v error -display_rotation:v:0 -90 -i landscape.mp4 -c copy "${exact[@
 ffmpeg -y -v error -f lavfi -i "$(pattern 1280x720 2)" -f lavfi -i "$(tone 2)" \
   -c:v libvpx -deadline good -cpu-used 5 -crf 60 -b:v 500k -threads 1 -g 30 \
   "${opus[@]}" "${exact[@]}" -shortest landscape-vp8.webm
+# The same picture without audio, in VP8, for the engine contract.
+ffmpeg -y -v error -f lavfi -i "$(pattern 1280x720 2)" \
+  -c:v libvpx -deadline good -cpu-used 5 -crf 60 -b:v 500k -threads 1 -g 30 \
+  "${exact[@]}" silent-vp8.webm
 # HEVC, which Chromium and Firefox don't decode: for UNSUPPORTED_CODEC.
 ffmpeg -y -v error -f lavfi -i "$(pattern 320x180 0.5)" -f lavfi -i "$(tone 0.5)" \
   -c:v libx265 -preset ultrafast -crf 45 -pix_fmt yuv420p -tag:v hvc1 \

@@ -109,6 +109,20 @@ export function createFakeEngine(): FakeEngine {
       sources.set(id, info);
       return info;
     },
+    async peaks(id, options) {
+      assertAlive();
+      throwIfAborted(options?.signal);
+      const source = sources.get(id);
+      if (!source) throw new TypeError(`The source "${id}" isn't open.`);
+      if (source.audio === null) return null;
+      // A steady tone at an eighth of full scale, as the generated fixtures hold.
+      const buckets = Math.ceil(source.duration / 10_000);
+      return {
+        bucketDuration: 10_000,
+        min: new Float32Array(buckets).fill(-0.125),
+        max: new Float32Array(buckets).fill(0.125),
+      };
+    },
     async close(id) {
       assertAlive();
       sources.delete(id);

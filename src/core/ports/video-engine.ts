@@ -1,4 +1,4 @@
-import type { VideoProbe, VideoSourceInfo } from "../model/source.js";
+import type { VideoPeaks, VideoProbe, VideoSourceInfo } from "../model/source.js";
 import type { VideoProbeOptions } from "./options.js";
 
 /**
@@ -6,8 +6,8 @@ import type { VideoProbeOptions } from "./options.js";
  * it, and open probed files as sources for playback and export (ADR 0001,
  * ADR 0002, ADR 0008). The SDK's own adapter does this in its media worker;
  * hosts can pass their own to the editor's `engine` prop, and every
- * implementation must pass the engine's contract tests. Thumbnails and
- * waveform peaks join the port with the pull requests that build them.
+ * implementation must pass the engine's contract tests. Thumbnails join the
+ * port with the pull request that builds them.
  *
  * The engine applies only the limits that must hold before anything reads
  * the file's structure: `maxFileSize`, `maxIndexSize`, and the packet walk's
@@ -56,6 +56,13 @@ export interface VideoEngine {
     probe: VideoProbe,
     options?: VideoProbeOptions,
   ): Promise<VideoSourceInfo>;
+  /**
+   * Decodes an open source's audio and builds its waveform peaks: the lowest
+   * and highest sample of each bucket of time, across all channels. Resolves
+   * `null` for a source without audio. Rejects with `TypeError` if `id`
+   * isn't open, and runs under `filePolicy`'s processing time.
+   */
+  peaks(id: string, options?: VideoProbeOptions): Promise<VideoPeaks | null>;
   /** Closes a source once nothing refers to it. Closing an unknown id does nothing. */
   close(id: string): Promise<void>;
   /** Releases the engine and its worker. Pending calls reject, and later calls throw. */

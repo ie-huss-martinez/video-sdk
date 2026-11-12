@@ -195,6 +195,26 @@ export function createEngine(environment: EngineEnvironment): VideoEngine {
         return sourceInfo(id, opened);
       });
     },
+    peaks(id, options = {}) {
+      return run(async () => {
+        assertAlive();
+        throwIfAborted(options.signal);
+        const source = sources.get(id);
+        if (!source) throw new TypeError(`The source "${id}" isn't open.`);
+        const policy = options.filePolicy ?? videoLimits.resolve();
+        const media = await worker();
+        return withProcessingTime(
+          policy,
+          (timed) =>
+            media.call(
+              "peaks",
+              { file: source.file, limits: policy.limits, probe: source.probe },
+              { signal: timed },
+            ),
+          options.signal ? { signal: options.signal } : {},
+        );
+      });
+    },
     async close(id) {
       assertAlive();
       sources.delete(id);

@@ -4,7 +4,7 @@ import hevcMp4 from "../../test/fixtures/video/hevc.mp4?url";
 import landscapeMp4 from "../../test/fixtures/video/landscape.mp4?url";
 import landscapeVp8 from "../../test/fixtures/video/landscape-vp8.webm?url";
 import rotatedMov from "../../test/fixtures/video/rotated.mov?url";
-import silentMp4 from "../../test/fixtures/video/silent.mp4?url";
+import silentVp8 from "../../test/fixtures/video/silent-vp8.webm?url";
 import tinyMp4 from "../../test/fixtures/video/tiny.mp4?url";
 import { isVideoError } from "../core/errors/video-error.js";
 import { videoLimits } from "../core/errors/video-limits.js";
@@ -40,7 +40,7 @@ describeVideoEngineContract("video engine", {
     return new Blob([await bytes(hevcMp4)]);
   },
   rotated: async () => new Blob([await bytes(rotatedMov)]),
-  silent: async () => new Blob([await bytes(silentMp4)]),
+  silent: async () => new Blob([await bytes(silentVp8)]),
   lyingHeader,
   malformed: async () => new Blob([(await bytes(tinyMp4)).subarray(0, 2_000)]),
   unknown: async () => new Blob(["GIF89a, not a video"]),

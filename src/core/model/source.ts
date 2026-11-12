@@ -140,3 +140,18 @@ export function rotateSize(
 export function addRotations(a: VideoRotation, b: VideoRotation): VideoRotation {
   return ((a + b) % 360) as VideoRotation;
 }
+
+/**
+ * A source's waveform overview: the lowest and highest sample of each bucket
+ * of time, across all channels, so that drawing a waveform never decodes
+ * audio again (docs/adr/0002). Bucket `i` covers the source's time from
+ * `i × bucketDuration` microseconds.
+ *
+ * @public
+ */
+export interface VideoPeaks {
+  /** How long each bucket is, in microseconds. */
+  readonly bucketDuration: number;
+  readonly min: Float32Array;
+  readonly max: Float32Array;
+}

@@ -1,6 +1,7 @@
 import type { WorkerHandlers } from "@hussmartinez/sdk-core";
 import { videoLimits } from "../../core/errors/video-limits.js";
 import { frontCheck } from "../front-check/front-check.js";
+import { audioPeaks } from "../mediabunny/audio-peaks.js";
 import { checkDecoderSupport } from "../mediabunny/decoder-support.js";
 import { probeFile } from "../probe.js";
 import type { MediaWorkerContract } from "./contract.js";
@@ -17,6 +18,10 @@ export function mediaWorkerHandlers(): WorkerHandlers<MediaWorkerContract> {
       await frontCheck(file, videoLimits.resolve(limits));
       await checkDecoderSupport(file, probe, signal);
       return undefined;
+    },
+    async peaks({ file, limits, probe }, { signal }) {
+      await frontCheck(file, videoLimits.resolve(limits));
+      return audioPeaks(file, probe, signal);
     },
   };
 }
