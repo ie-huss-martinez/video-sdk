@@ -89,6 +89,7 @@ What a session costs in memory isn't its sources, which stay `Blob`s, but what's
 
 - **Thumbnails and audio windows are evicted, oldest first,** to stay under it. They can always be made again from the sources.
 - **Peaks of every open source are kept,** because the timeline shows them. If they alone would exceed the maximum, an insert fails with `SESSION_TOO_LARGE`. Peaks cost a few kilobytes per minute, so in practice this is the protection against thousands of long sources, not a limit people meet.
+- **Not checked yet:** the session holds no cache so far; waveform peaks come from the engine on demand. So it doesn't check `maxSessionSize` yet. The check joins the session with its first cache, thumbnails or audio windows.
 - **Sources that only history refers to cost only their `Blob`s,** which the browser already holds. So history is never trimmed for memory, unlike audio-sdk's, where history holds decoded sources.
 
 ### Peak memory while opening

@@ -31,6 +31,12 @@ export interface AudioTrackProbe {
 }
 
 // @public
+export function checkOutput(policy: VideoFilePolicy, output: VideoPlanOutput): readonly VideoLimitName[];
+
+// @public
+export function checkPlanLength(policy: VideoFilePolicy, plan: VideoPlan): boolean;
+
+// @public
 export function checkProbe(policy: VideoFilePolicy, probe: VideoProbe): readonly VideoLimitName[];
 
 // @public
@@ -50,6 +56,9 @@ export function createVideoEngine(options?: VideoEngineOptions): VideoEngine;
 
 // @public
 export function createVideoReducer(sourceInfo: (id: string) => VideoSourceInfo | undefined): Reducer<VideoPlan, VideoCommand>;
+
+// @public
+export function createVideoSession(options: VideoSessionOptions): VideoSession;
 
 // @public
 export function dbToGain(db: number): number;
@@ -377,6 +386,13 @@ export type VideoFilePolicyOverrides = FilePolicyOverrides<VideoLimitDefinitions
 export type VideoFit = "contain" | "cover";
 
 // @public
+export interface VideoInsertOptions {
+    readonly at?: number;
+    // (undocumented)
+    readonly signal?: AbortSignal;
+}
+
+// @public
 export type VideoLimitDefinitions = typeof videoLimitDefinitions;
 
 // @public
@@ -643,6 +659,52 @@ export interface VideoProgressOptions extends VideoCallOptions {
 export type VideoRotation = 0 | 90 | 180 | 270;
 
 // @public
+export interface VideoSession {
+    destroy(): Promise<void>;
+    execute(commands: VideoCommand | readonly VideoCommand[]): void;
+    // (undocumented)
+    getSnapshot(): VideoSessionSnapshot;
+    insert(file: Blob, options?: VideoInsertOptions): Promise<VideoSourceInfo>;
+    redo(): boolean;
+    select(range: VideoTimelineRange | null): void;
+    subscribe(listener: () => void): () => void;
+    undo(): boolean;
+}
+
+// @public
+export interface VideoSessionEvent {
+    readonly commands: readonly VideoCommand["type"][];
+    // (undocumented)
+    readonly outcome: "done" | "failed" | "cancelled";
+    // (undocumented)
+    readonly type: "insert" | "execute" | "undo" | "redo";
+}
+
+// @public
+export interface VideoSessionOptions {
+    readonly engine: VideoEngine;
+    readonly filePolicy?: VideoFilePolicyOverrides;
+    // (undocumented)
+    readonly onEvent?: (event: VideoSessionEvent) => void;
+}
+
+// @public
+export interface VideoSessionSnapshot {
+    // (undocumented)
+    readonly canRedo: boolean;
+    // (undocumented)
+    readonly canUndo: boolean;
+    readonly decodingBytes: number;
+    readonly error: VideoError | null;
+    readonly inserting: number;
+    readonly plan: VideoPlan | null;
+    readonly selection: VideoTimelineRange | null;
+    readonly sources: readonly VideoSourceInfo[];
+    readonly status: "empty" | "ready";
+    readonly warnings: readonly VideoLimitName[];
+}
+
+// @public
 export interface VideoSourceInfo {
     // (undocumented)
     readonly audio: AudioTrackProbe | null;
@@ -659,6 +721,14 @@ export interface VideoSourceInfo {
         readonly rotation: VideoRotation;
         readonly frameRate: number;
     };
+}
+
+// @public
+export interface VideoTimelineRange {
+    // (undocumented)
+    readonly end: number;
+    // (undocumented)
+    readonly start: number;
 }
 
 // @public

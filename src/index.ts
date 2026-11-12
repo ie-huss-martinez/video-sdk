@@ -47,7 +47,12 @@ export {
   snapFrameRate,
   VOLUME_RANGE,
 } from "./core/model/plan.js";
-export { checkProbe, decodingBound } from "./core/model/probe-limits.js";
+export {
+  checkOutput,
+  checkPlanLength,
+  checkProbe,
+  decodingBound,
+} from "./core/model/probe-limits.js";
 export type {
   AudioTrackProbe,
   VideoContainer,
@@ -103,5 +108,14 @@ export type {
   VideoExportQuality,
   VideoProcessor,
 } from "./core/ports/video-processor.js";
+export type {
+  VideoInsertOptions,
+  VideoSession,
+  VideoSessionEvent,
+  VideoSessionOptions,
+  VideoSessionSnapshot,
+  VideoTimelineRange,
+} from "./core/session/session.js";
+export { createVideoSession } from "./core/session/session.js";
 export type { VideoMessageCatalogue } from "./messages/en.js";
 export { videoMessages } from "./messages/en.js";
