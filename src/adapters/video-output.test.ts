@@ -193,6 +193,24 @@ describe("the video output's page side", () => {
     });
   });
 
+  it("ends at once when the page is visible again after the clock passed the end while hidden", async () => {
+    const t = setup();
+    t.output.load(planOf(30));
+    const ended = vi.fn();
+    t.output.on("ended", ended);
+    await t.output.play();
+    t.setHidden(true);
+    // A hidden tab's timers run late: move the clock past the end without firing them.
+    vi.setSystemTime(Date.now() + 5_000);
+    expect(ended).not.toHaveBeenCalled();
+    t.setHidden(false);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(ended).toHaveBeenCalledTimes(1);
+    expect(t.output.getSnapshot().state).toBe("stopped");
+    expect(t.output.position()).toBe(30);
+    expect(t.last()).toEqual({ mode: "pause" });
+  });
+
   it("re-anchors at the playhead when the plan changes while playing, and stops at a shorter plan's end", async () => {
     const t = setup();
     t.output.load(planOf(90));

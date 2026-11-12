@@ -263,8 +263,12 @@ export function createOutput(environment: OutputEnvironment): VideoOutput {
 
   const onVisibility = () => {
     // Hidden: the worker stops decoding while the clock runs on. Visible
-    // again: it resyncs to the clock like a seek (docs/adr/0006).
-    if (!destroyed && anchor) void send(command());
+    // again: it resyncs to the clock like a seek (docs/adr/0006). Hidden
+    // tabs throttle timers, Chrome's to one a minute after five minutes, so
+    // the end is checked again: a clock past it ends playback at once.
+    if (destroyed || !anchor) return;
+    watchEnd();
+    if (anchor) void send(command());
   };
 
   /** Stops the clock where it is, keeping the frame drawn. */

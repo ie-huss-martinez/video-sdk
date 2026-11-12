@@ -38,7 +38,11 @@ export function describeVideoOutputContract(name: string, harness: VideoOutputHa
       const { output, source, elapse } = await harness.create();
       output.load(planOf(clipOf("x", source, 0, 90)));
       const states: string[] = [];
-      output.subscribe(() => states.push(output.getSnapshot().state));
+      // A subscriber is also notified of other changes, such as dropped frames: record state changes only.
+      output.subscribe(() => {
+        const { state } = output.getSnapshot();
+        if (states.at(-1) !== state) states.push(state);
+      });
       await output.play();
       await elapse(30);
       expect(states).toEqual(["playing"]);
