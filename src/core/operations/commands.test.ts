@@ -261,6 +261,26 @@ describe("the video reducer, command by command", () => {
     ).toBe(true);
   });
 
+  it("moves a clip's start back when even one frame of a new rate wouldn't fit its source", () => {
+    // Clip z starts 37,412 µs before source c's 500,000 µs end, so one
+    // 40,000 µs frame at 25 fps can't fit from its start.
+    const nearEnd = plan(clip("z", "c", 462_588, 1));
+    const output = { ...OUTPUT, frameRate: { num: 25, den: 1 } };
+    const { state, inverse } = reducer(nearEnd, { type: "video.setOutput", output });
+    expect(state.clips[0]).toMatchObject({ start: 460_000, end: 500_000 });
+    expectValid(state);
+    expect(reducer(state, inverse).state).toEqual(nearEnd);
+    // A source shorter than one output frame can't hold a clip at that rate.
+    expect(
+      invalid(() =>
+        reducer(nearEnd, {
+          type: "video.setOutput",
+          output: { ...OUTPUT, frameRate: { num: 1, den: 1 } },
+        }),
+      ),
+    ).toBe(true);
+  });
+
   it("sets volume, mute, fades and metadata, and refuses bad values", () => {
     expect(
       invalid(() => reducer(base, { type: "video.setVolume", keys: ["x"], volumeDb: 30 })),

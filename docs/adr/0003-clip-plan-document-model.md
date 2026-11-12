@@ -86,7 +86,7 @@ Commands are plain, structured-cloneable data, named `video.*`:
 
   The UI clamps what people enter before building a command. The reducer never silently corrects a command.
 - **Edits keep clips valid.** A trim that leaves a fade longer than its clip shortens the fade, and a rotation that changes a source's orientation keeps its crop inside it. The inverse is `video.restoreClips`, with the clip's full previous state, so undo restores both.
-- **Changing the output keeps every clip on the grid.** `video.setOutput` keeps every clip's start. When the frame rate changes, it moves each clip's end to the nearest frame of the new grid that fits its source, and shortens fades to fit, all in the same command. So the plan is on the grid after every command, and the inverse, which carries the previous output and clips, restores both.
+- **Changing the output keeps every clip on the grid.** `video.setOutput` keeps every clip's start. When the frame rate changes, it moves each clip's end to the nearest frame of the new grid that fits its source, and shortens fades to fit, all in the same command. A clip too near the end of its source for even one frame of the new grid moves its start back just enough for that frame, and only a source shorter than one output frame is refused. So the plan is on the grid after every command, and the inverse, which carries the previous output and clips, restores both.
 - **Sources are registered, not carried in commands.** `session.insert(file, { at })`:
   1. probes the file and checks it against the file policy ([ADR 0004](0004-video-limits.md));
   2. opens it in the media worker ([ADR 0002](0002-workers-and-assets.md));
