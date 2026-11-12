@@ -1,0 +1,82 @@
+name: Bug report
+description: Something in @hussmartinez/video-sdk doesn't work or look as documented.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a bug. **Security vulnerabilities**, including any video that crashes or freezes the page or leaks metadata or cut footage, go through [private reporting](https://github.com/ie-huss-martinez/video-sdk/security/advisories/new) instead. Accessibility problems are bugs, and belong here.
+
+        **Please don't attach personal recordings.** Anything you attach here is public, including the metadata inside a video, such as its location, and everything its audio picked up. Share a video only if it shows and records no people, places, voices, documents or anything else personal or confidential, or describe how to make one that shows the problem, such as a generated test pattern.
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Opening or decoding a file
+        - Playback, seeking or audio sync
+        - The timeline or editing tools (trim, split, move, rotate, crop, volume)
+        - Export or metadata
+        - Accessibility (keyboard, screen readers, focus, contrast)
+        - Styling or themes
+        - The React editor, the element or the standalone script
+        - Server rendering or hydration
+        - Types or packaging
+        - Something else
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: The package version, or the commit if you're working from source.
+      placeholder: 0.1.0
+    validations:
+      required: true
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: Include any error code (such as `INVALID_VIDEO`) and console warnings. For display or layout problems, a screenshot helps a lot, if it shows nothing confidential.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to reproduce
+      description: The smallest set of steps or code that shows the problem. A link to a minimal repository is ideal.
+      placeholder: |
+        1. …
+        2. …
+    validations:
+      required: true
+  - type: textarea
+    id: video
+    attributes:
+      label: The video
+      description: What kind of file shows it, such as its container and codecs, resolution, frame rate, duration, whether it has audio, or the camera or application that made it. Attach one only if it shows and records nothing personal or confidential, and strip its metadata first.
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Browser and version, operating system, React version if you use it, framework and bundler, and whether assets are inline or self-hosted. For accessibility problems, the assistive technology and its version.
+      placeholder: Safari 19 on iOS 19 with VoiceOver, React 19, Next.js 16 with Turbopack, inline assets
+    validations:
+      required: true
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before you submit
+      options:
+        - label: I searched the existing issues, and this hasn't been reported yet.
+          required: true
+        - label: This isn't a security vulnerability.
+          required: true
+        - label: Nothing I attached contains personal or confidential data.
+          required: true
