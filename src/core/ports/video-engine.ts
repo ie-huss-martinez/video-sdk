@@ -1,0 +1,43 @@
+import type { VideoProbe, VideoSourceInfo } from "../model/source.js";
+import type { VideoCallOptions } from "./options.js";
+
+/**
+ * The port for reading video files: check and probe a file without decoding
+ * it, and open probed files as sources for playback and export (ADR 0001,
+ * ADR 0002, ADR 0008). The SDK's own adapter does this in its media worker;
+ * hosts can pass their own to the editor's `engine` prop, and every
+ * implementation must pass the engine's contract tests. Thumbnails and
+ * waveform peaks join the port with the pull requests that build them.
+ *
+ * The engine doesn't apply the file policy: the session checks the probe
+ * against it between `probe` and `open` (ADR 0004).
+ *
+ * Failures reject with `VideoError`: `UNSUPPORTED_FORMAT` for a container
+ * the engine doesn't recognise or refuses, `INVALID_VIDEO` for a malformed
+ * file, `UNSUPPORTED_CODEC` for a track the browser can't decode, and
+ * sdk-core's codes for cancellation and worker failures.
+ *
+ * @public
+ */
+export interface VideoEngine {
+  /**
+   * Checks a file and walks its packets, without decoding it. It reads the
+   * file through the `Blob`, never all at once. The probe's duration is the
+   * larger of what the header claims and what the walk found.
+   */
+  probe(file: Blob, options?: VideoCallOptions): Promise<VideoProbe>;
+  /**
+   * Opens a probed file as the source `id`, which playback and export can
+   * then read. Rejects with `TypeError` if `id` is already open.
+   */
+  open(
+    id: string,
+    file: Blob,
+    probe: VideoProbe,
+    options?: VideoCallOptions,
+  ): Promise<VideoSourceInfo>;
+  /** Closes a source once nothing refers to it. Closing an unknown id does nothing. */
+  close(id: string): Promise<void>;
+  /** Releases the engine and its worker. Pending calls reject, and later calls throw. */
+  destroy(): Promise<void>;
+}

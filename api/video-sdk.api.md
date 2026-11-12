@@ -11,9 +11,319 @@ import { SdkCoreErrorCode } from '@hussmartinez/sdk-core';
 import { SdkError } from '@hussmartinez/sdk-core';
 
 // @public
+export function addRotations(a: VideoRotation, b: VideoRotation): VideoRotation;
+
+// @public
+export interface Applied<S, C> {
+    // (undocumented)
+    readonly inverse: C;
+    // (undocumented)
+    readonly state: S;
+}
+
+// @public
+export interface AudioTrackProbe {
+    // (undocumented)
+    readonly channels: number;
+    readonly codec: string;
+    // (undocumented)
+    readonly sampleRate: number;
+}
+
+// @public
+export function checkProbe(policy: VideoFilePolicy, probe: VideoProbe): readonly VideoLimitName[];
+
+// @public
+export function clipEnd(start: number, frames: number, rate: FrameRate): number;
+
+// @public
+export function clipFrames(clip: VideoClip, rate: FrameRate): number;
+
+// @public
+export function clipOffsets(plan: VideoPlan): readonly number[];
+
+// @public
+export function createPlan(output: VideoPlanOutput): VideoPlan;
+
+// @public
+export function createVideoReducer(sourceInfo: (id: string) => VideoSourceInfo | undefined): Reducer<VideoPlan, VideoCommand>;
+
+// @public
+export function dbToGain(db: number): number;
+
+// @public
+export function decodingBound(probe: VideoProbe): number;
+
+// @public
+export interface DeleteRangeCommand {
+    // (undocumented)
+    readonly end: number;
+    // (undocumented)
+    readonly keys: readonly string[];
+    // (undocumented)
+    readonly start: number;
+    // (undocumented)
+    readonly type: "video.deleteRange";
+}
+
+// @public
+export const EMPTY_METADATA: VideoMetadata;
+
+// @public
+export interface FrameRate {
+    // (undocumented)
+    readonly den: number;
+    // (undocumented)
+    readonly num: number;
+}
+
+// @public
+export function framesIn(duration: number, rate: FrameRate): number;
+
+// @public
+export function frameTime(frame: number, rate: FrameRate): number;
+
+// @public
+export function gainAt(clip: VideoClip, sample: number, sampleRate: number): number;
+
+// @public
+export const IDENTITY_TRANSFORM: VideoTransform;
+
+// @public
+export interface InsertClipsCommand {
+    // (undocumented)
+    readonly at: number;
+    // (undocumented)
+    readonly clips: readonly VideoClip[];
+    // (undocumented)
+    readonly type: "video.insertClips";
+}
+
+// @public
+export function isFrameRate(rate: FrameRate): boolean;
+
+// @public
+export function isOnGrid(start: number, end: number, rate: FrameRate): boolean;
+
+// @public
 export function isVideoError<Code extends VideoErrorCode = VideoErrorCode>(value: unknown, code?: Code): value is VideoError & {
     readonly code: Code;
 };
+
+// @public
+export function locateFrame(plan: VideoPlan, frame: number): {
+    readonly index: number;
+    readonly frame: number;
+    readonly sourceTime: number;
+} | undefined;
+
+// @public
+export const MAX_METADATA_LENGTH = 1000;
+
+// @public
+export function microsecondsToSeconds(microseconds: number): number;
+
+// @public
+export interface MoveClipsCommand {
+    // (undocumented)
+    readonly keys: readonly string[];
+    // (undocumented)
+    readonly to: number;
+    // (undocumented)
+    readonly type: "video.moveClips";
+}
+
+// @public
+export const NO_FADE: VideoFade;
+
+// @public
+export function outputFromSource(source: VideoSourceInfo): VideoPlanOutput;
+
+// @public
+export function planFrames(plan: VideoPlan): number;
+
+// @public
+export type Reducer<S, C> = (state: S, command: C) => Applied<S, C>;
+
+// @public
+export interface RemoveClipsCommand {
+    // (undocumented)
+    readonly keys: readonly string[];
+    // (undocumented)
+    readonly type: "video.removeClips";
+}
+
+// @public
+export interface RestoreClipsCommand {
+    // (undocumented)
+    readonly entries: readonly VideoClipEntry[];
+    // (undocumented)
+    readonly remove?: readonly string[];
+    // (undocumented)
+    readonly type: "video.restoreClips";
+}
+
+// @public
+export function rotateSize(size: {
+    readonly width: number;
+    readonly height: number;
+}, rotation: VideoRotation): {
+    readonly width: number;
+    readonly height: number;
+};
+
+// @public
+export function secondsToMicroseconds(seconds: number): number;
+
+// @public
+export interface SetFadeCommand {
+    // (undocumented)
+    readonly curve: VideoFadeCurve;
+    // (undocumented)
+    readonly duration: number;
+    // (undocumented)
+    readonly edge: "in" | "out";
+    // (undocumented)
+    readonly key: string;
+    // (undocumented)
+    readonly type: "video.setFade";
+}
+
+// @public
+export interface SetMetadataCommand {
+    // (undocumented)
+    readonly field: keyof VideoMetadata;
+    // (undocumented)
+    readonly type: "video.setMetadata";
+    // (undocumented)
+    readonly value: string;
+}
+
+// @public
+export interface SetMutedCommand {
+    // (undocumented)
+    readonly keys: readonly string[];
+    // (undocumented)
+    readonly muted: boolean;
+    // (undocumented)
+    readonly type: "video.setMuted";
+}
+
+// @public
+export interface SetOutputCommand {
+    // (undocumented)
+    readonly clips?: readonly VideoClip[];
+    // (undocumented)
+    readonly output: VideoPlanOutput;
+    // (undocumented)
+    readonly type: "video.setOutput";
+}
+
+// @public
+export interface SetTransformCommand {
+    // (undocumented)
+    readonly keys: readonly string[];
+    // (undocumented)
+    readonly transform: VideoTransform;
+    // (undocumented)
+    readonly type: "video.setTransform";
+}
+
+// @public
+export interface SetVolumeCommand {
+    // (undocumented)
+    readonly keys: readonly string[];
+    // (undocumented)
+    readonly type: "video.setVolume";
+    // (undocumented)
+    readonly volumeDb: number;
+}
+
+// @public
+export function snapFrameRate(framesPerSecond: number): FrameRate;
+
+// @public
+export function sourceInfo(id: string, probe: VideoProbe): VideoSourceInfo;
+
+// @public
+export interface SplitClipCommand {
+    // (undocumented)
+    readonly at: number;
+    // (undocumented)
+    readonly key: string;
+    // (undocumented)
+    readonly newKey: string;
+    // (undocumented)
+    readonly type: "video.splitClip";
+}
+
+// @public
+export interface TrimClipCommand {
+    // (undocumented)
+    readonly end: number;
+    // (undocumented)
+    readonly key: string;
+    // (undocumented)
+    readonly start: number;
+    // (undocumented)
+    readonly type: "video.trimClip";
+}
+
+// @public
+export interface VideoCallOptions {
+    readonly signal?: AbortSignal;
+}
+
+// @public
+export interface VideoClip {
+    readonly end: number;
+    // (undocumented)
+    readonly fadeIn: VideoFade;
+    // (undocumented)
+    readonly fadeOut: VideoFade;
+    readonly key: string;
+    // (undocumented)
+    readonly muted: boolean;
+    readonly source: string;
+    readonly start: number;
+    // (undocumented)
+    readonly transform: VideoTransform;
+    readonly volumeDb: number;
+}
+
+// @public
+export interface VideoClipEntry {
+    // (undocumented)
+    readonly clip: VideoClip;
+    // (undocumented)
+    readonly index: number;
+}
+
+// @public
+export type VideoCommand = InsertClipsCommand | RemoveClipsCommand | RestoreClipsCommand | DeleteRangeCommand | TrimClipCommand | SplitClipCommand | MoveClipsCommand | SetVolumeCommand | SetMutedCommand | SetFadeCommand | SetTransformCommand | SetOutputCommand | SetMetadataCommand;
+
+// @public
+export type VideoContainer = "mp4" | "mov" | "webm" | "mkv";
+
+// @public
+export interface VideoCrop {
+    // (undocumented)
+    readonly height: number;
+    // (undocumented)
+    readonly width: number;
+    // (undocumented)
+    readonly x: number;
+    // (undocumented)
+    readonly y: number;
+}
+
+// @public
+export interface VideoEngine {
+    close(id: string): Promise<void>;
+    destroy(): Promise<void>;
+    open(id: string, file: Blob, probe: VideoProbe, options?: VideoCallOptions): Promise<VideoSourceInfo>;
+    probe(file: Blob, options?: VideoCallOptions): Promise<VideoProbe>;
+}
 
 // @public
 export class VideoError extends SdkError<VideoErrorCode> {
@@ -24,10 +334,38 @@ export class VideoError extends SdkError<VideoErrorCode> {
 export type VideoErrorCode = SdkCoreErrorCode | "INVALID_VIDEO" | "UNSUPPORTED_FORMAT" | "UNSUPPORTED_CODEC" | "DECODE_FAILED" | "ENCODE_FAILED" | "INVALID_COMMAND" | "BUSY" | "FRAME_TOO_LARGE" | "FRAME_RATE_TOO_HIGH" | "DURATION_TOO_LONG" | "BITRATE_TOO_HIGH" | "PACKET_TOO_LARGE" | "TOO_MANY_TRACKS" | "INDEX_TOO_LARGE" | "TOO_MANY_CHANNELS" | "SAMPLE_RATE_TOO_HIGH" | "SESSION_TOO_LARGE" | "TOO_MANY_CLIPS";
 
 // @public
+export type VideoExportContainer = "mp4" | "webm";
+
+// @public
+export interface VideoExportJob {
+    readonly container?: VideoExportContainer;
+    // (undocumented)
+    readonly plan: VideoPlan;
+    readonly quality?: VideoExportQuality;
+}
+
+// @public
+export type VideoExportQuality = "low" | "medium" | "high";
+
+// @public
+export interface VideoFade {
+    // (undocumented)
+    readonly curve: VideoFadeCurve;
+    // (undocumented)
+    readonly duration: number;
+}
+
+// @public
+export type VideoFadeCurve = "linear" | "equalPower";
+
+// @public
 export type VideoFilePolicy = FilePolicy<VideoLimitDefinitions>;
 
 // @public
 export type VideoFilePolicyOverrides = FilePolicyOverrides<VideoLimitDefinitions>;
+
+// @public
+export type VideoFit = "contain" | "cover";
 
 // @public
 export type VideoLimitDefinitions = typeof videoLimitDefinitions;
@@ -189,6 +527,143 @@ export const videoMessages: {
     readonly "warnings.maxFiles": "Adding {actual} files at once may be slow.";
     readonly "warnings.maxDecodedSize": "This file is very large once opened and may be slow to process.";
     readonly "warnings.maxProcessingTime": "This is taking longer than usual.";
+};
+
+// @public
+export interface VideoMetadata {
+    // (undocumented)
+    readonly artist: string;
+    // (undocumented)
+    readonly comment: string;
+    // (undocumented)
+    readonly date: string;
+    // (undocumented)
+    readonly description: string;
+    // (undocumented)
+    readonly title: string;
+}
+
+// @public
+export interface VideoOutput {
+    destroy(): Promise<void>;
+    // (undocumented)
+    getSnapshot(): VideoOutputSnapshot;
+    load(plan: VideoPlan): void;
+    pause(): void;
+    play(): Promise<void>;
+    position(): number;
+    seek(frame: number): void;
+    stop(): void;
+    subscribe(listener: () => void): () => void;
+}
+
+// @public
+export interface VideoOutputSnapshot {
+    readonly droppedFrames: number;
+    // (undocumented)
+    readonly state: VideoOutputState;
+}
+
+// @public
+export type VideoOutputState = "stopped" | "playing" | "paused";
+
+// @public
+export interface VideoPlan {
+    // (undocumented)
+    readonly clips: readonly VideoClip[];
+    // (undocumented)
+    readonly metadata: VideoMetadata;
+    // (undocumented)
+    readonly output: VideoPlanOutput;
+}
+
+// @public
+export interface VideoPlanOutput {
+    // (undocumented)
+    readonly channels: number;
+    // (undocumented)
+    readonly frameRate: FrameRate;
+    // (undocumented)
+    readonly height: number;
+    // (undocumented)
+    readonly sampleRate: number;
+    readonly width: number;
+}
+
+// @public
+export interface VideoProbe {
+    readonly audio: AudioTrackProbe | null;
+    // (undocumented)
+    readonly container: VideoContainer;
+    readonly duration: number;
+    readonly indexSize: number;
+    readonly maxPacketSize: number;
+    readonly peakBitrate: number;
+    readonly tracks: number;
+    // (undocumented)
+    readonly video: VideoTrackProbe;
+}
+
+// @public
+export interface VideoProcessor {
+    destroy(): Promise<void>;
+    export(job: VideoExportJob, options?: VideoProgressOptions): Promise<Blob>;
+}
+
+// @public
+export interface VideoProgressOptions extends VideoCallOptions {
+    readonly onProgress?: (fraction: number) => void;
+}
+
+// @public
+export type VideoRotation = 0 | 90 | 180 | 270;
+
+// @public
+export interface VideoSourceInfo {
+    // (undocumented)
+    readonly audio: AudioTrackProbe | null;
+    // (undocumented)
+    readonly container: VideoContainer;
+    readonly duration: number;
+    // (undocumented)
+    readonly id: string;
+    // (undocumented)
+    readonly video: {
+        readonly codec: string;
+        readonly width: number;
+        readonly height: number;
+        readonly rotation: VideoRotation;
+        readonly frameRate: number;
+    };
+}
+
+// @public
+export interface VideoTrackProbe {
+    readonly codec: string;
+    // (undocumented)
+    readonly codedHeight: number;
+    readonly codedWidth: number;
+    // (undocumented)
+    readonly displayHeight: number;
+    readonly displayWidth: number;
+    readonly frameRate: number;
+    readonly packets: number;
+    readonly rotation: VideoRotation;
+}
+
+// @public
+export interface VideoTransform {
+    readonly crop: VideoCrop | null;
+    // (undocumented)
+    readonly fit: VideoFit;
+    // (undocumented)
+    readonly rotation: VideoRotation;
+}
+
+// @public
+export const VOLUME_RANGE: {
+    readonly min: number;
+    readonly max: number;
 };
 
 ```
