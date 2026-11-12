@@ -181,7 +181,12 @@ export function createEngine(environment: EngineEnvironment): VideoEngine {
         const media = await worker();
         await withProcessingTime(
           policy,
-          (timed) => media.call("support", { file, limits: policy.limits }, { signal: timed }),
+          (timed) =>
+            media.call(
+              "support",
+              { file, limits: policy.limits, probe: opened },
+              { signal: timed },
+            ),
           options.signal ? { signal: options.signal } : {},
         );
         throwIfAborted(options.signal);

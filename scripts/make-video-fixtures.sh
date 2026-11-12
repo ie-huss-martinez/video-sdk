@@ -3,7 +3,9 @@
 # synthetic sources: a test pattern with a running frame counter, and a sine
 # tone. Never a recording (CONTRIBUTING.md, "Test videos"). The output is
 # committed; rerun this only to change the fixtures, with FFmpeg 6 or later
-# built with libx264, libvpx and libopus.
+# built with libx264, libx265, libvpx, libaom and libopus. Every encoder runs
+# single-threaded with deterministic settings, so the output is identical on
+# every run.
 set -euo pipefail
 
 out="$(dirname "$0")/../test/fixtures/video"
@@ -21,7 +23,7 @@ opus=(-c:a libopus -b:a 24k -ac 2)
 ffmpeg -y -v error -f lavfi -i "$(pattern 1280x720 2)" -f lavfi -i "$(tone 2)" \
   "${h264[@]}" "${aac[@]}" "${exact[@]}" -shortest landscape.mp4
 ffmpeg -y -v error -f lavfi -i "$(pattern 1280x720 2)" -f lavfi -i "$(tone 2)" \
-  -c:v libvpx-vp9 -deadline realtime -cpu-used 8 -crf 60 -b:v 0 -threads 1 -g 30 \
+  -c:v libvpx-vp9 -deadline good -cpu-used 5 -crf 60 -b:v 0 -threads 1 -row-mt 0 -g 30 \
   "${opus[@]}" "${exact[@]}" -shortest landscape.webm
 ffmpeg -y -v error -i landscape.mp4 -c copy "${exact[@]}" landscape.mkv
 ffmpeg -y -v error -i landscape.mp4 -c copy -movflags frag_keyframe+empty_moov+default_base_moof \
@@ -33,7 +35,7 @@ ffmpeg -y -v error -display_rotation:v:0 -90 -i landscape.mp4 -c copy "${exact[@
 # VP8 and Opus, which every browser engine decodes, including Playwright's
 # WebKit on Linux with few GStreamer plugins (docs/capabilities.md).
 ffmpeg -y -v error -f lavfi -i "$(pattern 1280x720 2)" -f lavfi -i "$(tone 2)" \
-  -c:v libvpx -deadline realtime -cpu-used 8 -crf 60 -b:v 500k -threads 1 -g 30 \
+  -c:v libvpx -deadline good -cpu-used 5 -crf 60 -b:v 500k -threads 1 -g 30 \
   "${opus[@]}" "${exact[@]}" -shortest landscape-vp8.webm
 # HEVC, which Chromium and Firefox don't decode: for UNSUPPORTED_CODEC.
 ffmpeg -y -v error -f lavfi -i "$(pattern 320x180 0.5)" -f lavfi -i "$(tone 0.5)" \
@@ -41,11 +43,17 @@ ffmpeg -y -v error -f lavfi -i "$(pattern 320x180 0.5)" -f lavfi -i "$(tone 0.5)
   -x265-params log-level=error:pools=none:frame-threads=1 \
   "${aac[@]}" "${exact[@]}" -shortest hevc.mp4
 
+# AV1 and Opus, so that every video codec in the capability matrix has a
+# file to decode (docs/capabilities.md).
+ffmpeg -y -v error -f lavfi -i "$(pattern 320x180 0.5)" -f lavfi -i "$(tone 0.5)" \
+  -c:v libaom-av1 -cpu-used 8 -crf 50 -threads 1 -row-mt 0 -g 30 \
+  "${opus[@]}" "${exact[@]}" -shortest av1.mp4
+
 # Tiny files, 64 × 36 and 6 frames, for truncation at every byte offset.
 ffmpeg -y -v error -f lavfi -i "$(pattern 64x36 0.2)" -f lavfi -i "$(tone 0.2)" \
   "${h264[@]}" "${aac[@]}" "${exact[@]}" -shortest tiny.mp4
 ffmpeg -y -v error -f lavfi -i "$(pattern 64x36 0.2)" -f lavfi -i "$(tone 0.2)" \
-  -c:v libvpx-vp9 -deadline realtime -cpu-used 8 -crf 60 -b:v 0 -threads 1 \
+  -c:v libvpx-vp9 -deadline good -cpu-used 5 -crf 60 -b:v 0 -threads 1 -row-mt 0 \
   "${opus[@]}" "${exact[@]}" -shortest tiny.webm
 
 ls -l

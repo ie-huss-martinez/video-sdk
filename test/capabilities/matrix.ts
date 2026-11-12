@@ -35,9 +35,26 @@ export type CodecId = (typeof CODECS)[number]["id"];
 export interface Capabilities {
   readonly worker: Record<(typeof WORKER_FEATURES)[number], boolean>;
   readonly page: Record<(typeof PAGE_FEATURES)[number], boolean>;
+  /** What `isConfigSupported` claims for decoding. */
   readonly decode: Record<CodecId, boolean>;
+  /** Whether a real file in the codec decodes, through the SDK's decoder for video. */
+  readonly decodes: Record<CodecId, boolean>;
   readonly encode: Record<CodecId, boolean>;
 }
+
+/** The fixture each codec is decoded from, and which of its tracks. */
+export const DECODE_FIXTURES: Record<
+  CodecId,
+  { readonly file: string; readonly track: "video" | "audio" }
+> = {
+  h264: { file: "landscape.mp4", track: "video" },
+  hevc: { file: "hevc.mp4", track: "video" },
+  vp8: { file: "landscape-vp8.webm", track: "video" },
+  vp9: { file: "landscape.webm", track: "video" },
+  av1: { file: "av1.mp4", track: "video" },
+  aac: { file: "landscape.mp4", track: "audio" },
+  opus: { file: "landscape.webm", track: "audio" },
+};
 
 /** The browser versions the matrix was last measured with, for the record. */
 export const MEASURED = {
@@ -63,11 +80,13 @@ export const MATRIX: Record<Engine, Capabilities> = {
   chromium: {
     ...ALL_FEATURES,
     decode: { h264: true, hevc: false, vp8: true, vp9: true, av1: true, aac: true, opus: true },
+    decodes: { h264: true, hevc: false, vp8: true, vp9: true, av1: true, aac: true, opus: true },
     encode: { h264: true, hevc: false, vp8: true, vp9: true, av1: true, aac: false, opus: true },
   },
   firefox: {
     ...ALL_FEATURES,
     decode: { h264: true, hevc: false, vp8: true, vp9: true, av1: true, aac: true, opus: true },
+    decodes: { h264: true, hevc: false, vp8: true, vp9: true, av1: true, aac: true, opus: true },
     encode: { h264: true, hevc: false, vp8: true, vp9: true, av1: true, aac: false, opus: true },
   },
   // WebKit on Linux answers from the image's GStreamer plugins, which claim
@@ -75,6 +94,7 @@ export const MATRIX: Record<Engine, Capabilities> = {
   webkit: {
     ...ALL_FEATURES,
     decode: { h264: true, hevc: true, vp8: true, vp9: true, av1: true, aac: true, opus: true },
+    decodes: { h264: true, hevc: true, vp8: true, vp9: true, av1: true, aac: true, opus: true },
     encode: { h264: true, hevc: true, vp8: true, vp9: true, av1: true, aac: true, opus: true },
   },
 };
@@ -94,7 +114,7 @@ export function renderCapabilities(): string {
     "",
     `What each browser engine in the test matrix offers the SDK: Playwright ${MEASURED.playwright}'s builds, in the pinned browser test image of \`ci/Dockerfile\` (sdk-core ADR 0025), where CI runs. \`test/capabilities/capabilities.browser.test.ts\` measures it in a worker in that image, in CI and with \`pnpm test:browser:image\`, so a browser that changes fails a test. Elsewhere it skips, because another machine's browsers can differ.`,
     "",
-    "These are Playwright's builds, not every release of each browser. Playwright's WebKit on Linux answers from the system's GStreamer plugins: in the image they claim every codec here, while on a machine with fewer plugins the same WebKit decodes only VP8 and Opus. Neither is Safari. Whether a claimed codec really decodes is tested when decoding lands. The SDK asks the browser it runs in, with `isConfigSupported`, before it opens a file or chooses an export's codecs (docs/adr/0001), so this table documents the test environment rather than limiting any browser.",
+    "These are Playwright's builds, not every release of each browser. Playwright's WebKit on Linux answers from the system's GStreamer plugins: in the image they claim every codec here, while on a machine with fewer plugins the same WebKit decodes only VP8 and Opus. Neither is Safari. The \"Decoding a real file\" table records whether each claim holds. The SDK asks the browser it runs in, with `isConfigSupported`, before it opens a file or chooses an export's codecs (docs/adr/0001), so this table documents the test environment rather than limiting any browser.",
     "",
     "## APIs",
     "",
@@ -106,11 +126,25 @@ export function renderCapabilities(): string {
       row(`\`${feature}\` on the page`, (engine) => MATRIX[engine].page[feature]),
     ),
     "",
-    "## Decoding",
+    "## Decoding, as claimed",
+    "",
+    "What `VideoDecoder.isConfigSupported` and `AudioDecoder.isConfigSupported` answer.",
     "",
     header,
     ...CODECS.map((codec) =>
       row(`${codec.label} (\`${codec.codec}\`)`, (engine) => MATRIX[engine].decode[codec.id]),
+    ),
+    "",
+    "## Decoding a real file",
+    "",
+    "Whether a generated file in the codec really decodes: ten video frames through the SDK's own decoder, or ten audio packets through `AudioDecoder`.",
+    "",
+    header,
+    ...CODECS.map((codec) =>
+      row(
+        `${codec.label}, from \`${DECODE_FIXTURES[codec.id].file}\``,
+        (engine) => MATRIX[engine].decodes[codec.id],
+      ),
     ),
     "",
     "## Encoding",

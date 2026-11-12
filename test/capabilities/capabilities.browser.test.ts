@@ -1,6 +1,6 @@
 import { describe, expect, inject, it } from "vitest";
 import { server } from "vitest/browser";
-import { type Engine, MATRIX, type PAGE_FEATURES } from "./matrix.js";
+import { CODECS, DECODE_FIXTURES, type Engine, MATRIX, type PAGE_FEATURES } from "./matrix.js";
 
 // The capability matrix, checked in each engine (docs/capabilities.md). It
 // holds in the pinned browser image, where CI runs; another machine's
@@ -14,12 +14,13 @@ describe.skipIf(!inject("browserImage"))(`the capability matrix in ${server.brow
     });
     const measured = await new Promise<unknown>((resolve) => {
       worker.onmessage = (event) => resolve(event.data);
-      worker.postMessage(undefined);
+      void fixtures().then((files) => worker.postMessage(files));
     });
     worker.terminate();
     expect(measured).toEqual({
       worker: expected.worker,
       decode: expected.decode,
+      decodes: expected.decodes,
       encode: expected.encode,
     });
   });
@@ -33,3 +34,13 @@ describe.skipIf(!inject("browserImage"))(`the capability matrix in ${server.brow
     expect(page).toEqual(expected.page);
   });
 });
+
+/** Every codec's fixture, fetched from the test server. */
+async function fixtures(): Promise<Record<string, Blob>> {
+  const files: Record<string, Blob> = {};
+  for (const { id } of CODECS) {
+    const url = new URL(`../fixtures/video/${DECODE_FIXTURES[id].file}`, import.meta.url);
+    files[id] = await (await fetch(url)).blob();
+  }
+  return files;
+}

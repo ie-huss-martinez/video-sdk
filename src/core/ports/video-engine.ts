@@ -44,9 +44,11 @@ export interface VideoEngine {
    * A file opens only if this browser can decode the tracks the SDK uses:
    * otherwise `open` rejects with `UNSUPPORTED_CODEC`, naming the codec and
    * the track in `details`, or with `UNSUPPORTED_ENVIRONMENT` without
-   * WebCodecs. That includes the audio track: a file whose audio this
-   * browser can't decode is refused, never opened silent, so an export can't
-   * drop its sound without saying so.
+   * WebCodecs. The audio track counts too: a file whose audio this browser
+   * can't decode is refused, never opened silent, so an export can't drop its
+   * sound without saying so. Because a browser can claim a codec it then fails
+   * to decode, the first video frame is decoded as well, and a failure rejects
+   * with `DECODE_FAILED`.
    */
   open(
     id: string,
