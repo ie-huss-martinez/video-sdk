@@ -139,7 +139,19 @@ describe("the media worker (docs/adr/0001, docs/adr/0002)", () => {
         entry,
       ).toEqual([]);
     }
-    expect(chunk("index.js").dynamicImports).toEqual([chunkFile().fileName]);
+    expect(chunk("index.js").dynamicImports).toContain(chunkFile().fileName);
+  });
+
+  it("loads the page's audio player lazily, never in the entries (docs/adr/0006)", () => {
+    const player = chunk("index.js").dynamicImports.filter((name) =>
+      name.startsWith("lazy/playback-audio-"),
+    );
+    expect(player).toHaveLength(1);
+    // The window scheduler is in it, and only the small lazy wrapper is in the entry.
+    expect(chunk(player[0] as string).code).toContain("src/adapters/playback-audio.ts");
+    expect(chunk("index.js").code).not.toContain("src/adapters/playback-audio.ts");
+    expect(chunk("index.js").code).toContain("src/adapters/lazy-playback-audio.ts");
+    expect(chunk("index.js").dynamicImports).toHaveLength(2);
   });
 
   it("bundles mediabunny only into the worker, never into the entries", () => {

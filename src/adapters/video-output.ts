@@ -19,8 +19,9 @@ import type {
   VideoOutputSnapshot,
   VideoOutputState,
 } from "../core/ports/video-output.js";
+import { createLazyPlaybackAudio } from "./lazy-playback-audio.js";
 import type { MediaWorkerContract, PlaybackSource } from "./media-worker/contract.js";
-import { type AudioEnvironment, createPlaybackAudio } from "./playback-audio.js";
+import type { AudioEnvironment } from "./playback-audio.js";
 import { engineInternals } from "./video-engine.js";
 
 /**
@@ -207,7 +208,7 @@ export function createOutput(environment: OutputEnvironment): VideoOutput {
   /** Bumped by everything that stops or restarts the clock, so a start that's overtaken gives up. */
   let starting = 0;
   const player = environment.audio
-    ? createPlaybackAudio({
+    ? createLazyPlaybackAudio({
         ...environment.audio,
         fetchWindow: async (from, count, sampleRate) =>
           (await connection().call("audio", { from, count, rate: sampleRate })).channels,

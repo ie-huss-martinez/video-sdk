@@ -44,4 +44,13 @@ export default [
     brotli: true,
     limit: "60 kB",
   },
+  {
+    // The page's audio player, loaded on the first play of a plan with audio
+    // (docs/adr/0006): scheduling windows, the lead, gapless switches and the
+    // watchdog. It measures about 1.7 kB.
+    name: "Audio player (lazy)",
+    path: "dist/lazy/playback-audio-*.js",
+    brotli: true,
+    limit: "4 kB",
+  },
 ];

@@ -43,6 +43,7 @@ Both sides compute media time the same way, `M + (now − P) × 1,000` microseco
 - **Lead:** two windows are kept scheduled ahead of the one playing, and eight while the page is hidden, whose timers are throttled. The next window is fetched when one ends, from its `ended` event, which hidden pages don't throttle, and from a timer every 125 ms.
 - **Underrun:** a window that arrives after its time plays from where the clock is, with its late part skipped. Audio never waits, and the clock never moves back. The page counts underruns in a test ledger.
 - **Seek, pause, stop and the end** stop every scheduled node at once. Destroying the output closes the context.
+- **The player loads on the first play** of a plan with audio, from a lazy chunk, so hosts that only use the headless core don't carry it. The context is still created and resumed synchronously in `play()`, within the gesture; the player that schedules windows on it loads after.
 - **An edit while playing changes the sound without a gap.** The clock is unchanged, and the timeline goes on where it is. The window playing stops at a sample 200 ms ahead, later windows are dropped, and the new plan's windows start at that same sample. A change of volume or mute is heard within about a quarter of a second.
 
 ### Frames never leave the worker, and the consumer owns the wait
