@@ -64,7 +64,7 @@ mediabunny 1.65.2 caps box and element nesting at 64. It doesn't cap the size of
 
   Anything else fails with `UNSUPPORTED_FORMAT` and never reaches mediabunny.
 - **Structure:** the check walks only the top-level boxes or elements, and the few children named below, with a fixed depth limit. Every size is checked against the bytes that remain.
-- **Index size:** the total size of the index is bounded before mediabunny parses it, and fails over the index limit (defined with the other limits in ADR 0004). For ISOBMFF that's `moov` plus every `moof`; for Matroska it's `SeekHead`, `Tracks`, `Cues` and `Tags`. So a sample table can never be larger than the index limit allows.
+- **Index size:** the total size of the index is bounded before mediabunny parses it, and fails over the index limit, `maxIndexSize` ([ADR 0004](0004-video-limits.md)). For ISOBMFF that's `moov` plus every `moof`; for Matroska it's `SeekHead`, `Tracks`, `Cues` and `Tags`. So a sample table can never be larger than the index limit allows.
 - **Edit lists:** mediabunny 1.65.2 honours only the first edit that maps media; it ignores further edits and any rate other than 1, with only a console warning. Other players honour them, so the SDK would show different footage than the user expects. An MP4 or MOV track whose `elst` has more than one edit mapping media, or a media rate other than 1, fails with `UNSUPPORTED_FORMAT` and `details.reason: "edit-list"`. A single leading empty edit is allowed.
 - **Encryption:** encrypted tracks (`encv`, `enca`, a `pssh` box, or Matroska `ContentEncryption`) fail with `UNSUPPORTED_FORMAT`. The SDK never passes keys.
 
@@ -84,7 +84,7 @@ Only then does the worker open the file with mediabunny.
   - it stops and fails as soon as a track has more packets than the limits allow: the duration limit times the frame-rate limit for video, and the duration limit times 1,000 for audio;
   - it runs under `withProcessingTime`.
 - **Headers are compared, never trusted.** Duration, frame counts and sizes that a header claims are checked against what the walk found, and **the limits are checked against the larger of the two.**
-- **Every limit is checked before any decoder is configured** (ADR 0004).
+- **Every limit is checked before any decoder is configured** ([ADR 0004](0004-video-limits.md)).
 - **Malformed fails with a code:** `INVALID_VIDEO`, with `details` naming the format and what was wrong, never data from the file.
 
 ### Decoding: WebCodecs in the worker, with our own loops

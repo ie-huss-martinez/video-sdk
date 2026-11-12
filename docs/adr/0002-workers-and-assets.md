@@ -21,7 +21,7 @@ The family's workers use `sdk-core`'s typed RPC ([ADR 0018](https://github.com/i
 - **The page keeps each source's original `Blob`,** which costs nothing extra, because the browser already holds the file. Workers receive the `Blob` itself, which crosses threads without copying its bytes, and read it in slices ([ADR 0001](0001-video-engines.md)).
   - No session data lives only in a worker. If a worker crashes or is terminated, the session creates a new one, probes and opens the sources again from their `Blob`s, and redraws.
 - **Decoded video frames live only in the worker that decoded them.** They're drawn or encoded there and closed. No full-size `VideoFrame` or frame pixel buffer is ever posted to the page; thumbnails are posted as small `ImageBitmap`s.
-- **Decoded audio for playback goes to the page in short windows,** as one transferred `Float32Array` per channel, for the page's `AudioContext`. The window length and how playback schedules them are a later record on playback. Waveform peaks are computed in the worker and posted as small arrays.
+- **Decoded audio for playback goes to the page in short windows,** as one transferred `Float32Array` per channel, for the page's `AudioContext`. The window length and how playback schedules them are a later record on playback ([ADR 0005](0005-playback-and-export.md)). Waveform peaks are computed in the worker and posted as small arrays.
 - **Memory is bounded by queues, not by footage.** Every decoder, decoded-frame queue and encoder in a worker has a fixed maximum length:
   - **the decoder's own queue:** at most 8 packets;
   - **decoded frames waiting to be drawn or encoded:** at most 4;
@@ -29,20 +29,20 @@ The family's workers use `sdk-core`'s typed RPC ([ADR 0018](https://github.com/i
 
   When a queue is full, the loop waits for the consumer.
 - **Every `VideoFrame` and `AudioData` is closed on every path:** after drawing or encoding, and in `finally` blocks for seek, cancellation, errors and teardown. Each worker counts the frames it has open in a test-only counter.
-- **The session counts what the workers cache,** such as thumbnails and peaks, against the session memory limit (ADR 0004). It does so from sizes it already knows, so it never has to ask a worker.
+- **The session counts what the workers cache,** such as thumbnails and peaks, against the session memory limit ([ADR 0004](0004-video-limits.md)). It does so from sizes it already knows, so it never has to ask a worker.
 
 ### The preview: a transferred canvas
 
 - **The editor's canvas is transferred to the media worker** with `transferControlToOffscreen()`, once per mount. The worker draws the frame at the playhead into it, at the stage's size scaled to the device pixel ratio, through the same compose step as export.
 - **Scrubbing coalesces requests:** when seeks arrive faster than the worker can decode, only the latest is drawn.
-- **Playback** is paced by a clock that a later record on playback defines.
+- **Playback** is paced by a clock that a later record on playback defines ([ADR 0005](0005-playback-and-export.md)).
 - **Everything interactive stays in the DOM on the page:** the timeline, trim handles, playhead, transport, crop frame, focus and the keyboard. They're positioned from geometry that the page and the worker share as pure code, so nothing in the accessibility tree depends on the worker.
 - **Missing features fail clearly.** Without WebCodecs' `VideoDecoder`, `AudioDecoder`, `VideoEncoder` and `AudioEncoder` in workers, a 2D `OffscreenCanvas` in workers, or `transferControlToOffscreen`, the editor fails with `UNSUPPORTED_ENVIRONMENT` and `details.feature`, as [ADR 0013](https://github.com/ie-huss-martinez/sdk-core/blob/main/docs/adr/0013-browser-and-react-support.md) requires.
 - **The capability matrix checks every one of these** in workers on Chromium, Firefox and WebKit, together with which codecs decode and encode ([ADR 0001](0001-video-engines.md)). So a browser that changes fails a test, not a user.
 
 ### The workers: the family RPC
 
-Each worker module exposes its side with `exposeWorker`. The ports that reach them with `createWorkerClient` are named in a later record on the document model.
+Each worker module exposes its side with `exposeWorker`. The ports that reach them with `createWorkerClient` are named in a later record on the document model ([ADR 0003](0003-clip-plan-document-model.md)).
 
 **The media worker:**
 
@@ -111,4 +111,4 @@ Every call takes an `AbortSignal` and runs under `withProcessingTime`. Long call
 - **Memory depends on queue lengths and frame size, not on the length of the footage.**
 - **A worker crash loses no work:** the plan is on the page, and the sources are opened again from their `Blob`s.
 - **The canvas belongs to the media worker once transferred,** so the page can't read or draw into it. Hit-testing and handles use the shared geometry instead, and tests read pixels back through the worker.
-- **Audio crosses to the page,** so its window length is a trade-off between latency and the number of messages. A later record on playback sets it, together with how audio and video stay in sync.
+- **Audio crosses to the page,** so its window length is a trade-off between latency and the number of messages. A later record on playback sets it, together with how audio and video stay in sync ([ADR 0005](0005-playback-and-export.md)).
