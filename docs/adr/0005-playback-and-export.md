@@ -158,6 +158,8 @@ A generated "flash and beep" fixture has white flash frames and short tones at k
 
 ## Consequences
 
+- **Two audio timing limits are accepted,** both measured ([ADR 0001](0001-video-engines.md)). Opus exports from Firefox and WebKit start 6.5 ms late, within the one-frame tolerance for sync. WebKit on Linux reading back its own AAC export plays it 107 ms early, though the file is right and every other engine reads it exactly.
+
 - **Audio and video stay within a frame of each other,** measured in all three engines and in exported files, and audio never stutters for video.
 - **Exports are faster than real time** where the encoder is, silent, and work in a background tab.
 - **What the preview shows is what the file contains,** because both go through the same `composeFrame` and `gainAt`.
