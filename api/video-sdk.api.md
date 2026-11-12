@@ -4,4 +4,191 @@
 
 ```ts
 
+import { FilePolicy } from '@hussmartinez/sdk-core';
+import { FilePolicyOverrides } from '@hussmartinez/sdk-core';
+import { Limits } from '@hussmartinez/sdk-core';
+import { SdkCoreErrorCode } from '@hussmartinez/sdk-core';
+import { SdkError } from '@hussmartinez/sdk-core';
+
+// @public
+export function isVideoError<Code extends VideoErrorCode = VideoErrorCode>(value: unknown, code?: Code): value is VideoError & {
+    readonly code: Code;
+};
+
+// @public
+export class VideoError extends SdkError<VideoErrorCode> {
+    readonly name = "VideoError";
+}
+
+// @public
+export type VideoErrorCode = SdkCoreErrorCode | "INVALID_VIDEO" | "UNSUPPORTED_FORMAT" | "UNSUPPORTED_CODEC" | "DECODE_FAILED" | "ENCODE_FAILED" | "INVALID_COMMAND" | "BUSY" | "FRAME_TOO_LARGE" | "FRAME_RATE_TOO_HIGH" | "DURATION_TOO_LONG" | "BITRATE_TOO_HIGH" | "PACKET_TOO_LARGE" | "TOO_MANY_TRACKS" | "INDEX_TOO_LARGE" | "TOO_MANY_CHANNELS" | "SAMPLE_RATE_TOO_HIGH" | "SESSION_TOO_LARGE" | "TOO_MANY_CLIPS";
+
+// @public
+export type VideoFilePolicy = FilePolicy<VideoLimitDefinitions>;
+
+// @public
+export type VideoFilePolicyOverrides = FilePolicyOverrides<VideoLimitDefinitions>;
+
+// @public
+export type VideoLimitDefinitions = typeof videoLimitDefinitions;
+
+// @public
+export const videoLimitDefinitions: {
+    readonly maxFileSize: {
+        readonly default: 4000000000;
+        readonly warning: 1000000000;
+        readonly code: "FILE_TOO_LARGE";
+        readonly unit: "bytes";
+    };
+    readonly maxDecodedSize: {
+        readonly default: 1000000000;
+        readonly warning: 400000000;
+        readonly code: "DECODED_SIZE_TOO_LARGE";
+        readonly unit: "bytes";
+    };
+    readonly maxFramePixels: {
+        readonly code: "FRAME_TOO_LARGE";
+        readonly unit: "pixels";
+        readonly default: number;
+        readonly warning: number;
+    };
+    readonly maxFrameRate: {
+        readonly code: "FRAME_RATE_TOO_HIGH";
+        readonly unit: "count";
+        readonly default: 120;
+    };
+    readonly maxDuration: {
+        readonly code: "DURATION_TOO_LONG";
+        readonly unit: "milliseconds";
+        readonly default: number;
+        readonly warning: number;
+    };
+    readonly maxBitrate: {
+        readonly code: "BITRATE_TOO_HIGH";
+        readonly unit: "count";
+        readonly default: 200000000;
+    };
+    readonly maxPacketSize: {
+        readonly code: "PACKET_TOO_LARGE";
+        readonly unit: "bytes";
+        readonly default: 32000000;
+    };
+    readonly maxTracks: {
+        readonly code: "TOO_MANY_TRACKS";
+        readonly unit: "count";
+        readonly default: 16;
+    };
+    readonly maxIndexSize: {
+        readonly code: "INDEX_TOO_LARGE";
+        readonly unit: "bytes";
+        readonly default: 64000000;
+    };
+    readonly maxChannels: {
+        readonly code: "TOO_MANY_CHANNELS";
+        readonly unit: "count";
+        readonly default: 8;
+    };
+    readonly maxSampleRate: {
+        readonly code: "SAMPLE_RATE_TOO_HIGH";
+        readonly unit: "count";
+        readonly default: 192000;
+    };
+    readonly maxSessionSize: {
+        readonly code: "SESSION_TOO_LARGE";
+        readonly unit: "bytes";
+        readonly default: 512000000;
+        readonly warning: 256000000;
+    };
+    readonly maxClips: {
+        readonly code: "TOO_MANY_CLIPS";
+        readonly unit: "count";
+        readonly default: 2000;
+    };
+    readonly maxFiles: {
+        readonly code: "TOO_MANY_FILES";
+        readonly unit: "count";
+        readonly default: 20;
+    };
+    readonly maxProcessingTime: {
+        readonly code: "PROCESSING_TIME_EXCEEDED";
+        readonly unit: "milliseconds";
+        readonly default: 120000;
+    };
+};
+
+// @public
+export type VideoLimitName = keyof VideoLimitDefinitions;
+
+// @public
+export const videoLimits: Limits<VideoLimitDefinitions>;
+
+// @public
+export type VideoMessageCatalogue = typeof videoMessages;
+
+// @public
+export const videoMessages: {
+    readonly "errors.INVALID_VIDEO": "This file isn't a valid video, or it's too damaged to open.";
+    readonly "errors.UNSUPPORTED_FORMAT": "This video format isn't supported. Try converting the file to MP4 or WebM, then open it again.";
+    readonly "errors.UNSUPPORTED_CODEC": "This browser can't play or save this kind of video. Try another browser, or convert the file to MP4.";
+    readonly "errors.DECODE_FAILED": "This browser couldn't play part of this video. Try another browser, or convert the file to MP4.";
+    readonly "errors.ENCODE_FAILED": "The video couldn't be saved. Please try again.";
+    readonly "errors.INVALID_COMMAND": "This edit couldn't be made. Please try again.";
+    readonly "errors.BUSY": "A video is already being saved. Wait for it to finish, or cancel it.";
+    readonly "errors.FRAME_TOO_LARGE": "This video's picture is larger than the editor can handle. Try a smaller version of it.";
+    readonly "errors.FRAME_RATE_TOO_HIGH": "This video has {actual, number} frames per second, which is more than the limit of {maximum, number}.";
+    readonly "errors.DURATION_TOO_LONG": "This video is longer than the editor can open.";
+    readonly "errors.BITRATE_TOO_HIGH": "This video holds more data per second than the editor can play. Try a version with a lower quality setting.";
+    readonly "errors.PACKET_TOO_LARGE": "Part of this video is larger than the editor can read. Try converting the file, then open it again.";
+    readonly "errors.TOO_MANY_TRACKS": "This file has {actual, number} tracks, which is over the {maximum, number}-track limit.";
+    readonly "errors.INDEX_TOO_LARGE": "This video's index is larger than the editor can read. Try converting the file, then open it again.";
+    readonly "errors.TOO_MANY_CHANNELS": "This video's audio has {actual, number} channels, which is over the {maximum, number}-channel limit.";
+    readonly "errors.SAMPLE_RATE_TOO_HIGH": "This video's audio sample rate is {actual, number} Hz, which is over the {maximum, number} Hz limit.";
+    readonly "errors.SESSION_TOO_LARGE": "The open videos' previews would use {actual, fileSize} of memory, which is over the {maximum, fileSize} limit. Remove a video, and try again.";
+    readonly "errors.TOO_MANY_CLIPS": {
+        readonly $plural: "maximum";
+    } & {
+        readonly one: "A video can have {maximum} clip. Join or delete clips, and try again.";
+        readonly other: "A video can have up to {maximum, number} clips. Join or delete clips, and try again.";
+    };
+    readonly "warnings.maxFramePixels": "This video's picture is large, and may play slowly on some devices.";
+    readonly "warnings.maxFrameRate": "This video has {actual, number} frames per second, and may play slowly on some devices.";
+    readonly "warnings.maxDuration": "This video is long, and may be slow to open and save.";
+    readonly "warnings.maxBitrate": "This video holds a lot of data per second, and may play slowly on some devices.";
+    readonly "warnings.maxPacketSize": "Part of this video is very large, and may be slow to read.";
+    readonly "warnings.maxTracks": "This file has {actual, number} tracks. Only one video and one audio track are used.";
+    readonly "warnings.maxIndexSize": "This video's index is large, and may be slow to open.";
+    readonly "warnings.maxChannels": "This video's audio has {actual, number} channels, and may be slow to edit.";
+    readonly "warnings.maxSampleRate": "This video's audio sample rate is {actual, number} Hz, and it may be slow to edit.";
+    readonly "warnings.maxSessionSize": "The open videos' previews use {actual, fileSize} of memory. Removing videos frees memory.";
+    readonly "warnings.maxClips": {
+        readonly $plural: "actual";
+    } & {
+        readonly one: "This video has {actual} clip. Many clips may be slow to play and save.";
+        readonly other: "This video has {actual, number} clips. Many clips may be slow to play and save.";
+    };
+    readonly "errors.UNKNOWN": "Something went wrong. Please try again.";
+    readonly "errors.ABORTED": "The operation was cancelled.";
+    readonly "errors.TIMEOUT": "The operation took too long and was stopped.";
+    readonly "errors.WORKER_START_FAILED": "The file processor couldn't start. Reload the page and try again.";
+    readonly "errors.WORKER_PROTOCOL_MISMATCH": "The file processor is out of date. Reload the page to update it.";
+    readonly "errors.WORKER_CRASHED": "The file processor stopped unexpectedly. Please try again.";
+    readonly "errors.WORKER_TERMINATED": "The operation was stopped before it finished. Please try again.";
+    readonly "errors.WORKER_METHOD_NOT_FOUND": "This operation isn't available. Reload the page and try again.";
+    readonly "errors.WORKER_DATA_NOT_CLONEABLE": "Something went wrong while processing the file. Please try again.";
+    readonly "errors.UNSUPPORTED_ENVIRONMENT": "This browser doesn't support a feature this tool needs. Update your browser, or try another one.";
+    readonly "errors.FILE_TOO_LARGE": "This file is {actual, fileSize}, which is over the {maximum, fileSize} limit.";
+    readonly "errors.TOO_MANY_FILES": {
+        readonly $plural: "maximum";
+    } & {
+        readonly one: "You can add {maximum} file at a time.";
+        readonly other: "You can add up to {maximum} files at a time.";
+    };
+    readonly "errors.DECODED_SIZE_TOO_LARGE": "This file expands to more than {maximum, fileSize} when opened, which is over the limit.";
+    readonly "errors.PROCESSING_TIME_EXCEEDED": "Processing this file took too long and was stopped.";
+    readonly "warnings.maxFileSize": "This file is {actual, fileSize}. Large files may be slow to process.";
+    readonly "warnings.maxFiles": "Adding {actual} files at once may be slow.";
+    readonly "warnings.maxDecodedSize": "This file is very large once opened and may be slow to process.";
+    readonly "warnings.maxProcessingTime": "This is taking longer than usual.";
+};
+
 ```
