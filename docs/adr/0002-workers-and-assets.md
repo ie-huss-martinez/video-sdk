@@ -2,7 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-11-12
-- **Amended:** 2026-11-12, when playback found a deadlock in Firefox: a decoder that holds a full queue without output may take more packets, up to a hard cap.
+- **Amended:** 2026-11-12, when playback found a deadlock in Firefox: a decoder that holds a full queue without output may take more packets, up to a hard cap; and when playback was built: each output draws in a media worker of its own, which lives as long as the output.
 
 ## Context
 
@@ -65,8 +65,9 @@ Every call takes an `AbortSignal` and runs under `withProcessingTime`. Long call
 
 ### Clients and lifetimes
 
-- **Two workers, each with its own client.**
-  - **The media worker** probes, opens, draws, plays and builds thumbnails. It starts with the first file and stops with its session.
+- **Two kinds of worker, each with its own client.**
+  - **The media worker** probes, opens and builds thumbnails. It starts with the first file and stops with its session.
+  - **Each output plays in a media worker of its own:** the same module, started by the output with the canvas, and terminated when the output is destroyed. A worker holding a transferred canvas can't be stopped when idle and started again, because a canvas can be transferred only once. So it can't share the engine's client, which `sdk-core` terminates after its idle timeout. Keeping it separate also means a probe can't delay a frame, and a crash in playback doesn't fail a probe. Sources reach it as their `Blob`s and probes, which cost nothing to send.
   - **The export worker** starts with the first export and stops after `sdk-core`'s idle timeout.
 - **One export at a time per session;** a second request while one runs fails with `BUSY`.
 - **Cancelling an export** aborts its call. If the export worker doesn't settle within `sdk-core`'s cancel timeout, it's terminated. The media worker and the preview are untouched either way ([ADR 0018](https://github.com/ie-huss-martinez/sdk-core/blob/main/docs/adr/0018-worker-rpc-protocol.md)).

@@ -36,8 +36,9 @@ export default [
   },
   {
     // The media worker, inlined as a minified string and loaded on the first
-    // call (docs/adr/0002): the front check, the packet walk, and mediabunny's
-    // MP4 and Matroska readers (docs/adr/0001). It measures about 49 kB.
+    // call (docs/adr/0002): the front check, the packet walk, mediabunny's
+    // MP4 and Matroska readers (docs/adr/0001), decoding, and playback's
+    // scheduler and drawing (docs/adr/0006). It measures about 53 kB.
     name: "Media worker, inlined (lazy)",
     path: "dist/lazy/inline-worker-*.js",
     brotli: true,

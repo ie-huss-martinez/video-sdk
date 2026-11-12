@@ -11,6 +11,8 @@
 
 export type { VideoEngineOptions } from "./adapters/video-engine.js";
 export { createVideoEngine } from "./adapters/video-engine.js";
+export type { VideoOutputOptions } from "./adapters/video-output.js";
+export { createVideoOutput } from "./adapters/video-output.js";
 export type { VideoErrorCode } from "./core/errors/video-error.js";
 export { isVideoError, VideoError } from "./core/errors/video-error.js";
 export type {
@@ -99,6 +101,7 @@ export type {
 export type { VideoEngine } from "./core/ports/video-engine.js";
 export type {
   VideoOutput,
+  VideoOutputEvent,
   VideoOutputSnapshot,
   VideoOutputState,
 } from "./core/ports/video-output.js";

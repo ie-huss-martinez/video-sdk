@@ -55,6 +55,9 @@ export function createPlan(output: VideoPlanOutput): VideoPlan;
 export function createVideoEngine(options?: VideoEngineOptions): VideoEngine;
 
 // @public
+export function createVideoOutput(options: VideoOutputOptions): VideoOutput;
+
+// @public
 export function createVideoReducer(sourceInfo: (id: string) => VideoSourceInfo | undefined): Reducer<VideoPlan, VideoCommand>;
 
 // @public
@@ -574,17 +577,29 @@ export interface VideoOutput {
     // (undocumented)
     getSnapshot(): VideoOutputSnapshot;
     load(plan: VideoPlan): void;
+    on(event: VideoOutputEvent, listener: () => void): () => void;
     pause(): void;
     play(): Promise<void>;
     position(): number;
     seek(frame: number): void;
+    step(delta: 1 | -1): void;
     stop(): void;
     subscribe(listener: () => void): () => void;
 }
 
 // @public
+export type VideoOutputEvent = "ended";
+
+// @public
+export interface VideoOutputOptions {
+    readonly canvas: HTMLCanvasElement;
+    readonly engine: VideoEngine;
+}
+
+// @public
 export interface VideoOutputSnapshot {
     readonly droppedFrames: number;
+    readonly error: VideoError | null;
     // (undocumented)
     readonly state: VideoOutputState;
 }

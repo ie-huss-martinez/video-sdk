@@ -14,7 +14,8 @@ export interface FakeClock {
 /** A playback fake: the real output's state machine, driven by a manual clock. */
 export function createFakeOutput(): { output: VideoOutput; clock: FakeClock } {
   const listeners = new Set<() => void>();
-  let snapshot: VideoOutputSnapshot = { state: "stopped", droppedFrames: 0 };
+  let snapshot: VideoOutputSnapshot = { state: "stopped", droppedFrames: 0, error: null };
+  const ended = new Set<() => void>();
   let plan: VideoPlan | undefined;
   let playhead = 0;
   let destroyed = false;
@@ -60,10 +61,22 @@ export function createFakeOutput(): { output: VideoOutput; clock: FakeClock } {
       assertAlive();
       playhead = Math.max(0, Math.min(Math.round(frame), length()));
     },
+    step(delta) {
+      assertAlive();
+      const target = Math.min(playhead, length() - 1) + delta;
+      if (length() === 0 || target < 0 || target > length() - 1) return;
+      if (snapshot.state === "playing") setState("paused");
+      playhead = target;
+    },
+    on(_event, listener) {
+      ended.add(listener);
+      return () => ended.delete(listener);
+    },
     async destroy() {
       destroyed = true;
       setState("stopped");
       listeners.clear();
+      ended.clear();
     },
   };
 
@@ -71,7 +84,10 @@ export function createFakeOutput(): { output: VideoOutput; clock: FakeClock } {
     advance(frames) {
       if (snapshot.state !== "playing") return;
       playhead = Math.min(playhead + frames, length());
-      if (playhead >= length()) setState("stopped");
+      if (playhead >= length()) {
+        setState("stopped");
+        for (const listener of [...ended]) listener();
+      }
     },
   };
 

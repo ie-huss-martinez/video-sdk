@@ -9,7 +9,7 @@ import { VideoError } from "../core/errors/video-error.js";
 import { type VideoFilePolicy, videoLimits } from "../core/errors/video-limits.js";
 import { sourceInfo, type VideoProbe } from "../core/model/source.js";
 import type { VideoEngine } from "../core/ports/video-engine.js";
-import type { MediaWorkerContract } from "./media-worker/contract.js";
+import type { MediaWorkerContract, PlaybackSource } from "./media-worker/contract.js";
 
 /**
  * Options for {@link createVideoEngine}.
@@ -67,6 +67,30 @@ export function createVideoEngine(options: VideoEngineOptions = {}): VideoEngine
 }
 
 /**
+ * What the SDK's own output needs from the SDK's own engine (docs/adr/0006):
+ * how to start a media worker, and each open source's file, probe and policy.
+ *
+ * @internal
+ */
+export interface EngineInternals {
+  readonly loadWorker: () => Promise<() => WorkerLike>;
+  /** An open source, or `undefined`. */
+  source(id: string): PlaybackSource | undefined;
+}
+
+const internals = new WeakMap<VideoEngine, EngineInternals>();
+
+/**
+ * The internals of an engine made by {@link createVideoEngine}, or
+ * `undefined` for any other engine.
+ *
+ * @internal
+ */
+export function engineInternals(engine: VideoEngine): EngineInternals | undefined {
+  return internals.get(engine);
+}
+
+/**
  * Whether two probes are the same, field by field. A probe is plain data:
  * numbers, strings, `null` and objects of them.
  */
@@ -100,7 +124,7 @@ export function createEngine(environment: EngineEnvironment): VideoEngine {
   let destroyed = false;
   /** Probes this engine made, which `open` can trust without probing again. */
   const trusted = new WeakMap<VideoProbe, Blob>();
-  const sources = new Map<string, { readonly file: Blob; readonly probe: VideoProbe }>();
+  const sources = new Map<string, PlaybackSource>();
 
   const assertAlive = () => {
     if (destroyed) throw new Error("The video engine has been destroyed.");
@@ -146,7 +170,7 @@ export function createEngine(environment: EngineEnvironment): VideoEngine {
     return probed;
   }
 
-  return {
+  const engine: VideoEngine = {
     probe(file, options = {}) {
       return run(async () => {
         assertAlive();
@@ -191,7 +215,7 @@ export function createEngine(environment: EngineEnvironment): VideoEngine {
         );
         throwIfAborted(options.signal);
         if (sources.has(id)) throw new TypeError(`The source "${id}" is already open.`);
-        sources.set(id, { file, probe: opened });
+        sources.set(id, { id, file, probe: opened, limits: policy.limits });
         return sourceInfo(id, opened);
       });
     },
@@ -225,4 +249,9 @@ export function createEngine(environment: EngineEnvironment): VideoEngine {
       client?.destroy();
     },
   };
+  internals.set(engine, {
+    loadWorker: environment.loadWorker,
+    source: (id) => sources.get(id),
+  });
+  return engine;
 }
