@@ -29,7 +29,12 @@ export function describeVideoOutputContract(name: string, harness: VideoOutputHa
 
     it("starts stopped at the start, with nothing dropped", async () => {
       const { output } = await harness.create();
-      expect(output.getSnapshot()).toEqual({ state: "stopped", droppedFrames: 0, error: null });
+      expect(output.getSnapshot()).toEqual({
+        state: "stopped",
+        droppedFrames: 0,
+        error: null,
+        audio: "ready",
+      });
       expect(output.position()).toBe(0);
       await output.destroy();
     });

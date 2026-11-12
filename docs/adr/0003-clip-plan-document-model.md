@@ -26,6 +26,7 @@ The session's document is a **clip plan** over immutable sources:
   - The core sees no decoded data and no DOM types, so tests can supply their own sources.
   - **A source's time begins at the probe's `start`:** the video track's earliest presentation timestamp. A clip's `start` and `end`, video frame bounds and waveform buckets all count from it, so a file whose timestamps don't begin at 0, such as one with a Matroska start offset, keeps its sound in line with its picture.
     - **Audio before the first frame is pre-roll,** and isn't played. Opus in WebM starts about 7 milliseconds before the first frame, for its codec delay, which the decoder drops. Counting from it made frame 0 sit 7 milliseconds into the source, so a seek to the first frame found nothing at or before it.
+    - **The cost:** a recording whose sound really starts before its picture, such as a camera that starts recording audio a moment early, loses that sound. It can't be placed on a timeline that starts with the first frame.
 - **The plan:**
   - **`output`:** `{ width, height, frameRate, sampleRate, channels }`. `frameRate` is a rational `{ num, den }`, such as `{ num: 30000, den: 1001 }`;
   - **`clips`:** an ordered list, played back to back on one track;

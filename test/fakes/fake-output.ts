@@ -16,7 +16,12 @@ export interface FakeClock {
 /** A playback fake: the real output's state machine, driven by a manual clock. */
 export function createFakeOutput(): { output: VideoOutput; clock: FakeClock } {
   const listeners = new Set<() => void>();
-  let snapshot: VideoOutputSnapshot = { state: "stopped", droppedFrames: 0, error: null };
+  let snapshot: VideoOutputSnapshot = {
+    state: "stopped",
+    droppedFrames: 0,
+    error: null,
+    audio: "ready",
+  };
   const ended = new Set<() => void>();
   let plan: VideoPlan | undefined;
   let playhead = 0;

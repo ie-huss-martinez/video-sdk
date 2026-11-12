@@ -7,6 +7,7 @@
 import { exposeWorker } from "@hussmartinez/sdk-core";
 import type { MediaWorkerContract } from "../../src/adapters/media-worker/contract.js";
 import { mediaWorkerHandlers } from "../../src/adapters/media-worker/handlers.js";
+import { audioDataLedger } from "../../src/adapters/mediabunny/audio-decoder.js";
 import { videoFrameLedger } from "../../src/adapters/mediabunny/video-decoder.js";
 import { schedulerLedger } from "../../src/core/playback/scheduler.js";
 
@@ -20,6 +21,8 @@ export interface DrawnRecord {
   readonly sourceTime: number;
   /** The clock when it was drawn, in timeline microseconds, or `null` when paused. */
   readonly clock: number | null;
+  /** Wall-clock time when it was drawn, in milliseconds since the epoch. */
+  readonly wall: number;
   /** The canvas's backing size when it was drawn. */
   readonly width: number;
   readonly height: number;
@@ -29,6 +32,8 @@ export interface LedgerRecord {
   readonly type: "ledger";
   readonly open: number;
   readonly held: number;
+  /** Decoded audio chunks not yet closed. */
+  readonly audio: number;
 }
 
 /** What the test posts to the worker to receive its reports. */
@@ -47,6 +52,7 @@ self.addEventListener("message", (event: MessageEvent<Partial<TestPortMessage>>)
       type: "ledger",
       open: videoFrameLedger.open,
       held: schedulerLedger.held,
+      audio: audioDataLedger.open,
     } satisfies LedgerRecord);
   });
   port.start();
@@ -72,6 +78,7 @@ exposeWorker<MediaWorkerContract>(
         clip: clip.key,
         sourceTime,
         clock,
+        wall: performance.timeOrigin + performance.now(),
         width: canvas.width,
         height: canvas.height,
       } satisfies DrawnRecord);

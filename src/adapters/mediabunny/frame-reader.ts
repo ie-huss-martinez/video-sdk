@@ -1,6 +1,7 @@
-import type { InputVideoTrack } from "mediabunny";
+import type { InputAudioTrack, InputVideoTrack } from "mediabunny";
 import { isVideoError, VideoError } from "../../core/errors/video-error.js";
 import type { VideoProbe } from "../../core/model/source.js";
+import { type AudioRange, decodeAudioData } from "./audio-decoder.js";
 import { frameBounds } from "./frame-bounds.js";
 import { familyOf, openInput, pickTracks } from "./tracks.js";
 import { decodeVideoFrames, type FrameRange } from "./video-decoder.js";
@@ -18,6 +19,17 @@ export interface FrameReader {
     onFrame: (frame: VideoFrame) => void | Promise<void>,
     signal: AbortSignal,
   ): Promise<number>;
+  /**
+   * The audio track the probe read, or `null` without one. It decodes a
+   * range with `decodeAudioData`, lending each chunk to `onData`.
+   */
+  readonly audio: {
+    decode(
+      range: AudioRange,
+      onData: (data: AudioData) => void | Promise<void>,
+      signal: AbortSignal,
+    ): Promise<number>;
+  } | null;
   /** Releases the file. Decoding afterwards fails. */
   dispose(): void;
 }
@@ -35,9 +47,17 @@ export async function openFrameReader(file: Blob, probe: VideoProbe): Promise<Fr
   const input = openInput(file, familyOf(probe.container));
   let track: InputVideoTrack;
   let config: VideoDecoderConfig | null;
+  let audioTrack: InputAudioTrack | undefined;
+  let audioConfig: AudioDecoderConfig | null = null;
   try {
-    track = (await pickTracks(input, probe.container)).video;
+    const tracks = await pickTracks(input, probe.container);
+    track = tracks.video;
     config = await track.getDecoderConfig();
+    // Only the audio track the probe found; a file probed without audio plays silent.
+    if (probe.audio && tracks.audio) {
+      audioTrack = tracks.audio;
+      audioConfig = await audioTrack.getDecoderConfig();
+    }
   } catch (error) {
     input.dispose();
     if (isVideoError(error)) throw error;
@@ -54,9 +74,20 @@ export async function openFrameReader(file: Blob, probe: VideoProbe): Promise<Fr
   }
   const decoderConfig = config;
   const bounds = frameBounds(probe);
+  const audio =
+    audioTrack && audioConfig
+      ? {
+          decode: (
+            range: AudioRange,
+            onData: (data: AudioData) => void | Promise<void>,
+            signal: AbortSignal,
+          ) => decodeAudioData(audioTrack, audioConfig, range, onData, signal),
+        }
+      : null;
   return {
     decode: (range, onFrame, signal) =>
       decodeVideoFrames(track, decoderConfig, bounds, range, onFrame, signal),
+    audio,
     dispose: () => input.dispose(),
   };
 }
