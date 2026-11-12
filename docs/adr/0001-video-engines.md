@@ -123,7 +123,8 @@ Only then does the worker open the file with mediabunny.
 
   A host may ask for MP4 or WebM. If the browser can't encode either, the export fails with `UNSUPPORTED_CODEC`. A plan without audio writes no audio track.
 - **What the order gives, as measured** in the pinned image's [capability matrix](../capabilities.md): every engine encodes H.264, VP8, VP9, AV1 and Opus, but only WebKit encodes AAC.
-  - **Chromium and Firefox export MP4 with H.264 and Opus.** WebKit exports MP4 with H.264 and AAC.
+  - **In those builds, Chromium and Firefox export MP4 with H.264 and Opus,** and WebKit exports MP4 with H.264 and AAC.
+  - **The order is decided at runtime, by probing the browser the user has,** not from this table. The image's Chromium is Playwright's open-source build, without proprietary codecs. Branded Chrome on Windows, macOS and ChromeOS, and Edge, generally encode AAC through the platform's encoders, so their users most likely get H.264 and AAC. Opus in MP4 is the fallback for builds without an AAC encoder, such as Chromium on Linux, and Firefox.
   - **MP4 with H.264 and Opus is kept ahead of WebM** when AAC isn't available. H.264 in MP4 is the most widely accepted video, by players, hardware decoders and upload sites, and Opus in MP4 is standardised. Some players, notably older Apple software, don't play Opus in MP4. A host that needs another choice can ask for WebM.
   - **The export summary names the container and both codecs** before the download ([ADR 0005](0005-playback-and-export.md)), so the user sees which they're getting.
   - **The export tests decode every exported file in the engine that made it,** so a combination that writes but doesn't play back fails a test.
