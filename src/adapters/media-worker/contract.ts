@@ -1,5 +1,5 @@
 import type { VideoLimitName } from "../../core/errors/video-limits.js";
-import type { VideoProbe } from "../../core/model/source.js";
+import type { VideoContainer, VideoProbe } from "../../core/model/source.js";
 
 /**
  * A resolved file policy's limits, as plain data: a `FilePolicy` holds
@@ -20,5 +20,14 @@ export interface MediaWorkerContract {
   readonly probe: {
     readonly input: { readonly file: Blob; readonly limits: PolicyLimits };
     readonly output: VideoProbe;
+  };
+  /**
+   * Checks that this browser can decode the tracks of a file it has probed
+   * (docs/adr/0001). It rejects with `UNSUPPORTED_CODEC` or
+   * `UNSUPPORTED_ENVIRONMENT`, and decodes nothing.
+   */
+  readonly support: {
+    readonly input: { readonly file: Blob; readonly container: VideoContainer };
+    readonly output: undefined;
   };
 }

@@ -9,8 +9,13 @@ import { aborted, rejection } from "./helpers.js";
  */
 export interface VideoEngineHarness {
   createEngine(): VideoEngine;
-  /** 1280 × 720 at 30 frames per second, 2 seconds long, with 48 kHz stereo audio. */
+  /**
+   * 1280 × 720 at 30 frames per second, 2 seconds long, with 48 kHz stereo
+   * audio, in codecs every browser in the test matrix decodes.
+   */
   landscape(): Promise<Blob>;
+  /** A valid file whose video codec this browser can't decode. */
+  undecodable(): Promise<Blob>;
   /** The same, stored 1280 × 720 with a container rotation of 90°. */
   rotated(): Promise<Blob>;
   /** 1280 × 720 at 30 frames per second, 2 seconds long, with no audio track. */
@@ -97,6 +102,19 @@ export function describeVideoEngineContract(name: string, harness: VideoEngineHa
           "INDEX_TOO_LARGE",
         ),
       ).toBe(true);
+      await engine.destroy();
+    });
+
+    it("opens only files this browser can decode, naming the codec otherwise", async () => {
+      const engine = harness.createEngine();
+      const file = await harness.undecodable();
+      const probe = await engine.probe(file);
+      const error = await rejection(engine.open("u", file, probe));
+      expect(isVideoError(error, "UNSUPPORTED_CODEC")).toBe(true);
+      expect((error as { details?: unknown }).details).toMatchObject({
+        codec: probe.video.codec,
+        track: "video",
+      });
       await engine.destroy();
     });
 

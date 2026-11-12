@@ -18,6 +18,7 @@ export const fakeEngineHarness: VideoEngineHarness = {
   createEngine: createFakeEngine,
   landscape: async () => encodeFakeVideo(LANDSCAPE),
   rotated: async () => encodeFakeVideo({ ...LANDSCAPE, rotation: 90 }),
+  undecodable: async () => encodeFakeVideo({ ...LANDSCAPE, codec: "hvc1.1.6.L93.B0" }),
   silent: async () => encodeFakeVideo({ ...LANDSCAPE, audio: null }),
   lyingHeader: async () => encodeFakeVideo({ ...LANDSCAPE, declaredFrames: 30 }),
   malformed: async () => new Blob(["FAKEVIDEO1\n{not json"]),

@@ -39,6 +39,11 @@ export interface VideoEngine {
    * changed. Any other probe, such as one copied or restored from a saved
    * session, makes the engine probe the file again, under `filePolicy` as
    * `probe` does, and rejects with `INVALID_VIDEO` unless every field matches.
+   *
+   * A file opens only if this browser can decode the tracks the SDK uses:
+   * otherwise `open` rejects with `UNSUPPORTED_CODEC`, naming the codec and
+   * the track in `details`, or with `UNSUPPORTED_ENVIRONMENT` without
+   * WebCodecs.
    */
   open(
     id: string,

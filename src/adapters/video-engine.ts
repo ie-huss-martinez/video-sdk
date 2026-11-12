@@ -173,6 +173,13 @@ export function createEngine(environment: EngineEnvironment): VideoEngine {
           }
           opened = fresh;
         }
+        // Only a file this browser can decode opens (docs/adr/0001).
+        const media = await worker();
+        await media.call(
+          "support",
+          { file, container: opened.container },
+          options.signal ? { signal: options.signal } : {},
+        );
         throwIfAborted(options.signal);
         if (sources.has(id)) throw new TypeError(`The source "${id}" is already open.`);
         sources.set(id, { file, probe: opened });

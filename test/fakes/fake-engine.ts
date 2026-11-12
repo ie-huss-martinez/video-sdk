@@ -12,6 +12,9 @@ import {
 } from "../../src/index.js";
 import { decodeFakeVideo } from "./fake-video.js";
 
+/** The video codecs the fake engine "decodes": anything else is `UNSUPPORTED_CODEC`. */
+const DECODABLE = ["avc1.", "vp8", "vp09."];
+
 /** An engine fake that reads fake video files, and the sources it has open. */
 export interface FakeEngine extends VideoEngine {
   readonly sources: ReadonlyMap<string, VideoSourceInfo>;
@@ -67,7 +70,7 @@ export function createFakeEngine(): FakeEngine {
       peakBitrate: 1_000_000,
       maxPacketSize: 10_000,
       video: Object.freeze({
-        codec: "avc1.64001f",
+        codec: spec.codec ?? "avc1.64001f",
         codedWidth: pad(spec.width),
         codedHeight: pad(spec.height),
         displayWidth: spec.width,
@@ -96,6 +99,11 @@ export function createFakeEngine(): FakeEngine {
           throw new VideoError("INVALID_VIDEO", "The probe doesn't describe this file.");
         }
         probe = fresh;
+      }
+      if (!DECODABLE.some((prefix) => probe.video.codec.startsWith(prefix))) {
+        throw new VideoError("UNSUPPORTED_CODEC", "This browser can't decode the video track.", {
+          details: { codec: probe.video.codec, track: "video" },
+        });
       }
       const info = sourceInfo(id, probe);
       sources.set(id, info);

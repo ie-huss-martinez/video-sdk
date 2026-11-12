@@ -1,5 +1,6 @@
 import type { WorkerHandlers } from "@hussmartinez/sdk-core";
 import { videoLimits } from "../../core/errors/video-limits.js";
+import { checkDecoderSupport } from "../mediabunny/decoder-support.js";
 import { probeFile } from "../probe.js";
 import type { MediaWorkerContract } from "./contract.js";
 
@@ -10,5 +11,9 @@ import type { MediaWorkerContract } from "./contract.js";
 export function mediaWorkerHandlers(): WorkerHandlers<MediaWorkerContract> {
   return {
     probe: ({ file, limits }, { signal }) => probeFile(file, videoLimits.resolve(limits), signal),
+    async support({ file, container }) {
+      await checkDecoderSupport(file, container);
+      return undefined;
+    },
   };
 }
