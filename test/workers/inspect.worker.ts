@@ -19,6 +19,7 @@ export interface InspectContract {
       readonly container: string;
       readonly videoCodec: string;
       readonly audioCodec: string | null;
+      readonly tracks: number;
     };
   };
 }
@@ -66,6 +67,7 @@ exposeWorker<InspectContract>({
         container: probe.container,
         videoCodec: probe.video.codec,
         audioCodec: probe.audio?.codec ?? null,
+        tracks: probe.tracks,
       };
     } finally {
       input.dispose();

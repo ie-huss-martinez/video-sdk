@@ -71,6 +71,8 @@ function audioConfig(
     sampleRate: exportSampleRate(plan.output, candidate),
     numberOfChannels: plan.output.channels,
     bitrate: audioBitrate(plan.output, quality),
+    // Opus's 20 ms frames, said outright, so each chunk's length is known.
+    ...(candidate.audio.muxer === "opus" ? { opus: { frameDuration: 20_000 } } : {}),
   };
 }
 
@@ -108,44 +110,120 @@ async function provesVideo(config: VideoEncoderConfig): Promise<boolean> {
   }
 }
 
-/** Whether this browser encodes an audio configuration: it says so, and one silent chunk encodes. */
-async function provesAudio(config: AudioEncoderConfig): Promise<boolean> {
+/** Where the probe's tone burst starts, in samples: well past any codec's priming. */
+const BURST_AT = 4_800;
+
+/**
+ * Whether this browser encodes an audio configuration, and its priming: the
+ * samples of delay the encoder puts before the audio, which the file must
+ * trim (docs/adr/0001). The probe encodes silence with a short tone burst at
+ * a known sample, re-stamped by sample count as the export does, and decodes
+ * it back. Opus carries its pre-skip in its own header, so its priming is 0
+ * once it encodes. AAC's isn't recorded anywhere a decoder applies, so it's
+ * measured: where the burst comes back, less where it went in. `undefined`
+ * when the configuration doesn't encode, or AAC's priming can't be measured.
+ */
+async function provesAudio(config: AudioEncoderConfig): Promise<number | undefined> {
   try {
-    if (!(await AudioEncoder.isConfigSupported(config)).supported) return false;
+    if (!(await AudioEncoder.isConfigSupported(config)).supported) return undefined;
   } catch {
-    return false;
+    return undefined;
   }
-  let produced = false;
+  const chunks: EncodedAudioChunk[] = [];
+  let decoderConfig: AudioDecoderConfig | undefined;
   let failed = false;
   const encoder = new AudioEncoder({
-    output: () => {
-      produced = true;
+    output: (chunk, meta) => {
+      chunks.push(chunk);
+      decoderConfig ??= meta?.decoderConfig;
     },
     error: () => {
       failed = true;
     },
   });
+  const rate = config.sampleRate;
+  const channels = config.numberOfChannels;
   try {
     encoder.configure(config);
-    // A tenth of a second, more than any codec's frame.
-    const frames = Math.round(config.sampleRate / 10);
+    const frames = BURST_AT * 2;
+    const planar = new Float32Array(frames * channels);
+    // 10 ms of 1 kHz at full scale, in every channel.
+    for (let k = BURST_AT; k < BURST_AT + rate / 100; k += 1) {
+      const sample = Math.sin((2 * Math.PI * 1_000 * (k - BURST_AT)) / rate);
+      for (let channel = 0; channel < channels; channel += 1) planar[channel * frames + k] = sample;
+    }
     const data = new AudioData({
       format: "f32-planar",
-      sampleRate: config.sampleRate,
+      sampleRate: rate,
       numberOfFrames: frames,
-      numberOfChannels: config.numberOfChannels,
+      numberOfChannels: channels,
       timestamp: 0,
-      data: new Float32Array(frames * config.numberOfChannels),
+      data: planar,
     });
     encoder.encode(data);
     data.close();
     await encoder.flush();
-    return produced && !failed;
   } catch {
-    return false;
+    return undefined;
   } finally {
     if (encoder.state !== "closed") encoder.close();
   }
+  if (failed || chunks.length === 0) return undefined;
+  if (config.codec === "opus") return 0;
+  if (!decoderConfig) return undefined;
+  // Decoded in order, as the file would be read, and joined end to end.
+  const decoded: number[] = [];
+  let decodeFailed = false;
+  const decoder = new AudioDecoder({
+    output: (data) => {
+      const plane = new Float32Array(data.numberOfFrames);
+      data.copyTo(plane, { planeIndex: 0, format: "f32-planar" });
+      data.close();
+      for (const sample of plane) decoded.push(sample);
+    },
+    error: () => {
+      decodeFailed = true;
+    },
+  });
+  try {
+    decoder.configure(decoderConfig);
+    const step = audioFrameSamples(config.codec, rate);
+    for (const [index, chunk] of chunks.entries()) {
+      decoder.decode(restamp(chunk, index * step, step, rate));
+    }
+    await decoder.flush();
+  } catch {
+    return undefined;
+  } finally {
+    if (decoder.state !== "closed") decoder.close();
+  }
+  if (decodeFailed) return undefined;
+  // Above half the burst: AAC smears a transient about a block early, as pre-echo.
+  const onset = decoded.findIndex((sample) => Math.abs(sample) > 0.5);
+  if (onset < BURST_AT) return undefined;
+  return onset - BURST_AT;
+}
+
+/** How many samples each encoded chunk of a codec holds: AAC-LC's frame, and Opus's 20 ms. */
+function audioFrameSamples(codec: string, rate: number): number {
+  return codec === "opus" ? Math.round(rate / 50) : 1_024;
+}
+
+/**
+ * A chunk with its time set from its place in the stream: `from` samples,
+ * `length` long. WebKit stamps every chunk with the time and length of the
+ * audio it was encoded from, so several chunks share one time; the file
+ * needs each chunk's own.
+ */
+function restamp(chunk: EncodedAudioChunk, from: number, length: number, rate: number) {
+  const data = new Uint8Array(chunk.byteLength);
+  chunk.copyTo(data);
+  return new EncodedAudioChunk({
+    type: chunk.type,
+    timestamp: Math.round((from * 1_000_000) / rate),
+    duration: Math.round((length * 1_000_000) / rate),
+    data,
+  });
 }
 
 /**
@@ -158,7 +236,7 @@ async function chooseCandidate(
   quality: VideoExportQuality,
   withAudio: boolean,
   container: VideoExportContainer | undefined,
-): Promise<ExportCandidate> {
+): Promise<{ readonly candidate: ExportCandidate; readonly priming: number }> {
   for (const feature of ["VideoEncoder", "AudioEncoder"] as const) {
     if (typeof globalThis[feature] !== "function") {
       throw new VideoError(
@@ -175,14 +253,18 @@ async function chooseCandidate(
     if (!proved.has(key)) proved.set(key, await prove());
     return proved.get(key) as boolean;
   };
+  const primings = new Map<string, number | undefined>();
   for (const candidate of exportCandidates(plan.output, container)) {
     const video = videoConfig(plan, candidate, quality);
     if (!(await cached(`v:${video.codec}`, () => provesVideo(video)))) continue;
     if (withAudio) {
       const audio = audioConfig(plan, candidate, quality);
-      if (!(await cached(`a:${audio.codec}`, () => provesAudio(audio)))) continue;
+      if (!primings.has(audio.codec)) primings.set(audio.codec, await provesAudio(audio));
+      const priming = primings.get(audio.codec);
+      if (priming === undefined) continue;
+      return { candidate, priming };
     }
-    return candidate;
+    return { candidate, priming: 0 };
   }
   throw new VideoError("UNSUPPORTED_CODEC", "This browser can't encode the export.", {
     details: { codec: container ?? "mp4/webm", track: "video" },
@@ -286,7 +368,12 @@ export async function exportPlan(
 
   try {
     throwIfAborted(signal);
-    const candidate = await chooseCandidate(plan, quality, withAudio, request.container);
+    const { candidate, priming } = await chooseCandidate(
+      plan,
+      quality,
+      withAudio,
+      request.container,
+    );
     throwIfAborted(signal);
     const { output } = plan;
     writer = await createExportWriter(
@@ -310,9 +397,18 @@ export async function exportPlan(
     });
     videoEncoder.configure(video);
     const audio = withAudio ? audioConfig(plan, candidate, quality) : undefined;
+    let audioChunks = 0;
     if (audio) {
       audioEncoder = new AudioEncoder({
-        output: (chunk, meta) => write(() => activeWriter.addAudio(chunk, meta)),
+        // Each chunk is stamped by its place in the stream, from minus the
+        // encoder's priming: the file's edit list then trims the priming, so
+        // the first sample heard is the plan's first (docs/adr/0001).
+        output: (chunk, meta) => {
+          const step = audioFrameSamples(audio.codec, audio.sampleRate);
+          const stamped = restamp(chunk, audioChunks * step - priming, step, audio.sampleRate);
+          audioChunks += 1;
+          write(() => activeWriter.addAudio(stamped, meta));
+        },
         error: encodeFailed(audio.codec),
       });
       audioEncoder.configure(audio);

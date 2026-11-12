@@ -68,6 +68,32 @@ for spec in "a 0 440" "b 128 880"; do
     -c:v libvpx -deadline good -cpu-used 5 -crf 10 -b:v 200k -threads 1 -g 30 \
     "${opus[@]}" "${exact[@]}" -shortest "export-$1.webm"
 done
+# A source that carries everything an export must not copy (docs/adr/0005):
+# a location, a device make and model, a title, a comment, stream titles, a
+# subtitle track and a chapter, each with a marker string the export tests
+# search the exported bytes for.
+private_dir="$(mktemp -d)"
+printf '1\n00:00:00,000 --> 00:00:02,000\nMARKER-SUBTITLE-7731\n' > "$private_dir/sub.srt"
+printf ';FFMETADATA1\ntitle=MARKER-TITLE-7731\n[CHAPTER]\nTIMEBASE=1/1000\nSTART=0\nEND=1000\ntitle=MARKER-CHAPTER-7731\n' \
+  > "$private_dir/meta.txt"
+ffmpeg -y -v error -f lavfi -i "$(pattern 256x32 2)" -f lavfi -i "$(tone 2)" \
+  -i "$private_dir/sub.srt" -i "$private_dir/meta.txt" \
+  -map 0 -map 1 -map 2 -map_metadata 3 -map_chapters 3 \
+  -c:v libvpx -deadline good -cpu-used 5 -crf 30 -b:v 200k -threads 1 -g 30 \
+  "${opus[@]}" -c:s srt \
+  -metadata comment=MARKER-COMMENT-7731 -metadata location=+48.8584+002.2945/ \
+  -metadata make=MARKER-DEVICE-7731 -metadata model=MARKER-MODEL-7731 \
+  -metadata:s:v:0 title=MARKER-STREAM-7731 -metadata:s:v:0 handler_name=MARKER-HANDLER-7731 \
+  -fflags +bitexact -flags:v +bitexact -flags:a +bitexact private-metadata.mkv
+rm -r "$private_dir"
+
+# The numbered picture over three tones, a second each: 440 Hz, then 1 kHz,
+# which the cut-audio test cuts out, then 660 Hz.
+tones="aevalsrc='0.5*sin(2*PI*if(lt(t\\,1)\\,440\\,if(lt(t\\,2)\\,1000\\,660))*t)':s=48000:d=3"
+ffmpeg -y -v error -f lavfi -i "color=black:size=256x32:rate=30:duration=3,format=yuv420p,$numbered" \
+  -f lavfi -i "$tones" \
+  -c:v libvpx -deadline good -cpu-used 5 -crf 10 -b:v 200k -threads 1 -g 30 \
+  "${opus[@]}" "${exact[@]}" -shortest cut-tones.webm
 # HEVC, which Chromium and Firefox don't decode: for UNSUPPORTED_CODEC.
 ffmpeg -y -v error -f lavfi -i "$(pattern 320x180 0.5)" -f lavfi -i "$(tone 0.5)" \
   -c:v libx265 -preset ultrafast -crf 45 -pix_fmt yuv420p -tag:v hvc1 \
