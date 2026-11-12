@@ -29,19 +29,19 @@ The package is pre-1.0. Security fixes go into the latest release only. No versi
 
 In scope is everything in this repository: `@hussmartinez/video-sdk`, its workers, its own probe and its integration of the demuxer, muxer and codecs, the workflows that verify and release it, and the published package. Examples:
 
-- a video that runs script in the host page or a worker, or makes the SDK insert file-derived text, such as metadata, a track name or a file name, as HTML;
-- a **container or codec bomb**: a file that declares or decodes to more than the file policy's limits allow, in frame pixels, frame rate, duration, bitrate, packet size, tracks, channels or sample rate, and still reaches a decoder. For example, a small file with millions of tiny packets; a header or sample table that claims less than the packets or the decoder produce; decoded frames larger than the probe reported; or a file that the SDK demuxes or decodes outside a worker;
-- a video that freezes or crashes the page, hangs the probe or the demuxer, or exhausts memory despite the limits, including through decoded frames that are never closed;
-- any network request the SDK makes, including for workers, codecs, fonts or models;
+- a video that runs script in the host page or a worker, or makes the SDK insert file-derived text, such as metadata, a track name or a file name, as HTML ([ADR 0001](docs/adr/0001-video-engines.md));
+- a **container or codec bomb**: a file that declares or decodes to more than the file policy's limits allow, in frame pixels, frame rate, duration, bitrate, packet size, tracks, channels or sample rate, and still reaches a decoder. For example, a small file with millions of tiny packets; a header or sample table that claims less than the packets or the decoder produce; decoded frames larger than the probe reported; or a file that the SDK demuxes or decodes outside a worker ([ADR 0001](docs/adr/0001-video-engines.md));
+- a video that freezes or crashes the page, hangs the probe or the demuxer, or exhausts memory despite the limits, including through decoded frames that are never closed ([ADR 0002](docs/adr/0002-workers-and-assets.md));
+- any network request the SDK makes, including for workers, codecs, fonts or models ([ADR 0002](docs/adr/0002-workers-and-assets.md));
 - **metadata and location leaks:** an exported video that carries metadata from its sources instead of only what the user set, such as GPS coordinates, the recording device, creation times, chapters, subtitle tracks or cover art; or an editor that says metadata was removed when it wasn't;
-- **cut footage surviving an export:** video or audio the user trimmed, split off or deleted that is still in the exported file, for example as packets outside an edit list, an untrimmed track, or a source muxed alongside the edit;
+- **cut footage surviving an export:** video or audio the user trimmed, split off or deleted that is still in the exported file, for example as packets outside an edit list, an untrimmed track, or a source muxed alongside the edit. Exports are re-encoded and never copy a source's packets ([ADR 0001](docs/adr/0001-video-engines.md));
 - **frames leaking between clips:** a frame or audio from one clip, source or editor appearing in another, such as a stale frame after a seek or an edit, a decoder or canvas reused without a reset, or one editor's video showing in another on the same page;
 - file names, frames, audio or metadata reaching the host's `onEvent`, or anything else that leaks a video's data;
 - styles from the standalone script that change the host page outside the editor;
 - anything that requires a weaker Content Security Policy than documented, such as `unsafe-eval`;
 - weaknesses in the build, release or publishing workflows, such as unpinned actions, excessive permissions, or a bundled dependency that doesn't match its pinned version.
 
-The SDK probes files with its own code, demuxes and muxes them with a bundled, pinned third-party library, and decodes and encodes them with the browser's WebCodecs, in workers. **A known vulnerability in any third-party code that the SDK bundles, including its demuxer and muxer, is in scope** when the SDK's latest release still ships the affected version, because applications can only get the fix from us.
+The SDK checks and probes files with its own code, reads and writes containers with [mediabunny](https://github.com/Vanilagy/mediabunny) 1.65.2 (MPL-2.0), bundled at that exact version, and decodes and encodes with the browser's WebCodecs, all in workers ([ADR 0001](docs/adr/0001-video-engines.md)). **A known vulnerability in any third-party code that the SDK bundles, including mediabunny, is in scope** when the SDK's latest release still ships the affected version, because applications can only get the fix from us.
 
 Out of scope:
 
