@@ -9,8 +9,17 @@ import { aborted, rejection } from "./helpers.js";
  */
 export interface VideoEngineHarness {
   createEngine(): VideoEngine;
-  /** 1280 × 720 at 30 frames per second, 2 seconds long, with 48 kHz stereo audio. */
+  /**
+   * 1280 × 720 at 30 frames per second, 2 seconds long, with 48 kHz stereo
+   * audio, in codecs every browser in the test matrix decodes.
+   */
   landscape(): Promise<Blob>;
+  /**
+   * A valid file whose video codec this browser can't decode, or
+   * `undefined` where every codec in the fixtures decodes, and the test
+   * that needs it skips.
+   */
+  undecodable(): Promise<Blob | undefined>;
   /** The same, stored 1280 × 720 with a container rotation of 90°. */
   rotated(): Promise<Blob>;
   /** 1280 × 720 at 30 frames per second, 2 seconds long, with no audio track. */
@@ -100,6 +109,23 @@ export function describeVideoEngineContract(name: string, harness: VideoEngineHa
       await engine.destroy();
     });
 
+    it("opens only files this browser can decode, naming the codec otherwise", async (context) => {
+      const file = await harness.undecodable();
+      if (file === undefined) {
+        context.skip("this browser claims to decode every codec in the fixtures");
+        return;
+      }
+      const engine = harness.createEngine();
+      const probe = await engine.probe(file);
+      const error = await rejection(engine.open("u", file, probe));
+      expect(isVideoError(error, "UNSUPPORTED_CODEC")).toBe(true);
+      expect((error as { details?: unknown }).details).toMatchObject({
+        codec: probe.video.codec,
+        track: "video",
+      });
+      await engine.destroy();
+    });
+
     it("rejects a cancelled call with ABORTED", async () => {
       const engine = harness.createEngine();
       const file = await harness.landscape();
@@ -171,6 +197,15 @@ export function describeVideoEngineContract(name: string, harness: VideoEngineHa
         const error = await rejection(engine.open(`forged-${index}`, file, forged));
         expect(isVideoError(error, "INVALID_VIDEO"), `forgery ${index}`).toBe(true);
       }
+      await engine.destroy();
+    });
+
+    it("trusts a probe only for the file it was made from", async () => {
+      const engine = harness.createEngine();
+      const probe = await engine.probe(await harness.landscape());
+      // The same probe, with a different file: probed again, and refused.
+      const error = await rejection(engine.open("other", await harness.silent(), probe));
+      expect(isVideoError(error, "INVALID_VIDEO")).toBe(true);
       await engine.destroy();
     });
 

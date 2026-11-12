@@ -99,7 +99,7 @@ export function createEngine(environment: EngineEnvironment): VideoEngine {
   let client: WorkerClient<MediaWorkerContract> | undefined;
   let destroyed = false;
   /** Probes this engine made, which `open` can trust without probing again. */
-  const trusted = new WeakSet<VideoProbe>();
+  const trusted = new WeakMap<VideoProbe, Blob>();
   const sources = new Map<string, { readonly file: Blob; readonly probe: VideoProbe }>();
 
   const assertAlive = () => {
@@ -141,7 +141,8 @@ export function createEngine(environment: EngineEnvironment): VideoEngine {
     );
     // Frozen before it's trusted: a caller can't lower a value in it to pass
     // the limits, then open the file with it.
-    trusted.add(freeze(probed));
+    // A probe is trusted only for the Blob it was made from.
+    trusted.set(freeze(probed), file);
     return probed;
   }
 
@@ -159,12 +160,13 @@ export function createEngine(environment: EngineEnvironment): VideoEngine {
         throwIfAborted(options.signal);
         if (sources.has(id)) throw new TypeError(`The source "${id}" is already open.`);
         // A probe the caller rebuilt or copied, such as one restored from a
-        // saved session: probe the file again, under the caller's policy,
-        // and open it with the fresh probe only if every field matches, so
-        // that limits were checked against what the file really holds.
+        // saved session, or a probe of another file: probe this file again,
+        // under the caller's policy, and open it with the fresh probe only if
+        // every field matches, so that limits were checked against what the
+        // file really holds.
+        const policy = options.filePolicy ?? videoLimits.resolve();
         let opened = given;
-        if (!trusted.has(given)) {
-          const policy = options.filePolicy ?? videoLimits.resolve();
+        if (trusted.get(given) !== file) {
           const fresh = await probe(file, policy, options.signal);
           if (!sameProbe(fresh, given)) {
             throw new VideoError("INVALID_VIDEO", "The probe doesn't describe this file.", {
@@ -173,6 +175,15 @@ export function createEngine(environment: EngineEnvironment): VideoEngine {
           }
           opened = fresh;
         }
+        // Only a file this browser can decode opens (docs/adr/0001). The
+        // worker checks the file again before mediabunny reads it, under the
+        // same policy and processing time as a probe.
+        const media = await worker();
+        await withProcessingTime(
+          policy,
+          (timed) => media.call("support", { file, limits: policy.limits }, { signal: timed }),
+          options.signal ? { signal: options.signal } : {},
+        );
         throwIfAborted(options.signal);
         if (sources.has(id)) throw new TypeError(`The source "${id}" is already open.`);
         sources.set(id, { file, probe: opened });

@@ -1,28 +1,11 @@
-import {
-  BlobSource,
-  type EncodedPacket,
-  EncodedPacketSink,
-  Input,
-  type InputAudioTrack,
-  type InputFormat,
-  type InputTrack,
-  MATROSKA,
-  MP4,
-  QTFF,
-  WEBM,
-} from "mediabunny";
+import { type EncodedPacket, EncodedPacketSink, type InputTrack } from "mediabunny";
 import { throwIfAborted } from "../../core/errors/error-helpers.js";
 import { isVideoError, VideoError } from "../../core/errors/video-error.js";
 import type { VideoFilePolicy } from "../../core/errors/video-limits.js";
 import type { AudioTrackProbe, VideoRotation, VideoTrackProbe } from "../../core/model/source.js";
 import { packetCaps } from "../front-check/front-check.js";
 import type { FrontCheck } from "../front-check/types.js";
-
-/** The only formats mediabunny is given, per family: never `ALL_FORMATS` (ADR 0001). */
-const FORMATS: Record<FrontCheck["family"], InputFormat[]> = {
-  isobmff: [MP4, QTFF],
-  matroska: [MATROSKA, WEBM],
-};
+import { codecOf, openInput, pickTracks } from "./tracks.js";
 
 /** How many packets between checks of the abort signal. */
 const ABORT_EVERY = 1_024;
@@ -53,10 +36,6 @@ function peakPerSecond(timestamps: Float64Array): number {
   return peak;
 }
 
-async function codecOf(track: InputTrack): Promise<string | null> {
-  return (await track.getCodecParameterString()) ?? (await track.getCodec());
-}
-
 /**
  * Opens a front-checked file with mediabunny, restricted to its family's
  * formats, picks the video track and an audio track, and walks every packet
@@ -78,33 +57,10 @@ export async function walkPackets(
   policy: VideoFilePolicy,
   signal?: AbortSignal,
 ): Promise<PacketWalk> {
-  const input = new Input({ source: new BlobSource(file), formats: FORMATS[front.family] });
+  const input = openInput(file, front.family);
   const container = front.container;
   try {
-    const video = (await input.getPrimaryVideoTrack()) ?? (await input.getVideoTracks())[0];
-    if (!video) {
-      throw new VideoError("UNSUPPORTED_FORMAT", "The file has no video track.", {
-        details: { container, reason: "no-video" },
-      });
-    }
-    if (await video.getFlip()) {
-      throw new VideoError("UNSUPPORTED_FORMAT", "The video track is mirrored.", {
-        details: { container, reason: "flip" },
-      });
-    }
-    const videoCodec = await codecOf(video);
-    if (videoCodec === null) {
-      throw new VideoError("UNSUPPORTED_CODEC", "The video codec isn't recognised.", {
-        details: { container },
-      });
-    }
-    let audio: InputAudioTrack | undefined;
-    for (const track of await input.getAudioTracks()) {
-      if ((await codecOf(track)) !== null) {
-        audio = track;
-        break;
-      }
-    }
+    const { video, videoCodec, audio } = await pickTracks(input, container);
 
     const caps = packetCaps(policy);
     const seconds = policy.limits.maxDuration.maximum / 1_000;

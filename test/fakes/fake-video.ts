@@ -14,6 +14,8 @@ export interface FakeVideoSpec {
   /** How many frames the header claims, when it differs from the walk. */
   readonly declaredFrames?: number;
   readonly audio?: { readonly sampleRate: number; readonly channels: number } | null;
+  /** The video codec, as a WebCodecs codec string. `avc1.64001f` by default. */
+  readonly codec?: string;
   readonly tracks?: number;
 }
 

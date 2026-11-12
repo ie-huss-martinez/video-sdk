@@ -18,7 +18,7 @@ pnpm verify        # everything CI runs
 pnpm verify:fast   # the subset the pre-push hook runs
 ```
 
-Browser tests need Playwright's browsers once: `pnpm exec playwright install chromium`, plus `firefox webkit` to run all three engines with `CI=1` or `pnpm test:browser:all`.
+Browser tests need Playwright's browsers once: `pnpm exec playwright install chromium`, plus `firefox webkit` to run all three engines with `CI=1` or `pnpm test:browser:all`. To run them exactly as CI does, in the pinned browser image of `ci/Dockerfile`, use `pnpm test:browser:image`, which needs Docker. The [capability matrix](docs/capabilities.md) is checked only there, because another machine's browsers can differ.
 
 `pnpm verify` runs, in order:
 

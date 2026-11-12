@@ -58,6 +58,7 @@
     "test": "vitest run --project unit",
     "test:browser": "vitest run --project browser",
     "test:browser:all": "vitest run --project browser --mode all-browsers",
+    "test:browser:image": "scripts/test-browsers-in-image.sh",
     "check:size": "size-limit",
     "check:api": "tsc -p tsconfig.build.json && api-extractor run && api-extractor run -c api-extractor.react.json && api-extractor run -c api-extractor.element.json",
     "check:package": "publint run --pack pnpm --strict && attw --pack . --profile esm-only --exclude-entrypoints ./styles.css",
