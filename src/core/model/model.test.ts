@@ -169,10 +169,12 @@ describe("the audio envelope", () => {
 describe("checking a probe against the limits", () => {
   const policy = videoLimits.resolve();
 
-  it("bounds what one file's decoding holds at once: about 700 MB at 4K", () => {
+  it("bounds what one file's decoding holds at once, with the decoders' padding: about 763 MB at 4K", () => {
     const fourK = probe({ video: { ...probe().video, codedWidth: 3840, codedHeight: 2160 } });
-    expect(decodingBound(fourK)).toBe(21 * 3840 * 2160 * 4 + 12_000 * 2 * 4);
-    expect(decodingBound({ ...fourK, audio: null })).toBe(21 * 3840 * 2160 * 4);
+    const padded = 21 * (3840 + 128) * (2160 + 128) * 4;
+    expect(decodingBound(fourK)).toBe(padded + 12_000 * 2 * 4);
+    expect(decodingBound({ ...fourK, audio: null })).toBe(padded);
+    expect(Math.round(padded / 1e6)).toBe(763);
     expect(checkProbe(policy, fourK)).toEqual(["maxFramePixels", "maxDecodedSize"]);
   });
 

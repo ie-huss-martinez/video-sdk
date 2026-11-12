@@ -1,18 +1,12 @@
 import { type EncodedPacket, EncodedPacketSink, type InputVideoTrack } from "mediabunny";
 import { abortError } from "../../core/errors/error-helpers.js";
 import { isVideoError, VideoError } from "../../core/errors/video-error.js";
+import { CODED_PADDING } from "../../core/model/probe-limits.js";
 
 /** The most packets waiting in the decoder's own queue (docs/adr/0002). */
 export const MAX_DECODE_QUEUE = 8;
 /** The most decoded frames waiting for their consumer while packets are fed (docs/adr/0002). */
 export const MAX_QUEUED_FRAMES = 4;
-/**
- * How far a decoded frame's coded size may exceed the probe's, in pixels in
- * each dimension. Decoders pad frames to their own alignment: Chromium
- * measured 1280 × 738 for H.264 and 1344 × 720 for VP9, both showing
- * 1280 × 720 (docs/adr/0001). The visible picture gets no allowance.
- */
-export const CODED_PADDING = 128;
 
 /**
  * Counts the `VideoFrame`s this worker's decoders have output and not yet

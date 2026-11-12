@@ -2,6 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-11-12
+- **Amended:** 2026-11-12, when decoding was built: `maxDecodedSize` counts the decoders' alignment padding.
 
 ## Context
 
@@ -63,8 +64,9 @@ Video's risks differ from the other SDKs':
 - **From the walk, never from a header alone.** Duration, frame rate, bitrate and packet size come from walking every packet. Where a header claims a value too, the larger of the two is checked. So a header can't lower a bound.
 - **The frame rate is the most frames in any one-second window** of the walk. The smallest gap between two frames, which the walk also records, can be tiny in an ordinary file with a duplicated or reordered timestamp, so it's not used as a rate.
 - **The walk can't run away.** It fails with `FRAME_RATE_TOO_HIGH` as soon as a video track has more packets than `maxDuration × maxFrameRate`. It fails with `DURATION_TOO_LONG` as soon as an audio track has more than 1,000 packets for every second of `maxDuration`. Both bounds hold even when the timestamps don't.
-- **`maxDecodedSize` bounds one file's decoding,** not its length, because nothing is held whole. It's checked against the probe's coded size as (4 queued frames + 16 decoder reference frames + 1 on the canvas) × coded width × coded height × 4 bytes, plus one audio window.
-  - A 4K file comes to about 700 MB, within the 1 GB default.
+- **`maxDecodedSize` bounds one file's decoding,** not its length, because nothing is held whole. It's checked against the probe's coded size as (4 queued frames + 16 decoder reference frames + 1 on the canvas) × (coded width + 128) × (coded height + 128) × 4 bytes, plus one audio window.
+  - The 128 pixels in each dimension are the most alignment padding a decoder may add to a frame ([ADR 0001](0001-video-engines.md)), so the limit counts what decoders really allocate.
+  - A 4K file comes to about 763 MB, within the 1 GB default.
   - The 16 reference frames are the most H.264 allows. Other codecs allow no more, so this bounds what the decoder may hold, which the SDK can't measure itself.
 - **Every decoded frame is checked again:** one larger than the probe's coded size, or over `maxFramePixels`, is closed and fails with `INVALID_VIDEO` ([ADR 0001](0001-video-engines.md)).
 - **What's drawn is checked as well as what's opened.** `video.setOutput` checks the output's size, frame rate, sample rate and channels against the same limits, so an export can never encode more than they allow.

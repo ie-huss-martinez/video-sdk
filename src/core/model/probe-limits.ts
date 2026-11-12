@@ -11,16 +11,31 @@ const SHOWN_FRAMES = 1;
 const AUDIO_WINDOW_SECONDS = 0.25;
 
 /**
+ * How far a decoded frame's coded size may exceed the probe's, in pixels in
+ * each dimension (ADR 0001). Decoders pad frames to their own alignment:
+ * Chromium measured 1280 × 738 for H.264 and 1344 × 720 for VP9, both
+ * showing 1280 × 720. The decoder refuses frames padded further, and
+ * {@link decodingBound} counts this much, so the limit describes what
+ * decoders really allocate.
+ *
+ * @internal
+ */
+export const CODED_PADDING = 128;
+
+/**
  * The most bytes decoding one file can hold at once, from its probe
- * (ADR 0004): the queued, reference and shown frames at the coded size as
- * RGBA, plus one window of 32-bit float audio. It bounds memory, not the
- * file's total decoded size, because decoded media is streamed.
+ * (ADR 0004): the queued, reference and shown frames as RGBA at the coded
+ * size plus the most padding a decoder may add in each dimension, and one
+ * window of 32-bit float audio. It bounds memory, not the file's total
+ * decoded size, because decoded media is streamed.
  *
  * @public
  */
 export function decodingBound(probe: VideoProbe): number {
   const frames = QUEUED_FRAMES + REFERENCE_FRAMES + SHOWN_FRAMES;
-  const video = frames * probe.video.codedWidth * probe.video.codedHeight * 4;
+  const width = probe.video.codedWidth + CODED_PADDING;
+  const height = probe.video.codedHeight + CODED_PADDING;
+  const video = frames * width * height * 4;
   const audio =
     probe.audio === null
       ? 0
