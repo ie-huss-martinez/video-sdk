@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { VideoError } from "../core/errors/video-error.js";
+import { videoLimits } from "../core/errors/video-limits.js";
 import {
   clipEnd,
   createPlan,
@@ -49,6 +50,7 @@ const SOURCE: PlaybackSource = {
 
 function setup() {
   const commands: SchedulerCommand[] = [];
+  const resizes: { width: number; height: number }[] = [];
   let hidden = false;
   let onVisibility = () => {};
   let failControl: VideoError | undefined;
@@ -56,6 +58,7 @@ function setup() {
   const output = createOutput({
     connect: () => ({
       call: async (method, input) => {
+        if (method === "resize") resizes.push(input as { width: number; height: number });
         if (method === "control") {
           commands.push(input as SchedulerCommand);
           if (failControl) {
@@ -71,6 +74,7 @@ function setup() {
     }),
     source: (id) => (id === "s" ? SOURCE : undefined),
     now: () => Date.now(),
+    policy: videoLimits.resolve(),
     visibility: {
       hidden: () => hidden,
       subscribe(listener) {
@@ -82,6 +86,7 @@ function setup() {
   return {
     output,
     commands,
+    resizes,
     destroyed,
     last: () => commands.at(-1),
     setHidden(value: boolean) {
@@ -209,6 +214,38 @@ describe("the video output's page side", () => {
     expect(t.output.getSnapshot().state).toBe("stopped");
     expect(t.output.position()).toBe(30);
     expect(t.last()).toEqual({ mode: "pause" });
+  });
+
+  it("resizes the canvas to the stage times a capped pixel ratio, redrawing the frame when paused", async () => {
+    const t = setup();
+    t.output.load(planOf(90));
+    t.output.seek(10);
+    const sent = t.commands.length;
+    t.output.resize(320, 180, 2);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(t.resizes).toEqual([{ width: 640, height: 360 }]);
+    expect(t.commands.slice(sent)).toEqual([{ mode: "show", at: 333_333 }]);
+    // A ratio over 4 is drawn at 4.
+    t.output.resize(100, 50, 10);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(t.resizes.at(-1)).toEqual({ width: 400, height: 200 });
+    // Playing, the next frame redraws: no seek is sent.
+    await t.output.play();
+    const playing = t.commands.length;
+    t.output.resize(320, 180, 1);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(t.commands).toHaveLength(playing);
+  });
+
+  it("refuses a backing size over maxFramePixels before telling the worker", async () => {
+    const t = setup();
+    t.output.load(planOf(90));
+    expect(() => t.output.resize(4_000, 3_000, 1)).toThrow(
+      expect.objectContaining({ code: "FRAME_TOO_LARGE" }),
+    );
+    expect(() => t.output.resize(-1, 3)).toThrow(TypeError);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(t.resizes).toEqual([]);
   });
 
   it("re-anchors at the playhead when the plan changes while playing, and stops at a shorter plan's end", async () => {

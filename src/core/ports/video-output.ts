@@ -36,6 +36,34 @@ export interface VideoOutputSnapshot {
 export type VideoOutputEvent = "ended";
 
 /**
+ * The highest device pixel ratio an output draws at. A larger ratio is drawn
+ * at this one: no display needs more, and it bounds the canvas a runaway
+ * layout can ask for.
+ *
+ * @public
+ */
+export const MAX_PIXEL_RATIO = 4;
+
+/**
+ * The size of an output canvas's backing store for a stage of `width` ×
+ * `height` CSS pixels at `pixelRatio`, at most {@link MAX_PIXEL_RATIO}, in
+ * whole pixels, at least 1.
+ *
+ * @public
+ */
+export function backingSize(
+  width: number,
+  height: number,
+  pixelRatio = 1,
+): { readonly width: number; readonly height: number } {
+  const ratio = Math.min(pixelRatio, MAX_PIXEL_RATIO);
+  return {
+    width: Math.max(1, Math.round(width * ratio)),
+    height: Math.max(1, Math.round(height * ratio)),
+  };
+}
+
+/**
  * The port for playback (ADR 0002, ADR 0003, ADR 0005, ADR 0008). Playback
  * is a function of the plan and the playhead: loading a changed plan or
  * seeking while playing continues from the current position. The SDK's own
@@ -86,6 +114,17 @@ export interface VideoOutput {
    * unsubscribes.
    */
   on(event: VideoOutputEvent, listener: () => void): () => void;
+  /**
+   * Sizes the canvas's backing store for a stage of `width` × `height` CSS
+   * pixels at `pixelRatio`, such as `devicePixelRatio`, which defaults to 1:
+   * see {@link backingSize}. The frame shown is kept, and redrawn sharp at
+   * the new size. Call it when the stage's size or the ratio changes.
+   *
+   * Throws `TypeError` for a size or ratio that isn't a positive finite
+   * number, and `VideoError` with `FRAME_TOO_LARGE` when the backing size is
+   * over the output's `maxFramePixels`; the canvas then keeps its size.
+   */
+  resize(width: number, height: number, pixelRatio?: number): void;
   /** Stops playback and releases the audio device and decoders. Later calls throw. */
   destroy(): Promise<void>;
 }

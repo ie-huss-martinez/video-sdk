@@ -31,6 +31,12 @@ export interface AudioTrackProbe {
 }
 
 // @public
+export function backingSize(width: number, height: number, pixelRatio?: number): {
+    readonly width: number;
+    readonly height: number;
+};
+
+// @public
 export function checkOutput(policy: VideoFilePolicy, output: VideoPlanOutput): readonly VideoLimitName[];
 
 // @public
@@ -134,6 +140,9 @@ export function locateFrame(plan: VideoPlan, frame: number): {
 
 // @public
 export const MAX_METADATA_LENGTH = 1000;
+
+// @public
+export const MAX_PIXEL_RATIO = 4;
 
 // @public
 export function microsecondsToSeconds(microseconds: number): number;
@@ -581,6 +590,7 @@ export interface VideoOutput {
     pause(): void;
     play(): Promise<void>;
     position(): number;
+    resize(width: number, height: number, pixelRatio?: number): void;
     seek(frame: number): void;
     step(delta: 1 | -1): void;
     stop(): void;
@@ -594,6 +604,7 @@ export type VideoOutputEvent = "ended";
 export interface VideoOutputOptions {
     readonly canvas: HTMLCanvasElement;
     readonly engine: VideoEngine;
+    readonly filePolicy?: VideoFilePolicy;
 }
 
 // @public

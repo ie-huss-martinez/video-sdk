@@ -2,7 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-11-12
-- **Amended:** 2026-11-12, when video playback was built: the clock reads wall-clock time, a late frame is dropped only when a later one is due, and timestamps within a millisecond of the frame grid are on it.
+- **Amended:** 2026-11-12, when video playback was built: the clock reads wall-clock time, a late frame is dropped only when a later one is due, and timestamps within a millisecond of the frame grid are on it. Then, the canvas's size follows the stage's.
 
 ## Context
 
@@ -64,6 +64,15 @@ Both sides compute media time the same way, `M + (now − P) × 1,000` microseco
 - **Seeking** aborts the running decoders, whose frames the decoder then closes ([ADR 0001](0001-video-engines.md)). It decodes from the key packet before the target, through `decodeVideoFrames`' range, and draws the latest frame at or before the target as soon as it's decoded. If playing, the clock's anchor moves to the target, and playback continues from there.
 - **Seeks are coalesced.** A seek that arrives while another decodes replaces it: the earlier one is aborted, and only the latest target is drawn. Scrubbing is a stream of such seeks, and silent ([ADR 0005](0005-playback-and-export.md)).
 - **An edit during playback** loads the new plan, then seeks to the current position under it. A playhead past the new plan's end moves to the end ([ADR 0003](0003-clip-plan-document-model.md)).
+
+### The canvas's size
+
+The canvas's backing store is sized for the stage, not the output, so frames are drawn sharp at the size they're shown, and no larger.
+
+- **`resize(width, height, pixelRatio)`** sets it to the stage's CSS size times the device pixel ratio. The host calls it when either changes. Until then the canvas keeps the size it had when the output was created.
+- **The ratio is capped at 4,** as image-sdk's preview is: no display needs more, and it bounds the canvas a runaway layout can ask for.
+- **The backing size is checked against `maxFramePixels`** before the worker is told. Over it, `resize` throws `FRAME_TOO_LARGE` and the canvas keeps its size.
+- **The picture is kept.** The worker takes the canvas's picture with `transferToImageBitmap()`, resizes the canvas, and draws the output frame from it letterboxed into the new size, so there's no black flash. Paused, the frame shown is then drawn again, sharp; playing, the next frame is.
 
 ### Timestamps rounded to milliseconds
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { VideoOutput, VideoSourceInfo } from "../../src/index.js";
+import { isVideoError, type VideoOutput, type VideoSourceInfo } from "../../src/index.js";
 import { clipOf, planOf } from "./helpers.js";
 
 /**
@@ -122,6 +122,28 @@ export function describeVideoOutputContract(name: string, harness: VideoOutputHa
       expect(output.position()).toBe(30);
       output.step(-1);
       expect(output.position()).toBe(28);
+      await output.destroy();
+    });
+
+    it("resizes while playing, and refuses a size it can't draw, keeping the canvas", async () => {
+      const { output, source, elapse } = await harness.create();
+      output.load(planOf(clipOf("x", source, 0, 90)));
+      await output.play();
+      output.resize(320, 40, 2);
+      await elapse(10);
+      expect(output.getSnapshot().state).toBe("playing");
+      near(output.position(), 10);
+      expect(() => output.resize(0, 40)).toThrow(TypeError);
+      expect(() => output.resize(320, 40, Number.NaN)).toThrow(TypeError);
+      // 20,000 × 20,000 is far over the default maxFramePixels.
+      let error: unknown;
+      try {
+        output.resize(5_000, 5_000, 4);
+      } catch (caught) {
+        error = caught;
+      }
+      expect(isVideoError(error, "FRAME_TOO_LARGE")).toBe(true);
+      expect(output.getSnapshot().state).toBe("playing");
       await output.destroy();
     });
 

@@ -20,6 +20,9 @@ export interface DrawnRecord {
   readonly sourceTime: number;
   /** The clock when it was drawn, in timeline microseconds, or `null` when paused. */
   readonly clock: number | null;
+  /** The canvas's backing size when it was drawn. */
+  readonly width: number;
+  readonly height: number;
 }
 
 export interface LedgerRecord {
@@ -53,7 +56,8 @@ exposeWorker<MediaWorkerContract>(
   mediaWorkerHandlers({
     afterDraw({ context, clip, sourceTime, clock }) {
       const { canvas } = context;
-      // The centre of each 32-pixel block, across the middle row.
+      // The centre of each eighth of the width, across the middle row: the
+      // output fills the width whenever the canvas is as wide or wider.
       const row = context.getImageData(0, canvas.height / 2, canvas.width, 1).data;
       const blocks = 8;
       const width = canvas.width / blocks;
@@ -68,6 +72,8 @@ exposeWorker<MediaWorkerContract>(
         clip: clip.key,
         sourceTime,
         clock,
+        width: canvas.width,
+        height: canvas.height,
       } satisfies DrawnRecord);
     },
   }),

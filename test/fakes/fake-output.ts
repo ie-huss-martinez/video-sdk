@@ -1,8 +1,10 @@
+import { checkedBackingSize } from "../../src/core/playback/backing.js";
 import {
   planFrames,
   type VideoOutput,
   type VideoOutputSnapshot,
   type VideoPlan,
+  videoLimits,
 } from "../../src/index.js";
 
 /** A manual clock for the fake output, in output frames. */
@@ -67,6 +69,10 @@ export function createFakeOutput(): { output: VideoOutput; clock: FakeClock } {
       if (length() === 0 || target < 0 || target > length() - 1) return;
       if (snapshot.state === "playing") setState("paused");
       playhead = target;
+    },
+    resize(width, height, pixelRatio) {
+      assertAlive();
+      checkedBackingSize(videoLimits.resolve(), width, height, pixelRatio);
     },
     on(_event, listener) {
       ended.add(listener);

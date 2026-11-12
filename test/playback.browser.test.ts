@@ -193,6 +193,26 @@ describe("drawing what the plan places at the clock", () => {
     await noFramesOpen();
   });
 
+  it("resizes the canvas, keeping exact frames, and letterboxes another shape", async () => {
+    const real = await setup();
+    output = real.output;
+    output.load(planOf(clipOf("a", real.source, 0, 120)));
+    expect(await shown()).toBe(0);
+    output.seek(40);
+    expect(await shown()).toBe(40);
+    // 128 × 16 CSS pixels at a ratio of 4.
+    output.resize(128, 16, 4);
+    await vi.waitFor(() => expect(drawn.some((record) => record.clock === null)).toBe(true));
+    expect(drawn[0]).toMatchObject({ number: 40, width: 512, height: 64 });
+    drawn = [];
+    // Taller than the output: letterboxed above and below.
+    output.resize(256, 128);
+    output.step(1);
+    await vi.waitFor(() => expect(drawn.some((record) => record.number === 41)).toBe(true));
+    expect(drawn.at(-1)).toMatchObject({ number: 41, width: 256, height: 128 });
+    await noFramesOpen();
+  });
+
   it("draws the new plan's frames after an edit during playback, and holds no frame after each step", async () => {
     const real = await setup();
     output = real.output;
