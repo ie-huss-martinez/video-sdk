@@ -165,8 +165,9 @@ export interface SetTransformCommand {
 /**
  * Sets the output. Every clip keeps its start; when the frame rate changes,
  * its end moves to the nearest frame of the new grid that fits its source,
- * and its fades are shortened to fit. `clips`, which undo uses, puts clips
- * back exactly as they were instead.
+ * and its fades are shortened to fit. A clip too near its source's end for
+ * even one new frame moves its start back by what it needs. `clips`, which
+ * undo uses, puts clips back exactly as they were instead.
  *
  * @public
  */
@@ -539,9 +540,16 @@ export function createVideoReducer(
           clips = plan.clips.map((clip) => {
             const source = sourceInfo(clip.source);
             if (source === undefined) throw invalid(`Unknown source "${clip.source}".`);
+            let start = clip.start;
             let frames = Math.max(1, framesIn(clip.end - clip.start, next));
-            while (frames > 1 && clipEnd(clip.start, frames, next) > source.duration) frames -= 1;
-            return fitFades({ ...clip, end: clip.start + frameTime(frames, next) });
+            while (frames > 1 && clipEnd(start, frames, next) > source.duration) frames -= 1;
+            // Even one frame of the new grid would pass the source's end: move
+            // the start back so that it ends there. Only a source shorter than
+            // one frame can't fit, and the check below refuses it.
+            if (clipEnd(start, frames, next) > source.duration) {
+              start = Math.max(0, source.duration - frameTime(frames, next));
+            }
+            return fitFades({ ...clip, start, end: start + frameTime(frames, next) });
           });
         }
         for (const clip of clips) checkClip(clip, next);
