@@ -2,6 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-11-12
+- **Amended:** 2026-11-12, when audio mixing was built: the resampler's kernel, exact-position evaluation so windows join without a seam, and the order of resampling, channel mixing and gain.
 
 ## Context
 
@@ -37,6 +38,9 @@
 - **The page schedules each window** as an `AudioBufferSourceNode` started at an exact context time. It keeps at least two windows, half a second, scheduled ahead.
 - **Seeking, editing or pausing** stops every scheduled node and schedules again from the new position. Windows already made for unchanged parts of the plan are reused from the cache ([ADR 0004](0004-video-limits.md)).
 - **Resampling is our own code,** a windowed-sinc resampler in the core, deterministic and shared by playback and export. `OfflineAudioContext` doesn't exist in workers.
+  - **The kernel** is a Blackman-windowed sinc with 16 zero crossings each side. When downsampling, its cutoff drops to the output's Nyquist, so nothing above it folds back.
+  - **Each output sample is evaluated at its exact position** in the source, from the clip's start and the two rates, rather than streamed through a filter with state. So windows made separately, in any order, join without a seam, and a window is the same whether playback or export makes it.
+  - **Channels are mixed after resampling,** by a matrix of Web Audio's speaker rules for mono, stereo, quad and 5.1, and one to one for other layouts. Then `gainAt` scales each sample.
 
 #### Video: frames drawn against the clock
 
