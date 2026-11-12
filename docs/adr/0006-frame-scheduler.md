@@ -2,6 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-11-12
+- **Amended:** 2026-11-12, when video playback was built: the clock reads wall-clock time, a late frame is dropped only when a later one is due, and timestamps within a millisecond of the frame grid are on it.
 
 ## Context
 
@@ -22,10 +23,14 @@ Measured in the pinned browser image, in Chromium, Firefox and WebKit:
 
 `VideoOutput` keeps one clock that maps media time, in output microseconds on the plan's timeline, to the page's `performance.now()`. It has two sources:
 
-- **The audio clock,** when the plan has audio and the `AudioContext` is running. The page reads `getOutputTimestamp()`, adds the output latency (`outputLatency`, or `baseLatency` where that's 0 or missing), and sends the worker an **anchor**: "media time *M* is heard at performance time *P*". It sends a new anchor at play, at every seek, and every 250 milliseconds while playing, so the worker follows the audio hardware's clock as it drifts from `performance.now()`.
+- **The audio clock,** when the plan has audio and the `AudioContext` is running. The page reads `getOutputTimestamp()`, adds the output latency (`outputLatency`, or `baseLatency` where that's 0 or missing), and sends the worker an **anchor**: "media time *M* is heard at wall-clock time *P*". It sends a new anchor at play, at every seek, and every 250 milliseconds while playing, so the worker follows the audio hardware's clock as it drifts from `performance.now()`.
 - **The performance clock,** when the plan has no audio, or audio can't start. The anchor is set at play and at every seek, and media time advances with `performance.now()`.
 
 Both sides compute media time the same way, `M + (now − P) × 1,000` microseconds, from the latest anchor. So the page's playhead, `VideoOutput.position()`, and the frames the worker draws agree, without a message per frame.
+
+**Wall-clock time** is `performance.timeOrigin + performance.now()`, in milliseconds. A worker's `performance.now()` counts from when the worker started, not from the page's origin, so the two sides can only agree on a time with the origin added.
+
+**The clock starts when the worker can draw.** `play()` waits until the output's worker has the plan, then sets the anchor, so a worker that's still starting doesn't make playback skip its first frames.
 
 **Autoplay.** `play()` creates the `AudioContext` lazily and calls `resume()`. If it isn't running when `resume()` settles, playback continues on the performance clock with no sound, and the output's snapshot reports `audio: "blocked"`. The next `play()`, from a user gesture, tries again. The editor can then show why there's no sound, and tests run headless.
 
@@ -43,7 +48,7 @@ Both sides compute media time the same way, `M + (now − P) × 1,000` microseco
 
 ### Dropping late frames
 
-- **A frame whose time is already past** by more than one output frame when it arrives is closed without being drawn, and counted in the snapshot's `droppedFrames`. The scheduler doesn't wait for it.
+- **A frame whose time is past when it arrives** isn't waited for. Within one output frame of its time, it's drawn at once. Later than that, it's held and drawn on the next animation frame, unless a later frame is due by then: the later one replaces it, and the one replaced is closed undrawn and counted in the snapshot's `droppedFrames`. So the frame on screen is always the latest one due, and a frame is never dropped when nothing newer can take its place.
 - **Audio never waits for video** ([ADR 0005](0005-playback-and-export.md)). When decoding can't keep up, frames are dropped, and the clock runs on.
 - **Paused, nothing is drawn.** The canvas keeps the last frame.
 
@@ -51,6 +56,7 @@ Both sides compute media time the same way, `M + (now − P) × 1,000` microseco
 
 - **Clips decode in turn,** each through `decodeVideoFrames` over its source range.
 - **Pre-roll:** when the clock is within one second of the current clip's end, the next clip's decoder starts, so its first frame is ready at the cut. At most two decoders run at once ([ADR 0004](0004-video-limits.md)).
+- **No frame is drawn before one already drawn:** frames from two clips, at a cut, can be due on the same animation frame, and the later one wins.
 - **Every frame is checked against the clip at the clock** before it's drawn: its source and its time must be the ones the plan places there. So no frame from another clip, an earlier seek or an earlier plan is drawn ([ADR 0005](0005-playback-and-export.md)).
 
 ### Seeking, scrubbing and edits
@@ -58,6 +64,10 @@ Both sides compute media time the same way, `M + (now − P) × 1,000` microseco
 - **Seeking** aborts the running decoders, whose frames the decoder then closes ([ADR 0001](0001-video-engines.md)). It decodes from the key packet before the target, through `decodeVideoFrames`' range, and draws the latest frame at or before the target as soon as it's decoded. If playing, the clock's anchor moves to the target, and playback continues from there.
 - **Seeks are coalesced.** A seek that arrives while another decodes replaces it: the earlier one is aborted, and only the latest target is drawn. Scrubbing is a stream of such seeks, and silent ([ADR 0005](0005-playback-and-export.md)).
 - **An edit during playback** loads the new plan, then seeks to the current position under it. A playhead past the new plan's end moves to the end ([ADR 0003](0003-clip-plan-document-model.md)).
+
+### Timestamps rounded to milliseconds
+
+WebM and Matroska store timestamps in whole milliseconds by default. At 30 frames a second, frame 80 is stored at 2.667 s, after the 2.666667 s it stands for, so "the latest frame at or before the time" would land a frame early. **A frame within a millisecond of the output's frame grid is taken as on it,** for seeking and stepping and for when it's drawn, and a frame within a millisecond of a clip's end belongs to the next clip.
 
 ### Hidden pages
 
@@ -97,8 +107,9 @@ No full-size frame ever crosses ([ADR 0002](0002-workers-and-assets.md)).
 ### Tests
 
 - **The scheduler's decisions are pure functions,** tested without a browser on a fake clock: which frame to draw, which to drop, when a cut pre-rolls, how seeks coalesce, what stepping targets, when `ended` fires, and what happens while hidden.
-- **In every engine,** a frame-numbered fixture plays, seeks and is edited during playback, and the worker reads back what it drew. It must be the frame the plan places at the clock, or a dropped frame counted.
-- **The frame ledger is zero** after play, pause, seek, an edit during playback, stop and destroy ([ADR 0002](0002-workers-and-assets.md)).
+- **The page's decisions** are tested the same way, with a fake worker and fake timers: the anchor, when `ended` fires, stepping, and what it sends while hidden.
+- **In every engine,** a frame-numbered fixture plays, seeks and is edited during playback, and the worker reads back what it drew. It must be the frame the plan places at the clock, or one shortly before it, never a later one; and every frame must be drawn or counted as dropped. Seeks and steps must draw exactly the frame the plan places there, across a cut. The `VideoOutput` contract runs on the real output too.
+- **The frame ledger is zero** after play, pause, seek, an edit during playback and stop ([ADR 0002](0002-workers-and-assets.md)). Destroying the output terminates its worker, which closes everything left.
 
 ## Alternatives considered
 

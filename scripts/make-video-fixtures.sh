@@ -41,6 +41,13 @@ ffmpeg -y -v error -f lavfi -i "$(pattern 1280x720 2)" -f lavfi -i "$(tone 2)" \
 ffmpeg -y -v error -f lavfi -i "$(pattern 1280x720 2)" \
   -c:v libvpx -deadline good -cpu-used 5 -crf 60 -b:v 500k -threads 1 -g 30 \
   "${exact[@]}" silent-vp8.webm
+# Frame-numbered VP8 for playback: 256 × 32 at 30 fps, 4 seconds, no audio.
+# Eight 32-pixel blocks show each frame's number in binary, most significant
+# bit first, white for 1, so a test can read back which frame was drawn.
+numbered="geq=lum='if(mod(trunc(N/pow(2\\,7-trunc(X/32)))\\,2)\\,235\\,16)':cb=128:cr=128"
+ffmpeg -y -v error -f lavfi -i "color=black:size=256x32:rate=30:duration=4,format=yuv420p,$numbered" \
+  -c:v libvpx -deadline good -cpu-used 5 -crf 10 -b:v 200k -threads 1 -g 30 \
+  "${exact[@]}" numbered-vp8.webm
 # HEVC, which Chromium and Firefox don't decode: for UNSUPPORTED_CODEC.
 ffmpeg -y -v error -f lavfi -i "$(pattern 320x180 0.5)" -f lavfi -i "$(tone 0.5)" \
   -c:v libx265 -preset ultrafast -crf 45 -pix_fmt yuv420p -tag:v hvc1 \

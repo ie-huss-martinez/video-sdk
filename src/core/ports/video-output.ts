@@ -1,3 +1,4 @@
+import type { VideoError } from "../errors/video-error.js";
 import type { VideoPlan } from "../model/plan.js";
 
 /**
@@ -18,7 +19,21 @@ export interface VideoOutputSnapshot {
   readonly state: VideoOutputState;
   /** Frames skipped since the plan was loaded, because decoding couldn't keep up (ADR 0005). */
   readonly droppedFrames: number;
+  /**
+   * Why playback stopped, such as `DECODE_FAILED` when a frame doesn't
+   * decode, or `null`. Playback pauses when it fails; the next `play`,
+   * `seek` or `load` clears it.
+   */
+  readonly error: VideoError | null;
 }
+
+/**
+ * What a {@link VideoOutput} tells its listeners about, apart from changes of
+ * state: `ended` when playback reaches the end of the plan.
+ *
+ * @public
+ */
+export type VideoOutputEvent = "ended";
 
 /**
  * The port for playback (ADR 0002, ADR 0003, ADR 0005, ADR 0008). Playback
@@ -47,8 +62,9 @@ export interface VideoOutput {
   /**
    * Plays from the playhead, or from the start when the playhead is at the
    * end. The first call may need a user gesture, as browsers' autoplay rules
-   * require. When playback reaches the end, the state becomes `stopped` and
-   * the playhead stays at the end.
+   * require. When playback reaches the end, the state becomes `stopped`, the
+   * playhead stays at the end with the last frame shown, and `ended` fires,
+   * once.
    */
   play(): Promise<void>;
   /** Pauses, keeping the playhead. */
@@ -57,6 +73,19 @@ export interface VideoOutput {
   stop(): void;
   /** Moves the playhead to an output frame, clamped to the plan. While playing, playback continues from there. */
   seek(frame: number): void;
+  /**
+   * Shows the next frame, `1`, or the previous one, `-1`, exactly, pausing
+   * if playing (docs/adr/0006). Stepping past either end of the plan does
+   * nothing. A playhead at the end shows the last frame, so stepping back
+   * from it shows the one before.
+   */
+  step(delta: 1 | -1): void;
+  /**
+   * Calls the listener on each `ended`: when playback reaches the end of the
+   * plan, never on a seek or a step to it. Returns a function that
+   * unsubscribes.
+   */
+  on(event: VideoOutputEvent, listener: () => void): () => void;
   /** Stops playback and releases the audio device and decoders. Later calls throw. */
   destroy(): Promise<void>;
 }

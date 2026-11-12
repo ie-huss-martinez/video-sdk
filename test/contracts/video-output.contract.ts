@@ -29,7 +29,7 @@ export function describeVideoOutputContract(name: string, harness: VideoOutputHa
 
     it("starts stopped at the start, with nothing dropped", async () => {
       const { output } = await harness.create();
-      expect(output.getSnapshot()).toEqual({ state: "stopped", droppedFrames: 0 });
+      expect(output.getSnapshot()).toEqual({ state: "stopped", droppedFrames: 0, error: null });
       expect(output.position()).toBe(0);
       await output.destroy();
     });
@@ -38,7 +38,11 @@ export function describeVideoOutputContract(name: string, harness: VideoOutputHa
       const { output, source, elapse } = await harness.create();
       output.load(planOf(clipOf("x", source, 0, 90)));
       const states: string[] = [];
-      output.subscribe(() => states.push(output.getSnapshot().state));
+      // A subscriber is also notified of other changes, such as dropped frames: record state changes only.
+      output.subscribe(() => {
+        const { state } = output.getSnapshot();
+        if (states.at(-1) !== state) states.push(state);
+      });
       await output.play();
       await elapse(30);
       expect(states).toEqual(["playing"]);
@@ -72,6 +76,52 @@ export function describeVideoOutputContract(name: string, harness: VideoOutputHa
       await output.play();
       await elapse(5);
       near(output.position(), 5);
+      await output.destroy();
+    });
+
+    it("fires ended once when playback reaches the end, and never on a seek to it", async () => {
+      const { output, source, elapse } = await harness.create();
+      output.load(planOf(clipOf("x", source, 0, 15)));
+      let ended = 0;
+      const off = output.on("ended", () => {
+        ended += 1;
+      });
+      output.seek(15);
+      await elapse(5);
+      expect(ended).toBe(0);
+      await output.play();
+      await elapse(30);
+      expect(ended).toBe(1);
+      expect(output.getSnapshot().state).toBe("stopped");
+      expect(output.position()).toBe(15);
+      await elapse(15);
+      expect(ended).toBe(1);
+      off();
+      await output.play();
+      await elapse(30);
+      expect(ended).toBe(1);
+      await output.destroy();
+    });
+
+    it("steps one frame either way, pausing, and not past either end", async () => {
+      const { output, source, elapse } = await harness.create();
+      output.load(planOf(clipOf("x", source, 0, 30)));
+      output.step(-1);
+      expect(output.position()).toBe(0);
+      output.step(1);
+      expect(output.position()).toBe(1);
+      await output.play();
+      await elapse(10);
+      output.step(1);
+      const stepped = output.position();
+      expect(output.getSnapshot().state).toBe("paused");
+      await elapse(10);
+      expect(output.position()).toBe(stepped);
+      output.seek(30);
+      output.step(1);
+      expect(output.position()).toBe(30);
+      output.step(-1);
+      expect(output.position()).toBe(28);
       await output.destroy();
     });
 

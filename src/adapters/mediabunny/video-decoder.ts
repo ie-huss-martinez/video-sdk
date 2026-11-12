@@ -45,6 +45,12 @@ export interface FrameRange {
   readonly from: number;
   /** The timestamp to stop before, exclusive. */
   readonly to: number;
+  /**
+   * Where decoding starts: at the key packet at or before this timestamp.
+   * Defaults to `from`. A seek decodes from the key packet before its
+   * target, and delivers frames before it too, to find the one shown there.
+   */
+  readonly keyFrom?: number;
   /** Stop after delivering this many frames. */
   readonly limit?: number;
 }
@@ -52,7 +58,8 @@ export interface FrameRange {
 /**
  * Decodes the frames of `range` from a video track with WebCodecs, in the
  * worker, and lends each one to `onFrame` in presentation order (docs/adr/0001,
- * docs/adr/0002). Decoding starts at the key packet before `range.from`.
+ * docs/adr/0002). Decoding starts at the key packet at or before
+ * `range.keyFrom`, or `range.from`.
  *
  * - **Bounded:** at most {@link MAX_DECODE_QUEUE} packets wait in the
  *   decoder, with back-pressure on its `dequeue` event, and no packet is fed
@@ -222,7 +229,8 @@ export async function decodeVideoFrames(
     configure(decoder, config);
     const sink = new EncodedPacketSink(track);
     const start =
-      (await sink.getKeyPacket(range.from / 1_000_000)) ?? (await sink.getFirstPacket());
+      (await sink.getKeyPacket((range.keyFrom ?? range.from) / 1_000_000)) ??
+      (await sink.getFirstPacket());
     let packet: EncodedPacket | null = start;
     while (packet !== null && delivered < limit) {
       check();
