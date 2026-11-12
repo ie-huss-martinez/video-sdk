@@ -105,6 +105,7 @@ export type {
   VideoOutputSnapshot,
   VideoOutputState,
 } from "./core/ports/video-output.js";
+export { backingSize, MAX_PIXEL_RATIO } from "./core/ports/video-output.js";
 export type {
   VideoExportContainer,
   VideoExportJob,

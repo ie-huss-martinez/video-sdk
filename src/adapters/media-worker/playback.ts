@@ -2,7 +2,7 @@ import type { WorkerHandlers } from "@hussmartinez/sdk-core";
 import { abortError, asVideoError } from "../../core/errors/error-helpers.js";
 import { VideoError } from "../../core/errors/video-error.js";
 import { videoLimits } from "../../core/errors/video-limits.js";
-import type { VideoClip, VideoPlan } from "../../core/model/plan.js";
+import { IDENTITY_TRANSFORM, type VideoClip, type VideoPlan } from "../../core/model/plan.js";
 import type { VideoProbe } from "../../core/model/source.js";
 import { type Composition, composeFrame } from "../../core/playback/compose.js";
 import { createFrameScheduler } from "../../core/playback/scheduler.js";
@@ -12,7 +12,7 @@ import { type FrameReader, openFrameReader } from "../mediabunny/frame-reader.js
 import type { MediaWorkerContract, PlaybackSource } from "./contract.js";
 
 /** The playback methods of the media worker's contract. */
-type PlaybackMethods = Pick<MediaWorkerContract, "attach" | "load" | "control">;
+type PlaybackMethods = Pick<MediaWorkerContract, "attach" | "resize" | "load" | "control">;
 
 /**
  * What a test learns after each frame is drawn: the canvas, the clip, the
@@ -103,6 +103,8 @@ export function playbackHandlers(hooks: PlaybackHooks = {}): WorkerHandlers<Play
   let sources = new Map<string, PlaybackSource>();
   const readers = new Map<string, { readonly file: Blob; readonly reader: Promise<FrameReader> }>();
   let anchor: PlaybackAnchor | null = null;
+  /** The plan's output, for keeping the picture through a resize. */
+  let output: VideoPlan["output"] | undefined;
   /** Once `drawImage` refuses a frame, every later frame is drawn through an `ImageBitmap`. */
   let throughBitmaps = false;
   let bitmapQueue: Promise<void> = Promise.resolve();
@@ -192,7 +194,39 @@ export function playbackHandlers(hooks: PlaybackHooks = {}): WorkerHandlers<Play
       context = attached;
       return undefined;
     },
+    resize({ width, height }) {
+      if (!context) throw new TypeError("No canvas is attached.");
+      const { canvas } = context;
+      if (canvas.width === width && canvas.height === height) return undefined;
+      // Keep the picture: the output frame shown, letterboxed into the new
+      // size, until the next frame is drawn sharp.
+      const shown = output
+        ? composeFrame(output, canvas, { ...output, rotation: 0 }, IDENTITY_TRANSFORM).viewport
+        : undefined;
+      const picture = shown ? canvas.transferToImageBitmap() : undefined;
+      canvas.width = width;
+      canvas.height = height;
+      context.fillStyle = "#000";
+      context.fillRect(0, 0, width, height);
+      if (picture && shown && output) {
+        const fitted = composeFrame(output, canvas, { ...output, rotation: 0 }, IDENTITY_TRANSFORM);
+        context.drawImage(
+          picture,
+          shown.x,
+          shown.y,
+          shown.width,
+          shown.height,
+          fitted.viewport.x,
+          fitted.viewport.y,
+          fitted.viewport.width,
+          fitted.viewport.height,
+        );
+        picture.close();
+      }
+      return undefined;
+    },
     load({ plan, sources: next }) {
+      output = plan.output;
       sources = new Map(next.map((source) => [source.id, source]));
       for (const [id, open] of readers) {
         if (sources.get(id)?.file === open.file) continue;

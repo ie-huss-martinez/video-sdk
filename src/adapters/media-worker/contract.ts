@@ -67,6 +67,14 @@ export interface MediaWorkerContract {
     readonly input: { readonly canvas: OffscreenCanvas };
     readonly output: undefined;
   };
+  /**
+   * Sizes the canvas's backing store, keeping the picture shown, scaled into
+   * the new size until the next frame is drawn (docs/adr/0006).
+   */
+  readonly resize: {
+    readonly input: { readonly width: number; readonly height: number };
+    readonly output: undefined;
+  };
   /** Sets the plan and its sources, and stops what's running until the next `control`. */
   readonly load: {
     readonly input: { readonly plan: VideoPlan; readonly sources: readonly PlaybackSource[] };

@@ -1,8 +1,10 @@
 import { createWorkerClient, type WorkerClient } from "@hussmartinez/sdk-core";
 import { asVideoError } from "../core/errors/error-helpers.js";
 import { VideoError } from "../core/errors/video-error.js";
+import { type VideoFilePolicy, videoLimits } from "../core/errors/video-limits.js";
 import { planFrames, type VideoPlan } from "../core/model/plan.js";
 import { frameTime } from "../core/model/time.js";
+import { checkedBackingSize } from "../core/playback/backing.js";
 import type { SchedulerCommand } from "../core/playback/scheduler.js";
 import {
   clipStarts,
@@ -31,16 +33,22 @@ export interface VideoOutputOptions {
   /**
    * The canvas to draw into. It's transferred to the output's worker, so the
    * page can't draw into it or transfer it again. It's drawn at the width
-   * and height it has when the output is created; style it to fit the stage.
+   * and height it has when the output is created, until `resize` sets
+   * them; style it to fit the stage.
    */
   readonly canvas: HTMLCanvasElement;
+  /**
+   * The limits `resize` checks the canvas's backing size against:
+   * `maxFramePixels`. The defaults of `videoLimits` when omitted.
+   */
+  readonly filePolicy?: VideoFilePolicy;
 }
 
 /** How often the page sends the anchor while playing, and learns of dropped frames and failures (docs/adr/0006). */
 const ANCHOR_INTERVAL = 250;
 
 /** The playback worker, as the output uses it. */
-type PlaybackCall = <Method extends "load" | "control">(
+type PlaybackCall = <Method extends "resize" | "load" | "control">(
   method: Method,
   input: MediaWorkerContract[Method]["input"],
 ) => Promise<MediaWorkerContract[Method]["output"]>;
@@ -58,6 +66,8 @@ export interface OutputEnvironment {
   readonly source: (id: string) => PlaybackSource | undefined;
   /** Wall-clock milliseconds since the epoch, as the worker reads them. */
   readonly now: () => number;
+  /** The limits `resize` checks against. */
+  readonly policy: VideoFilePolicy;
   /** Whether the page is hidden, and how to learn when that changes, if there's a page. */
   readonly visibility?: {
     readonly hidden: () => boolean;
@@ -135,6 +145,7 @@ export function createVideoOutput(options: VideoOutputOptions): VideoOutput {
     },
     source: internals.source,
     now: wallClock,
+    policy: options.filePolicy ?? videoLimits.resolve(),
     ...(typeof document === "undefined"
       ? {}
       : {
@@ -353,6 +364,14 @@ export function createOutput(environment: OutputEnvironment): VideoOutput {
       if (anchor) halt("paused");
       playhead = target;
       void send(command());
+    },
+    resize(width, height, pixelRatio) {
+      assertAlive();
+      const size = checkedBackingSize(environment.policy, width, height, pixelRatio);
+      void connection().call("resize", size).catch(fail);
+      // Paused, the frame shown is drawn again, sharp at the new size;
+      // playing, the next frame is.
+      if (!anchor && length > 0) void send(command());
     },
     on(_event, listener) {
       endedListeners.add(listener);
