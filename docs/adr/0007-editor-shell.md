@@ -1,6 +1,6 @@
 # 0007. The editor shell: layout, the timeline, shortcuts and focus
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-11-12
 
 ## Context
@@ -43,7 +43,17 @@ Below a container width of 720 px the inspector moves under the timeline. Sizes 
 
 ### The timeline
 
-**`<VideoTimeline>` is a building block in this SDK, not a `ui` component, for now.** It's written to `ui`'s component contract, from `ui`'s primitives, with its own CSS under `hm.sdk`. When audio-sdk's editor needs a clip track too, it's promoted to `ui`. Until then, video-sdk is its only user, and its design can change with each release here, without waiting for `ui`'s.
+**`<VideoTimeline>` is a building block in this SDK, not a `ui` component, for now.** The family reviewer decided this on 2026-11-12, by the family's rule of two consumers: a component moves to `ui` once two SDKs need it.
+
+- **It's written to `ui`'s component contract,** from `ui`'s primitives, with its own CSS under `hm.sdk`, so it can move without being rewritten.
+- **The trigger for promoting it** is audio-sdk's editor needing a clip track. Then it moves to `ui`, with an ADR there, and both SDKs render `ui`'s. Until then, video-sdk is its only user, and its design can change with each release here, without waiting for `ui`'s.
+
+**Its arithmetic is `sdk-core`'s timeline helpers** ([ADR 0042](https://github.com/ie-huss-martinez/sdk-core/blob/main/docs/adr/0042-timeline-sequence-helpers.md)), from `sdk-core` 0.4.0, in output frames:
+
+- **Layout:** `sequenceOffsets` of the clips' lengths gives every boundary, the clips' starts and the plan's length, for laying out the clips and the playhead.
+- **The playhead and the pointer:** `locate` maps a frame to the clip under it and the frame within it, on every animation frame while playing, and for a pointer at the frame under it. A frame on a boundary belongs to the clip that starts there, and the plan's end, where no clip is, shows the last frame.
+- **Snapping:** a dragged edge or the playhead snaps with `snap` to the clips' boundaries and the playhead. Its tolerance is in output frames, converted from a fixed distance of 8 CSS pixels at the current zoom: `Math.round(8 × framesPerPixel)`, where `framesPerPixel` is the visible length in frames divided by the timeline's width. So snapping feels the same at every zoom. `Alt` while dragging turns it off.
+- **They replace this SDK's own `clipOffsets` and `locateFrame`** in the UI. The core's are kept, as they're public, and later reimplemented over the helpers.
 
 - **The track is a `listbox`** of clips, horizontal, with `aria-multiselectable`. One tab stop, with roving focus: Left and Right move between clips, Home and End to the first and last, and Shift and Mod extend the selection. Each clip's accessible name is its source's position and its range: "Clip 2 of 5, 0:04.00 to 0:09.20, muted".
 - **The playhead is a `ui` Slider** over output frames, with `aria-valuetext` the time, so a screen reader reads "0:12.40" and not a frame number. Its arrow keys step one frame, and Page Up and Page Down one second, as the slider's own keys.
@@ -75,7 +85,7 @@ Each feature is a folder under `src/features/` with its command, UI, styles, mes
 | `video.insert` | none | `Mod+O` is the browser's own |
 | `video.export` | none | Irreversible, so a click, through the export dialog |
 
-The single-character keys, `S`, `M`, `[`, `]`, `+`, `-` and `0`, are active only while focus is in the editor, which meets WCAG 2.1.4 through its exception, as the family's are. Each tool's button carries `aria-keyshortcuts` from the registry, and its tooltip shows the keys from the catalogue.
+**Single-key shortcuts,** `S`, `M`, `[`, `]`, `+`, `-` and `0`, and the unmodified `Home`, `End`, `Left` and `Right`, are active only while focus is inside the editor's root ([ADR 0030](https://github.com/ie-huss-martinez/sdk-core/blob/main/docs/adr/0030-tools-and-keyboard-shortcuts.md)). That's WCAG 2.1.4's condition for character-key shortcuts that are active only while their component has focus. They never fire in a text field, `select` or `contenteditable`, whose keys are the field's own. Each tool's button carries `aria-keyshortcuts` from the registry, and its tooltip shows the keys from the catalogue.
 
 ### Focus
 

@@ -14,4 +14,4 @@ Use [`template.md`](template.md) for new records. Name files `NNNN-short-title.m
 | [0004](0004-video-limits.md) | Video limits and session memory | Accepted |
 | [0005](0005-playback-and-export.md) | Playback with audio as the clock, and export with progress, cancellation and nothing but the edit | Accepted |
 | [0006](0006-frame-scheduler.md) | The frame scheduler: playback's clock, frame ownership, dropping and seeking | Accepted; refines [0002](0002-workers-and-assets.md) and [0005](0005-playback-and-export.md) |
-| [0007](0007-editor-shell.md) | The editor shell: layout, the timeline, shortcuts and focus | Proposed |
+| [0007](0007-editor-shell.md) | The editor shell: layout, the timeline, shortcuts and focus | Accepted |
