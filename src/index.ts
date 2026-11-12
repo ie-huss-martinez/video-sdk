@@ -9,6 +9,8 @@
  * @packageDocumentation
  */
 
+export type { VideoEngineOptions } from "./adapters/video-engine.js";
+export { createVideoEngine } from "./adapters/video-engine.js";
 export type { VideoErrorCode } from "./core/errors/video-error.js";
 export { isVideoError, VideoError } from "./core/errors/video-error.js";
 export type {

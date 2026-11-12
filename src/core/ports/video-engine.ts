@@ -1,5 +1,5 @@
 import type { VideoProbe, VideoSourceInfo } from "../model/source.js";
-import type { VideoCallOptions, VideoProbeOptions } from "./options.js";
+import type { VideoProbeOptions } from "./options.js";
 
 /**
  * The port for reading video files: check and probe a file without decoding
@@ -34,12 +34,17 @@ export interface VideoEngine {
   /**
    * Opens a probed file as the source `id`, which playback and export can
    * then read. Rejects with `TypeError` if `id` is already open.
+   *
+   * A probe this engine made is trusted, and frozen so that it can't be
+   * changed. Any other probe, such as one copied or restored from a saved
+   * session, makes the engine probe the file again, under `filePolicy` as
+   * `probe` does, and rejects with `INVALID_VIDEO` unless every field matches.
    */
   open(
     id: string,
     file: Blob,
     probe: VideoProbe,
-    options?: VideoCallOptions,
+    options?: VideoProbeOptions,
   ): Promise<VideoSourceInfo>;
   /** Closes a source once nothing refers to it. Closing an unknown id does nothing. */
   close(id: string): Promise<void>;

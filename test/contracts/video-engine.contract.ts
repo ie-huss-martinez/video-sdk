@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isVideoError, type VideoEngine, videoLimits } from "../../src/index.js";
+import { isVideoError, type VideoEngine, type VideoProbe, videoLimits } from "../../src/index.js";
 import { aborted, rejection } from "./helpers.js";
 
 /**
@@ -131,6 +131,56 @@ export function describeVideoEngineContract(name: string, harness: VideoEngineHa
       await engine.close("a");
       await engine.close("never-opened");
       await expect(engine.open("a", file, probe)).resolves.toMatchObject({ id: "a" });
+      await engine.destroy();
+    });
+
+    it("freezes the probes it makes, so they can't be changed to pass the limits", async () => {
+      const engine = harness.createEngine();
+      const probe = await engine.probe(await harness.landscape());
+      for (const part of [probe, probe.video, probe.audio])
+        expect(Object.isFrozen(part)).toBe(true);
+      // Modules run in strict mode, where writing to a frozen object throws.
+      expect(() => {
+        (probe.video as { codedWidth: number }).codedWidth = 64;
+      }).toThrow(TypeError);
+      expect(probe.video.codedWidth).toBeGreaterThanOrEqual(1280);
+      await engine.destroy();
+    });
+
+    it("opens a copied probe only if every field matches the file", async () => {
+      const engine = harness.createEngine();
+      const file = await harness.landscape();
+      const probe = await engine.probe(file);
+      const copy = structuredClone(probe);
+      await expect(engine.open("copy", file, copy)).resolves.toMatchObject({ id: "copy" });
+      // Each forgery lowers a value that a limit checks.
+      const forgeries: VideoProbe[] = [
+        { ...copy, video: { ...copy.video, codedWidth: 64, codedHeight: 36 } },
+        { ...copy, video: { ...copy.video, frameRate: 1 } },
+        { ...copy, peakBitrate: 1 },
+        { ...copy, maxPacketSize: 1 },
+        { ...copy, duration: 1 },
+        { ...copy, tracks: 1 },
+        { ...copy, indexSize: 1 },
+        { ...copy, video: { ...copy.video, rotation: 90 } },
+        { ...copy, video: { ...copy.video, displayWidth: 2 } },
+        { ...copy, audio: copy.audio && { ...copy.audio, channels: 1 } },
+        { ...copy, audio: copy.audio && { ...copy.audio, sampleRate: 8_000 } },
+      ];
+      for (const [index, forged] of forgeries.entries()) {
+        const error = await rejection(engine.open(`forged-${index}`, file, forged));
+        expect(isVideoError(error, "INVALID_VIDEO"), `forgery ${index}`).toBe(true);
+      }
+      await engine.destroy();
+    });
+
+    it("probes a copied probe's file again under the caller's policy", async () => {
+      const engine = harness.createEngine();
+      const file = await harness.landscape();
+      const copy = structuredClone(await engine.probe(file));
+      const filePolicy = videoLimits.resolve({ maxFileSize: 10 });
+      const error = await rejection(engine.open("copy", file, copy, { filePolicy }));
+      expect(isVideoError(error, "FILE_TOO_LARGE")).toBe(true);
       await engine.destroy();
     });
 

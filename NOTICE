@@ -1,0 +1,15 @@
+@hussmartinez/video-sdk
+Copyright 2026 Huss Martinez
+
+This product is licensed under the Apache License, Version 2.0 (see LICENSE).
+
+It bundles the following third-party software, unmodified, under the licence
+named (docs/adr/0001).
+
+--------------------------------------------------------------------------------
+mediabunny 1.65.2 (inlined into the media worker)
+Copyright (c) 2026-present, Vanilagy and contributors
+Licensed under the Mozilla Public License, Version 2.0.
+https://mozilla.org/MPL/2.0/
+Source: https://github.com/Vanilagy/mediabunny/tree/v1.65.2
+--------------------------------------------------------------------------------
