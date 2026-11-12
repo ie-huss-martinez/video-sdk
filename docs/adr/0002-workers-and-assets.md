@@ -2,6 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-11-12
+- **Amended:** 2026-11-12, when playback found a deadlock in Firefox: a decoder that holds a full queue without output may take more packets, up to a hard cap.
 
 ## Context
 
@@ -23,7 +24,7 @@ The family's workers use `sdk-core`'s typed RPC ([ADR 0018](https://github.com/i
 - **Decoded video frames live only in the worker that decoded them.** They're drawn or encoded there and closed. No full-size `VideoFrame` or frame pixel buffer is ever posted to the page; thumbnails are posted as small `ImageBitmap`s.
 - **Decoded audio for playback goes to the page in short windows,** as one transferred `Float32Array` per channel, for the page's `AudioContext`. The window length and how playback schedules them are a later record on playback ([ADR 0005](0005-playback-and-export.md)). Waveform peaks are computed in the worker and posted as small arrays.
 - **Memory is bounded by queues, not by footage.** Every decoder, decoded-frame queue and encoder in a worker has a fixed maximum length:
-  - **the decoder's own queue:** at most 8 packets;
+  - **the decoder's own queue:** at most 8 packets. A decoder that holds all 8 for 50 milliseconds without output, with no decoded frame waiting, gets one more at a time, up to 32. Firefox decodes VP8 on several threads at once and outputs nothing until about as many packets as it has threads are in flight, which can be more than 8; without this, the loop would wait for an output and the decoder for a packet, forever. The bound stays fixed, at 32 packets;
   - **decoded frames waiting to be drawn or encoded:** at most 4;
   - **the encoder's queue:** at most 8 frames.
 

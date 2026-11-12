@@ -5,6 +5,15 @@ import { CODED_PADDING } from "../../core/model/probe-limits.js";
 
 /** The most packets waiting in the decoder's own queue (docs/adr/0002). */
 export const MAX_DECODE_QUEUE = 8;
+/**
+ * The most packets the decoder's queue may grow to while the decoder holds
+ * them without output (docs/adr/0002). Firefox decodes VP8 on several threads
+ * at once and outputs nothing until about as many packets as it has threads
+ * are in flight, which can be more than {@link MAX_DECODE_QUEUE}.
+ */
+export const MAX_STALLED_DECODE_QUEUE = 32;
+/** How long a full queue may go without output before the decoder is given one more packet, in milliseconds. */
+export const STALL_TIMEOUT = 50;
 /** The most decoded frames waiting for their consumer while packets are fed (docs/adr/0002). */
 export const MAX_QUEUED_FRAMES = 4;
 
@@ -45,7 +54,10 @@ export interface FrameRange {
  *
  * - **Bounded:** at most {@link MAX_DECODE_QUEUE} packets wait in the
  *   decoder, with back-pressure on its `dequeue` event, and no packet is fed
- *   while {@link MAX_QUEUED_FRAMES} decoded frames wait for `onFrame`.
+ *   while {@link MAX_QUEUED_FRAMES} decoded frames wait for `onFrame`. A
+ *   decoder that holds a full queue without output gets one more packet at a
+ *   time, up to {@link MAX_STALLED_DECODE_QUEUE}, so one that needs more
+ *   packets in flight than that bound can't deadlock.
  * - **Borrowed frames:** a frame is closed as soon as `onFrame` settles, so
  *   every frame is closed in one place. `onFrame` clones a frame to keep it,
  *   and then owns the clone.
@@ -110,16 +122,42 @@ export async function decodeVideoFrames(
     if (signal?.aborted) throw abortError(signal);
     if (failure !== undefined) throw failure;
   };
-  /** Waits for the decoder, cancellation or a failure, unless `ready` already holds. */
-  const until = async (ready: () => boolean) => {
+  /**
+   * Waits for the decoder, cancellation or a failure, unless `ready` already
+   * holds. When nothing happens for {@link STALL_TIMEOUT}, `onStall` is
+   * called, and may make `ready` hold.
+   */
+  const until = async (ready: () => boolean, onStall?: () => void) => {
     while (!ready()) {
       check();
+      let stalled = false;
+      let timer: ReturnType<typeof setTimeout> | undefined;
       await new Promise<void>((resolve) => {
         wake = resolve;
-        if (ready() || signal?.aborted || failure !== undefined) notify();
+        if (ready() || signal?.aborted || failure !== undefined) return notify();
+        if (onStall) {
+          timer = setTimeout(() => {
+            stalled = true;
+            notify();
+          }, STALL_TIMEOUT);
+        }
       });
+      clearTimeout(timer);
+      if (stalled) onStall?.();
     }
     check();
+  };
+  /**
+   * How many packets may wait in the decoder. A decoder that holds a full
+   * queue without output, with no frame waiting for the consumer, needs more
+   * packets before it can output one: it gets one more at a time, up to
+   * {@link MAX_STALLED_DECODE_QUEUE}.
+   */
+  let queueLimit = MAX_DECODE_QUEUE;
+  const onStall = () => {
+    if (waiting.length === 0 && decoder.decodeQueueSize >= queueLimit) {
+      queueLimit = Math.min(queueLimit + 1, MAX_STALLED_DECODE_QUEUE);
+    }
   };
   /** Lends every waiting frame to the consumer, in order. */
   const drain = async () => {
@@ -181,7 +219,8 @@ export async function decodeVideoFrames(
       if (packet.type === "key" && packet !== start && packet.microsecondTimestamp >= range.to)
         break;
       await until(
-        () => decoder.decodeQueueSize < MAX_DECODE_QUEUE && waiting.length < MAX_QUEUED_FRAMES,
+        () => decoder.decodeQueueSize < queueLimit && waiting.length < MAX_QUEUED_FRAMES,
+        onStall,
       );
       decoder.decode(packet.toEncodedVideoChunk());
       videoFrameLedger.peakDecodeQueue = Math.max(

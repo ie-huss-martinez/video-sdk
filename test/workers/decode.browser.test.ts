@@ -1,6 +1,6 @@
 import { createWorkerClient } from "@hussmartinez/sdk-core";
 import { afterEach, describe, expect, it } from "vitest";
-import { MAX_DECODE_QUEUE } from "../../src/adapters/mediabunny/video-decoder.js";
+import { MAX_STALLED_DECODE_QUEUE } from "../../src/adapters/mediabunny/video-decoder.js";
 import { isVideoError, VideoError } from "../../src/index.js";
 import landscapeVp8 from "../fixtures/video/landscape-vp8.webm?url";
 import type { DecodeContract, DecodeRequest } from "./decode.worker.js";
@@ -29,7 +29,7 @@ describe("decoding video frames in a worker", () => {
   afterEach(async () => {
     const ledger = await client.call("ledger", undefined);
     expect(ledger.open, "frames left open").toBe(0);
-    expect(ledger.peakDecodeQueue).toBeLessThanOrEqual(MAX_DECODE_QUEUE);
+    expect(ledger.peakDecodeQueue).toBeLessThanOrEqual(MAX_STALLED_DECODE_QUEUE);
   });
 
   it("decodes every frame, in presentation order, at the probe's size", async () => {
@@ -44,6 +44,12 @@ describe("decoding video frames in a worker", () => {
     const { timestamps } = await decode({ from: 500_000, to: 1_000_000 });
     expect(timestamps).toHaveLength(15);
     expect(timestamps.every((t) => t >= 500_000 && t < 1_000_000)).toBe(true);
+  });
+
+  it("gives a decoder that holds more packets than that before any output more, rather than deadlocking", async () => {
+    // As Firefox does with frame-threaded VP8 on a machine with many cores.
+    const { timestamps } = await decode({ lag: 12 });
+    expect(timestamps).toHaveLength(60);
   });
 
   it("stops after a limit", async () => {
