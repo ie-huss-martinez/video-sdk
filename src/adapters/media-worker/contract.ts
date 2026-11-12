@@ -1,5 +1,5 @@
 import type { VideoLimitName } from "../../core/errors/video-limits.js";
-import type { VideoContainer, VideoProbe } from "../../core/model/source.js";
+import type { VideoProbe } from "../../core/model/source.js";
 
 /**
  * A resolved file policy's limits, as plain data: a `FilePolicy` holds
@@ -22,12 +22,13 @@ export interface MediaWorkerContract {
     readonly output: VideoProbe;
   };
   /**
-   * Checks that this browser can decode the tracks of a file it has probed
-   * (docs/adr/0001). It rejects with `UNSUPPORTED_CODEC` or
-   * `UNSUPPORTED_ENVIRONMENT`, and decodes nothing.
+   * Checks that this browser can decode the tracks of a file (docs/adr/0001).
+   * The front check runs first, under the same limits as a probe, so
+   * mediabunny never reads a file it hasn't bounded. It rejects with
+   * `UNSUPPORTED_CODEC` or `UNSUPPORTED_ENVIRONMENT`, and decodes nothing.
    */
   readonly support: {
-    readonly input: { readonly file: Blob; readonly container: VideoContainer };
+    readonly input: { readonly file: Blob; readonly limits: PolicyLimits };
     readonly output: undefined;
   };
 }

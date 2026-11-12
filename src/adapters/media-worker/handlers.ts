@@ -1,5 +1,6 @@
 import type { WorkerHandlers } from "@hussmartinez/sdk-core";
 import { videoLimits } from "../../core/errors/video-limits.js";
+import { frontCheck } from "../front-check/front-check.js";
 import { checkDecoderSupport } from "../mediabunny/decoder-support.js";
 import { probeFile } from "../probe.js";
 import type { MediaWorkerContract } from "./contract.js";
@@ -11,8 +12,10 @@ import type { MediaWorkerContract } from "./contract.js";
 export function mediaWorkerHandlers(): WorkerHandlers<MediaWorkerContract> {
   return {
     probe: ({ file, limits }, { signal }) => probeFile(file, videoLimits.resolve(limits), signal),
-    async support({ file, container }) {
-      await checkDecoderSupport(file, container);
+    async support({ file, limits }) {
+      // The same front check as a probe, before mediabunny reads the file.
+      const front = await frontCheck(file, videoLimits.resolve(limits));
+      await checkDecoderSupport(file, front.container);
       return undefined;
     },
   };

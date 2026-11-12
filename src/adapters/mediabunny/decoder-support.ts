@@ -4,7 +4,7 @@ import { familyOf, openInput, pickTracks } from "./tracks.js";
 
 /**
  * Checks that this browser can decode the tracks the SDK uses from a file
- * it has already probed (ADR 0001, ADR 0002): WebCodecs' `VideoDecoder` and
+ * that has passed the front check (ADR 0001, ADR 0002): WebCodecs' `VideoDecoder` and
  * `AudioDecoder` must exist where this runs, a worker, and each track's
  * decoder configuration must be supported. Nothing is decoded or configured;
  * `isConfigSupported` only asks.

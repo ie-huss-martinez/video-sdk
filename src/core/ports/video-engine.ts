@@ -35,15 +35,18 @@ export interface VideoEngine {
    * Opens a probed file as the source `id`, which playback and export can
    * then read. Rejects with `TypeError` if `id` is already open.
    *
-   * A probe this engine made is trusted, and frozen so that it can't be
-   * changed. Any other probe, such as one copied or restored from a saved
-   * session, makes the engine probe the file again, under `filePolicy` as
-   * `probe` does, and rejects with `INVALID_VIDEO` unless every field matches.
+   * A probe this engine made is trusted for the `Blob` it was made from, and
+   * frozen so that it can't be changed. Any other probe, such as one copied
+   * or restored from a saved session, or a probe of another file, makes the
+   * engine probe the file again, under `filePolicy` as `probe` does, and
+   * rejects with `INVALID_VIDEO` unless every field matches.
    *
    * A file opens only if this browser can decode the tracks the SDK uses:
    * otherwise `open` rejects with `UNSUPPORTED_CODEC`, naming the codec and
    * the track in `details`, or with `UNSUPPORTED_ENVIRONMENT` without
-   * WebCodecs.
+   * WebCodecs. That includes the audio track: a file whose audio this
+   * browser can't decode is refused, never opened silent, so an export can't
+   * drop its sound without saying so.
    */
   open(
     id: string,

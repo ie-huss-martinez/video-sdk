@@ -23,8 +23,8 @@ export interface FakeEngine extends VideoEngine {
 /** A reading fake: the real engine's checks and lifecycle, over fake files. */
 export function createFakeEngine(): FakeEngine {
   const sources = new Map<string, VideoSourceInfo>();
-  /** Probes this engine made, frozen, which `open` trusts. */
-  const trusted = new WeakSet<VideoProbe>();
+  /** Probes this engine made, frozen, which `open` trusts for the Blob each was made from. */
+  const trusted = new WeakMap<VideoProbe, Blob>();
   let destroyed = false;
   const assertAlive = () => {
     if (destroyed) throw new Error("The engine has been destroyed.");
@@ -81,7 +81,7 @@ export function createFakeEngine(): FakeEngine {
       }),
       audio: spec.audio ? Object.freeze({ codec: "mp4a.40.2", ...spec.audio }) : null,
     };
-    trusted.add(Object.freeze(probe));
+    trusted.set(Object.freeze(probe), file);
     return probe;
   }
 
@@ -93,7 +93,7 @@ export function createFakeEngine(): FakeEngine {
       throwIfAborted(options?.signal);
       if (sources.has(id)) throw new TypeError(`The source "${id}" is already open.`);
       let probe = given;
-      if (!trusted.has(given)) {
+      if (trusted.get(given) !== file) {
         const fresh = await probeFile(file, options);
         if (JSON.stringify(fresh) !== JSON.stringify(given)) {
           throw new VideoError("INVALID_VIDEO", "The probe doesn't describe this file.");

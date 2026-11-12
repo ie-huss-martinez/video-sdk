@@ -200,6 +200,15 @@ export function describeVideoEngineContract(name: string, harness: VideoEngineHa
       await engine.destroy();
     });
 
+    it("trusts a probe only for the file it was made from", async () => {
+      const engine = harness.createEngine();
+      const probe = await engine.probe(await harness.landscape());
+      // The same probe, with a different file: probed again, and refused.
+      const error = await rejection(engine.open("other", await harness.silent(), probe));
+      expect(isVideoError(error, "INVALID_VIDEO")).toBe(true);
+      await engine.destroy();
+    });
+
     it("probes a copied probe's file again under the caller's policy", async () => {
       const engine = harness.createEngine();
       const file = await harness.landscape();
