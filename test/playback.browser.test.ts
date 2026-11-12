@@ -13,6 +13,7 @@ import {
   describeVideoOutputContract,
   type VideoOutputHarness,
 } from "./contracts/video-output.contract.js";
+import landscapeVp8 from "./fixtures/video/landscape-vp8.webm?url";
 import numberedVp8 from "./fixtures/video/numbered-vp8.webm?url";
 import type { DrawnRecord, LedgerRecord, TestPortMessage } from "./workers/playback.worker.js";
 
@@ -63,10 +64,10 @@ afterEach(async () => {
   for (const engine of engines.splice(0)) await engine.destroy();
 });
 
-async function setup() {
+async function setup(url: string = numberedVp8) {
   for (const port of ports.splice(0)) port.close();
   const engine = createEngine({ loadWorker: async () => startWorker });
-  const file = await (await fetch(numberedVp8)).blob();
+  const file = await (await fetch(url)).blob();
   engines.push(engine);
   const source = await engine.open("numbered", file, await engine.probe(file));
   const canvas = document.createElement("canvas");
@@ -163,6 +164,18 @@ describe("drawing what the plan places at the clock", () => {
     const distinct = new Set(order).size;
     expect(distinct + (output.getSnapshot().droppedFrames ?? 0)).toBeGreaterThanOrEqual(88);
     expect(late.filter((d) => d === 0).length / late.length).toBeGreaterThan(0.7);
+    await noFramesOpen();
+  });
+
+  it("draws the first frame of a source whose audio starts before it, as Opus's does", async () => {
+    const real = await setup(landscapeVp8);
+    output = real.output;
+    output.load({
+      ...planOf(clipOf("a", real.source, 0, 30)),
+      output: { ...planOf().output, width: 1280, height: 720 },
+    });
+    // A frame is drawn at the start, paused.
+    await shown();
     await noFramesOpen();
   });
 

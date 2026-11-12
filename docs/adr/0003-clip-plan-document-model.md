@@ -2,7 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-11-12
-- **Amended:** 2026-11-12, to match the model as built: a clip's end matches the grid within one microsecond, `video.restoreClips` and `video.setOutput` carry what undo needs, and a source's time begins at the probe's `start`.
+- **Amended:** 2026-11-12, to match the model as built: a clip's end matches the grid within one microsecond, `video.restoreClips` and `video.setOutput` carry what undo needs, and a source's time begins at the probe's `start`. Then, when audio playback was built: that `start` is the video track's first timestamp.
 
 ## Context
 
@@ -24,7 +24,8 @@ The session's document is a **clip plan** over immutable sources:
     - the video track's codec, coded and display size, rotation and frame rate;
     - the audio track's codec, sample rate and channel count, if it has one.
   - The core sees no decoded data and no DOM types, so tests can supply their own sources.
-  - **A source's time begins at the probe's `start`:** the earliest presentation timestamp of the tracks the SDK uses. A clip's `start` and `end`, video frame bounds and waveform buckets all count from it, so a file whose timestamps don't begin at 0, such as one with an audio priming offset or a Matroska start offset, keeps its sound in line with its picture.
+  - **A source's time begins at the probe's `start`:** the video track's earliest presentation timestamp. A clip's `start` and `end`, video frame bounds and waveform buckets all count from it, so a file whose timestamps don't begin at 0, such as one with a Matroska start offset, keeps its sound in line with its picture.
+    - **Audio before the first frame is pre-roll,** and isn't played. Opus in WebM starts about 7 milliseconds before the first frame, for its codec delay, which the decoder drops. Counting from it made frame 0 sit 7 milliseconds into the source, so a seek to the first frame found nothing at or before it.
 - **The plan:**
   - **`output`:** `{ width, height, frameRate, sampleRate, channels }`. `frameRate` is a rational `{ num, den }`, such as `{ num: 30000, den: 1001 }`;
   - **`clips`:** an ordered list, played back to back on one track;

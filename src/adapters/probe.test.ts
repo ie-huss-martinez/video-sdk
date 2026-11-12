@@ -76,11 +76,12 @@ describe("probing the generated fixtures", () => {
     expect(probed.video).toMatchObject({ displayWidth: 1280, displayHeight: 720, rotation: 90 });
   });
 
-  it("reports where a source's time starts, and measures its length from there", async () => {
-    // Timestamps from about 1 s: Opus starts 7 ms before the first frame.
+  it("reports where a source's time starts, at its first frame, and measures its length from there", async () => {
+    // Timestamps from 1 s. Opus starts 7 ms before the first frame, for its
+    // codec delay: pre-roll, not the source's start.
     const probed = await probe(await fixture("offset.webm"));
-    expect(probed.start).toBeGreaterThanOrEqual(990_000);
-    expect(probed.start).toBeLessThanOrEqual(1_000_000);
+    expect(probed.start).toBe(1_000_000);
+    expect((await probe(await fixture("landscape-vp8.webm"))).start).toBe(0);
     expect(probed.duration).toBeGreaterThan(190_000);
     expect(probed.duration).toBeLessThan(260_000);
     expect((await probe(await fixture("landscape.mp4"))).start).toBeLessThan(50_000);

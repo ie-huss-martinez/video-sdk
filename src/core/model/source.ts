@@ -58,9 +58,10 @@ export interface VideoProbe {
   readonly container: VideoContainer;
   /**
    * Where the source's time begins, in the container's microseconds: the
-   * earliest presentation timestamp of the tracks the SDK uses. Source times
-   * in the plan, video frame bounds and waveform buckets all count from it,
-   * so a file whose timestamps don't start at 0 stays in sync (ADR 0003).
+   * video track's earliest presentation timestamp. Source times in the plan,
+   * video frame bounds and waveform buckets all count from it, so a file
+   * whose timestamps don't start at 0 stays in sync (ADR 0003). Audio before
+   * it, such as Opus's codec delay, is pre-roll, and isn't played.
    */
   readonly start: number;
   /**
