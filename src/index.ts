@@ -101,6 +101,7 @@ export type {
 export type { VideoEngine } from "./core/ports/video-engine.js";
 export type {
   VideoOutput,
+  VideoOutputAudio,
   VideoOutputEvent,
   VideoOutputSnapshot,
   VideoOutputState,

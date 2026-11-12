@@ -342,6 +342,29 @@ describe("the frame scheduler", () => {
     await t.scheduler.settled();
   });
 
+  it("follows a corrected anchor within a frame without restarting, and restarts on a jump", async () => {
+    const t = setup();
+    t.scheduler.load(planOf(clip("a", "s", 0, 300)), new Map([["s", 0]]));
+    t.play(0);
+    await t.advance(500);
+    const decodes = t.decodes.length;
+    // The audio clock runs 5 ms ahead of wall-clock time.
+    t.control({ mode: "play", anchor: { media: t.media() + 5_000, at: 1_700_000_000_000 + 500 } });
+    await t.advance(500);
+    expect(t.decodes).toHaveLength(decodes);
+    const frames = t.drawn.map((entry) => entry.frame);
+    expect(frames).toEqual([...frames].sort((a, b) => a - b));
+    // A jump of a second is a seek.
+    t.control({
+      mode: "play",
+      anchor: { media: t.media() + 1_000_000, at: 1_700_000_000_000 + 1_000 },
+    });
+    await t.advance(REFRESH * 2);
+    expect(t.decodes.length).toBeGreaterThan(decodes);
+    t.scheduler.dispose();
+    await t.scheduler.settled();
+  });
+
   it("reports a decoding failure once, and stops", async () => {
     const t = setup();
     t.scheduler.load(planOf(clip("a", "s", 0, 300)), new Map([["s", 0]]));

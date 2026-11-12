@@ -112,7 +112,11 @@ export interface FrameScheduler {
    * probe's `start`). Stops what's running: the page follows with a command.
    */
   load(plan: VideoPlan, starts: ReadonlyMap<string, number>): void;
-  /** Runs a command. A `play` with the anchor already playing changes nothing. */
+  /**
+   * Runs a command. A `play` whose anchor puts the clock within one output
+   * frame of where it is now only corrects the clock, as the audio clock's
+   * drift does; it doesn't restart the decoders.
+   */
   control(command: SchedulerCommand): void;
   /** Frames skipped while playing since the plan was loaded, because a later one was already due. */
   readonly dropped: number;
@@ -360,7 +364,17 @@ export function createFrameScheduler<Frame extends SchedulerFrame>(
       mode = undefined;
     },
     control(command) {
-      if (command.mode === "play" && mode === "play" && sameAnchor(anchor, command.anchor)) return;
+      if (command.mode === "play" && mode === "play" && anchor) {
+        if (sameAnchor(anchor, command.anchor)) return;
+        // The audio clock drifting from wall-clock time, corrected every
+        // 250 ms: follow it without restarting the decoders.
+        const now = environment.now();
+        const drift = Math.abs(mediaTimeAt(command.anchor, now) - mediaTimeAt(anchor, now));
+        if (drift <= frameDuration()) {
+          anchor = command.anchor;
+          return;
+        }
+      }
       restart(command);
     },
     get dropped() {

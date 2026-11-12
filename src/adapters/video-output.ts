@@ -20,6 +20,7 @@ import type {
   VideoOutputState,
 } from "../core/ports/video-output.js";
 import type { MediaWorkerContract, PlaybackSource } from "./media-worker/contract.js";
+import { type AudioEnvironment, createPlaybackAudio } from "./playback-audio.js";
 import { engineInternals } from "./video-engine.js";
 
 /**
@@ -48,7 +49,7 @@ export interface VideoOutputOptions {
 const ANCHOR_INTERVAL = 250;
 
 /** The playback worker, as the output uses it. */
-type PlaybackCall = <Method extends "resize" | "load" | "control">(
+type PlaybackCall = <Method extends "resize" | "audio" | "load" | "control">(
   method: Method,
   input: MediaWorkerContract[Method]["input"],
 ) => Promise<MediaWorkerContract[Method]["output"]>;
@@ -68,6 +69,8 @@ export interface OutputEnvironment {
   readonly now: () => number;
   /** The limits `resize` checks against. */
   readonly policy: VideoFilePolicy;
+  /** The page's audio, where there's an `AudioContext`. Without it, playback is silent, on the performance clock. */
+  readonly audio?: Omit<AudioEnvironment, "fetchWindow">;
   /** Whether the page is hidden, and how to learn when that changes, if there's a page. */
   readonly visibility?: {
     readonly hidden: () => boolean;
@@ -79,8 +82,11 @@ export interface OutputEnvironment {
  * Creates the SDK's playback output (docs/adr/0005, docs/adr/0006). It plays
  * the sources open in `engine` into `canvas`, which it transfers to a media
  * worker of its own: frames are decoded and drawn there, and never reach the
- * page. Video plays on the performance clock; audio playback joins it in a
- * later version.
+ * page. Audio is mixed in the same worker and played through an
+ * `AudioContext` created on the first `play`, which is the clock; a plan
+ * without audio plays on the performance clock. When the browser's autoplay
+ * rules keep the context suspended, playback goes on silently and the
+ * snapshot's `audio` is `"blocked"`, until a `play` from a user gesture.
  *
  * Throws `TypeError` for an engine `createVideoEngine` didn't make, and for a
  * canvas that has already been transferred; `VideoError` with
@@ -146,6 +152,15 @@ export function createVideoOutput(options: VideoOutputOptions): VideoOutput {
     source: internals.source,
     now: wallClock,
     policy: options.filePolicy ?? videoLimits.resolve(),
+    ...(typeof AudioContext === "undefined"
+      ? {}
+      : {
+          audio: {
+            createContext: () => new AudioContext(),
+            timeOrigin: performance.timeOrigin,
+            performanceNow: () => performance.now(),
+          },
+        }),
     ...(typeof document === "undefined"
       ? {}
       : {
@@ -170,7 +185,12 @@ export function createVideoOutput(options: VideoOutputOptions): VideoOutput {
 export function createOutput(environment: OutputEnvironment): VideoOutput {
   const listeners = new Set<() => void>();
   const endedListeners = new Set<() => void>();
-  let snapshot: VideoOutputSnapshot = { state: "stopped", droppedFrames: 0, error: null };
+  let snapshot: VideoOutputSnapshot = {
+    state: "stopped",
+    droppedFrames: 0,
+    error: null,
+    audio: "ready",
+  };
   let plan: VideoPlan | undefined;
   let length = 0;
   let duration = 0;
@@ -184,6 +204,15 @@ export function createOutput(environment: OutputEnvironment): VideoOutput {
   let worker: ReturnType<OutputEnvironment["connect"]> | undefined;
   /** Settles when the worker has the latest plan. */
   let loaded: Promise<unknown> = Promise.resolve();
+  /** Bumped by everything that stops or restarts the clock, so a start that's overtaken gives up. */
+  let starting = 0;
+  const player = environment.audio
+    ? createPlaybackAudio({
+        ...environment.audio,
+        fetchWindow: async (from, count, sampleRate) =>
+          (await connection().call("audio", { from, count, rate: sampleRate })).channels,
+      })
+    : undefined;
   const unsubscribeVisibility = environment.visibility?.subscribe(() => onVisibility());
 
   const assertAlive = () => {
@@ -194,7 +223,8 @@ export function createOutput(environment: OutputEnvironment): VideoOutput {
     if (
       next.state === snapshot.state &&
       next.droppedFrames === snapshot.droppedFrames &&
-      next.error === snapshot.error
+      next.error === snapshot.error &&
+      next.audio === snapshot.audio
     ) {
       return;
     }
@@ -225,6 +255,8 @@ export function createOutput(environment: OutputEnvironment): VideoOutput {
       anchor = null;
       stopTimers();
     }
+    starting += 1;
+    player?.stop();
     update({
       state: snapshot.state === "playing" ? "paused" : snapshot.state,
       error: asVideoError(reason),
@@ -255,6 +287,7 @@ export function createOutput(environment: OutputEnvironment): VideoOutput {
         playhead = length;
         anchor = null;
         stopTimers();
+        player?.stop();
         update({ state: "stopped" });
         void send({ mode: "pause" });
         for (const listener of [...endedListeners]) listener();
@@ -263,13 +296,55 @@ export function createOutput(environment: OutputEnvironment): VideoOutput {
     );
   };
 
-  const startClock = (frame: number) => {
-    anchor = { media: frameTime(frame, rate()), at: environment.now() };
+  /** Whether any clip's source has audio. */
+  const hasAudio = () =>
+    plan?.clips.some((clip) => environment.source(clip.source)?.probe.audio) ?? false;
+
+  /** Runs the clock from `anchor`: the end, and the anchor every 250 ms, read again from the audio clock. */
+  const runClock = (from: PlaybackAnchor) => {
+    anchor = from;
     watchEnd();
     clearInterval(anchorTimer);
     anchorTimer = setInterval(() => {
-      if (anchor && !environment.visibility?.hidden()) void send(command());
+      if (!anchor) return;
+      if (player?.stalled()) {
+        // The audio stopped keeping time: go on silently from where the clock is.
+        player.stop();
+        update({ audio: "blocked" });
+      } else {
+        anchor = player?.anchor() ?? anchor;
+      }
+      if (!environment.visibility?.hidden()) void send(command());
     }, ANCHOR_INTERVAL);
+  };
+
+  /**
+   * Starts playing from `frame` (docs/adr/0006): once the worker has drawn
+   * that frame, and the first audio windows are ready, the clock starts, so
+   * neither starts behind. Audio sets the clock when it can play; otherwise
+   * the performance clock does, silently.
+   */
+  const begin = async (frame: number, waking?: Promise<"running" | "blocked">) => {
+    const own = ++starting;
+    anchor = null;
+    stopTimers();
+    player?.stop();
+    playhead = frame;
+    const overtaken = () =>
+      own !== starting || destroyed || (snapshot.state as VideoOutputState) !== "playing";
+    await loaded;
+    await send({ mode: "show", at: frameTime(Math.min(frame, length - 1), rate()) });
+    if (overtaken()) return;
+    let from: PlaybackAnchor | undefined;
+    if (player && plan && hasAudio()) {
+      const audio = await (waking ?? player.start());
+      if (overtaken()) return;
+      update({ audio: audio === "running" ? "ready" : "blocked" });
+      if (audio === "running") from = await player.play(frameTime(frame, rate()), duration);
+      if (overtaken()) return player.stop();
+    }
+    runClock(from ?? { media: frameTime(frame, rate()), at: environment.now() });
+    await send(command());
   };
 
   const onVisibility = () => {
@@ -278,6 +353,7 @@ export function createOutput(environment: OutputEnvironment): VideoOutput {
     // tabs throttle timers, Chrome's to one a minute after five minutes, so
     // the end is checked again: a clock past it ends playback at once.
     if (destroyed || !anchor) return;
+    player?.setHidden(Boolean(environment.visibility?.hidden()));
     watchEnd();
     if (anchor) void send(command());
   };
@@ -286,7 +362,9 @@ export function createOutput(environment: OutputEnvironment): VideoOutput {
   const halt = (state: VideoOutputState) => {
     if (anchor) playhead = position();
     anchor = null;
+    starting += 1;
     stopTimers();
+    player?.stop();
     update({ state });
   };
 
@@ -314,7 +392,11 @@ export function createOutput(environment: OutputEnvironment): VideoOutput {
         .call("load", { plan: next, sources: [...sources.values()] })
         .catch(fail);
       if (anchor && at < length) {
-        startClock(at);
+        // The timeline goes on where it is: the clock is unchanged, the
+        // worker restarts under the new plan, and audio takes over with the
+        // new plan's windows a moment ahead, without a gap.
+        watchEnd();
+        player?.switchPlan(duration);
       } else {
         if (anchor) halt("stopped");
         playhead = Math.min(at, length);
@@ -325,13 +407,10 @@ export function createOutput(environment: OutputEnvironment): VideoOutput {
       assertAlive();
       if (length === 0 || snapshot.state === "playing") return;
       update({ state: "playing", error: null });
-      // The clock starts once the worker has the plan, so a worker that's
-      // still starting doesn't count against the first frames.
-      await loaded;
-      if (destroyed || (snapshot.state as VideoOutputState) !== "playing" || anchor) return;
-      if (playhead >= length) playhead = 0;
-      startClock(playhead);
-      await send(command());
+      // The context is created and resumed now, within the user's gesture:
+      // after an await, some browsers no longer count it as one.
+      const waking = player && plan && hasAudio() ? player.start() : undefined;
+      await begin(playhead >= length ? 0 : playhead, waking);
     },
     pause() {
       assertAlive();
@@ -349,19 +428,19 @@ export function createOutput(environment: OutputEnvironment): VideoOutput {
       assertAlive();
       const target = Math.max(0, Math.min(Math.round(frame), length));
       update({ error: null });
-      if (anchor && target < length) {
-        startClock(target);
-      } else {
-        if (anchor) halt("paused");
-        playhead = target;
+      if (snapshot.state === "playing" && target < length) {
+        void begin(target);
+        return;
       }
+      if (snapshot.state === "playing") halt("paused");
+      playhead = target;
       if (length > 0) void send(command());
     },
     step(delta) {
       assertAlive();
       const target = stepTarget(position(), delta, length);
       if (target === undefined) return;
-      if (anchor) halt("paused");
+      if (snapshot.state === "playing") halt("paused");
       playhead = target;
       void send(command());
     },
@@ -382,7 +461,9 @@ export function createOutput(environment: OutputEnvironment): VideoOutput {
       destroyed = true;
       stopTimers();
       anchor = null;
+      starting += 1;
       unsubscribeVisibility?.();
+      await player?.close();
       worker?.destroy();
       update({ state: "stopped" });
       listeners.clear();

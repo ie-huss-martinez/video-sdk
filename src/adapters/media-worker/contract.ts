@@ -75,6 +75,16 @@ export interface MediaWorkerContract {
     readonly input: { readonly width: number; readonly height: number };
     readonly output: undefined;
   };
+  /**
+   * Makes one window of the plan's audio (docs/adr/0005): `count` samples at
+   * `rate` from timeline sample `from`, mixed to the output's channels, as
+   * planar channels transferred to the page. Each clip's source audio is
+   * decoded for just the samples the window needs.
+   */
+  readonly audio: {
+    readonly input: { readonly from: number; readonly count: number; readonly rate: number };
+    readonly output: { readonly channels: Float32Array[] };
+  };
   /** Sets the plan and its sources, and stops what's running until the next `control`. */
   readonly load: {
     readonly input: { readonly plan: VideoPlan; readonly sources: readonly PlaybackSource[] };

@@ -48,7 +48,41 @@ const SOURCE: PlaybackSource = {
   limits: {} as PlaybackSource["limits"],
 };
 
-function setup() {
+/** A source with audio, for the audio clock. */
+const WITH_AUDIO: PlaybackSource = {
+  ...SOURCE,
+  probe: { start: 0, audio: { codec: "opus", sampleRate: 48_000, channels: 2 } } as VideoProbe,
+};
+
+function fakeAudioContext(blocked: boolean) {
+  const context = {
+    state: blocked ? "suspended" : "running",
+    sampleRate: 48_000,
+    currentTime: 0,
+    outputLatency: 0,
+    baseLatency: 0,
+    destination: {},
+    close: vi.fn(async () => {}),
+    resume: async () => {},
+    getOutputTimestamp: () => ({ contextTime: 0, performanceTime: 0 }),
+    createBuffer: (channels: number, length: number) => ({
+      copyToChannel() {},
+      length,
+      numberOfChannels: channels,
+    }),
+    createBufferSource: () => ({
+      buffer: null,
+      onended: null,
+      connect() {},
+      disconnect() {},
+      start() {},
+      stop() {},
+    }),
+  };
+  return context;
+}
+
+function setup(options: { audio?: ReturnType<typeof fakeAudioContext> } = {}) {
   const commands: SchedulerCommand[] = [];
   const resizes: { width: number; height: number }[] = [];
   let hidden = false;
@@ -59,6 +93,10 @@ function setup() {
     connect: () => ({
       call: async (method, input) => {
         if (method === "resize") resizes.push(input as { width: number; height: number });
+        if (method === "audio") {
+          const { count } = input as { count: number };
+          return { channels: [new Float32Array(count), new Float32Array(count)] } as never;
+        }
         if (method === "control") {
           commands.push(input as SchedulerCommand);
           if (failControl) {
@@ -72,7 +110,16 @@ function setup() {
       },
       destroy: destroyed,
     }),
-    source: (id) => (id === "s" ? SOURCE : undefined),
+    source: (id) => (id === "s" ? (options.audio ? WITH_AUDIO : SOURCE) : undefined),
+    ...(options.audio
+      ? {
+          audio: {
+            createContext: () => options.audio as unknown as AudioContext,
+            timeOrigin: 0,
+            performanceNow: () => Date.now(),
+          },
+        }
+      : {}),
     now: () => Date.now(),
     policy: videoLimits.resolve(),
     visibility: {
@@ -248,13 +295,15 @@ describe("the video output's page side", () => {
     expect(t.resizes).toEqual([]);
   });
 
-  it("re-anchors at the playhead when the plan changes while playing, and stops at a shorter plan's end", async () => {
+  it("keeps the clock when the plan changes while playing, and stops at a shorter plan's end", async () => {
     const t = setup();
     t.output.load(planOf(90));
     await t.output.play();
+    const started = Date.now();
     await vi.advanceTimersByTimeAsync(1_000);
     t.output.load(planOf(60));
-    expect(t.last()).toEqual({ mode: "play", anchor: { media: 1_000_000, at: Date.now() } });
+    expect(t.last()).toEqual({ mode: "play", anchor: { media: 0, at: started } });
+    expect(t.output.position()).toBe(30);
     t.output.load(planOf(20));
     expect(t.output.getSnapshot().state).toBe("stopped");
     expect(t.output.position()).toBe(20);
@@ -275,6 +324,48 @@ describe("the video output's page side", () => {
     expect(t.output.position()).toBe(7);
     await t.output.play();
     expect(t.output.getSnapshot()).toMatchObject({ state: "playing", error: null });
+  });
+
+  it("plays silently on the performance clock when autoplay blocks audio, and says so", async () => {
+    const context = fakeAudioContext(true);
+    const t = setup({ audio: context });
+    t.output.load(planOf(90));
+    await t.output.play();
+    expect(t.output.getSnapshot()).toMatchObject({ state: "playing", audio: "blocked" });
+    await vi.advanceTimersByTimeAsync(500);
+    expect(t.output.position()).toBe(15);
+    await t.output.destroy();
+    expect(context.close).toHaveBeenCalled();
+  });
+
+  it("takes the clock from the audio when it plays", async () => {
+    const context = fakeAudioContext(false);
+    const t = setup({ audio: context });
+    t.output.load(planOf(90));
+    await t.output.play();
+    expect(t.output.getSnapshot()).toMatchObject({ state: "playing", audio: "ready" });
+    // Timeline 0 is played 50 ms after the context's time 0, which is heard at wall time 0 + now.
+    const sent = t.last();
+    expect(sent).toMatchObject({ mode: "play", anchor: { media: 0 } });
+    if (sent?.mode !== "play") throw new Error("expected play");
+    expect(sent.anchor.at).toBeCloseTo(Date.now() + 50, 0);
+    await t.output.destroy();
+    expect(context.close).toHaveBeenCalled();
+  });
+
+  it("goes on silently from where the clock is when the audio stops keeping time", async () => {
+    // A context that says it's running, but whose time never moves.
+    const context = fakeAudioContext(false);
+    const t = setup({ audio: context });
+    t.output.load(planOf(300));
+    await t.output.play();
+    expect(t.output.getSnapshot().audio).toBe("ready");
+    await vi.advanceTimersByTimeAsync(1_500);
+    expect(t.output.getSnapshot()).toMatchObject({ state: "playing", audio: "blocked" });
+    const then = t.output.position();
+    await vi.advanceTimersByTimeAsync(1_000);
+    expect(t.output.position()).toBe(then + 30);
+    await t.output.destroy();
   });
 
   it("refuses a plan whose sources aren't open, and calls after destroy", async () => {

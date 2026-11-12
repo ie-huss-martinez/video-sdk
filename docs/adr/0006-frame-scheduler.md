@@ -2,7 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-11-12
-- **Amended:** 2026-11-12, when video playback was built: the clock reads wall-clock time, a late frame is dropped only when a later one is due, and timestamps within a millisecond of the frame grid are on it. Then, the canvas's size follows the stage's.
+- **Amended:** 2026-11-12, when audio playback was built: the output timestamp's latency, stamps that aren't believed, corrections without restarts, an audio clock that stops, the start of playback, and audio windows. Earlier, when video playback was built: the clock reads wall-clock time, a late frame is dropped only when a later one is due, and timestamps within a millisecond of the frame grid are on it. Then, the canvas's size follows the stage's.
 
 ## Context
 
@@ -23,16 +23,27 @@ Measured in the pinned browser image, in Chromium, Firefox and WebKit:
 
 `VideoOutput` keeps one clock that maps media time, in output microseconds on the plan's timeline, to the page's `performance.now()`. It has two sources:
 
-- **The audio clock,** when the plan has audio and the `AudioContext` is running. The page reads `getOutputTimestamp()`, adds the output latency (`outputLatency`, or `baseLatency` where that's 0 or missing), and sends the worker an **anchor**: "media time *M* is heard at wall-clock time *P*". It sends a new anchor at play, at every seek, and every 250 milliseconds while playing, so the worker follows the audio hardware's clock as it drifts from `performance.now()`.
+- **The audio clock,** when the plan has audio and the `AudioContext` is running. The page reads `getOutputTimestamp()` and sends the worker an **anchor**: "media time *M* is heard at wall-clock time *P*". It sends a new anchor at play, at every seek, and every 250 milliseconds while playing, so the worker follows the audio hardware's clock as it drifts from `performance.now()`.
+  - **The output timestamp already includes the output latency:** it's the context time the device is playing at a performance time. So latency is added only when there's no usable stamp, to the context's `currentTime`, which is what's being rendered now: `outputLatency`, or `baseLatency` where that's 0 or missing.
+  - **A stamp whose performance time is more than 200 ms from `performance.now()` isn't used.** WebKit on Linux, in the pinned image, stamps another timeline that runs about twice as fast, and an anchor built on it froze the playhead.
+  - **A correction within one output frame doesn't restart the decoders:** the scheduler takes the new anchor, and its waits follow it. A larger change is a seek.
+  - **An audio clock that stops keeping time,** advancing less than half as fast as wall-clock time over a second, as a context whose device fails does, is dropped. Playback goes on silently from where the clock is, and the snapshot's `audio` becomes `"blocked"`.
 - **The performance clock,** when the plan has no audio, or audio can't start. The anchor is set at play and at every seek, and media time advances with `performance.now()`.
 
 Both sides compute media time the same way, `M + (now − P) × 1,000` microseconds, from the latest anchor. So the page's playhead, `VideoOutput.position()`, and the frames the worker draws agree, without a message per frame.
 
 **Wall-clock time** is `performance.timeOrigin + performance.now()`, in milliseconds. A worker's `performance.now()` counts from when the worker started, not from the page's origin, so the two sides can only agree on a time with the origin added.
 
-**The clock starts when the worker can draw.** `play()` waits until the output's worker has the plan, then sets the anchor, so a worker that's still starting doesn't make playback skip its first frames.
+**The clock starts when playback can start.** `play()` waits until the worker has drawn the start frame, and, with audio, until the first two windows are decoded, mixed and scheduled 50 ms ahead. Then it sets the anchor, so neither picture nor sound starts behind. A seek while playing starts the same way.
 
-**Autoplay.** `play()` creates the `AudioContext` lazily and calls `resume()`. If it isn't running when `resume()` settles, playback continues on the performance clock with no sound, and the output's snapshot reports `audio: "blocked"`. The next `play()`, from a user gesture, tries again. The editor can then show why there's no sound, and tests run headless.
+**Autoplay.** `play()` creates the `AudioContext` lazily and calls `resume()`, synchronously, within the user's gesture: after an `await`, some browsers no longer count it as one. If the context isn't running 100 ms later, playback continues on the performance clock with no sound, and the output's snapshot reports `audio: "blocked"`. The next `play()`, from a user gesture, tries again. The editor can then show why there's no sound, and tests run headless. A browser with no audio output looks the same, as Firefox in the pinned image does: its contexts stay suspended even after a click.
+
+**Audio windows.** The page asks the worker for 250 ms windows, mixed at the context's rate ([ADR 0005](0005-playback-and-export.md)), and schedules each as an `AudioBufferSourceNode` at the exact context time of its first sample.
+
+- **Lead:** two windows are kept scheduled ahead of the one playing, and eight while the page is hidden, whose timers are throttled. The next window is fetched when one ends, from its `ended` event, which hidden pages don't throttle, and from a timer every 125 ms.
+- **Underrun:** a window that arrives after its time plays from where the clock is, with its late part skipped. Audio never waits, and the clock never moves back. The page counts underruns in a test ledger.
+- **Seek, pause, stop and the end** stop every scheduled node at once. Destroying the output closes the context.
+- **An edit while playing changes the sound without a gap.** The clock is unchanged, and the timeline goes on where it is. The window playing stops at a sample 200 ms ahead, later windows are dropped, and the new plan's windows start at that same sample. A change of volume or mute is heard within about a quarter of a second.
 
 ### Frames never leave the worker, and the consumer owns the wait
 
@@ -119,6 +130,8 @@ No full-size frame ever crosses ([ADR 0002](0002-workers-and-assets.md)).
 - **The page's decisions** are tested the same way, with a fake worker and fake timers: the anchor, when `ended` fires, stepping, and what it sends while hidden.
 - **In every engine,** a frame-numbered fixture plays, seeks and is edited during playback, and the worker reads back what it drew. It must be the frame the plan places at the clock, or one shortly before it, never a later one; and every frame must be drawn or counted as dropped. Seeks and steps must draw exactly the frame the plan places there, across a cut. The `VideoOutput` contract runs on the real output too.
 - **The frame ledger is zero** after play, pause, seek, an edit during playback and stop ([ADR 0002](0002-workers-and-assets.md)). Destroying the output terminates its worker, which closes everything left.
+- **The page's audio** is tested on a fake `AudioContext` and fake timers: the lead, an underrun, a switch on an exact sample, a stamp that isn't believed, a context that stops, autoplay blocked, and every node released.
+- **The sync test** plays a frame-numbered fixture with tones at four frames, cut out of order. Each flash must be drawn within one output frame, 33 ms, of when its tone is heard: the tone's context time, mapped through the context's own output timestamp. It runs, with the gapless mute and release test, in Chromium and WebKit in the pinned image. Firefox there has no audio output, so those two tests are skipped where a context can't start even from a click, and Firefox is checked for silent playback instead.
 
 ## Alternatives considered
 

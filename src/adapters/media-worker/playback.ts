@@ -1,4 +1,5 @@
 import type { WorkerHandlers } from "@hussmartinez/sdk-core";
+import { mixWindow, type SourceSamples, sourceSpan } from "../../core/audio/mix.js";
 import { abortError, asVideoError } from "../../core/errors/error-helpers.js";
 import { VideoError } from "../../core/errors/video-error.js";
 import { videoLimits } from "../../core/errors/video-limits.js";
@@ -12,7 +13,10 @@ import { type FrameReader, openFrameReader } from "../mediabunny/frame-reader.js
 import type { MediaWorkerContract, PlaybackSource } from "./contract.js";
 
 /** The playback methods of the media worker's contract. */
-type PlaybackMethods = Pick<MediaWorkerContract, "attach" | "resize" | "load" | "control">;
+type PlaybackMethods = Pick<
+  MediaWorkerContract,
+  "attach" | "resize" | "audio" | "load" | "control"
+>;
 
 /**
  * What a test learns after each frame is drawn: the canvas, the clip, the
@@ -38,6 +42,49 @@ export interface DrawnFrame {
  */
 export interface PlaybackHooks {
   readonly afterDraw?: (drawn: DrawnFrame) => void;
+}
+
+/**
+ * Decodes a span of a source's audio, in source samples counted from the
+ * probe's `start`, into planar channels. Each chunk is copied out and closed
+ * by the decoder at once; samples outside the span are dropped, and any the
+ * file doesn't have stay silent.
+ */
+async function decodeSpan(
+  audio: NonNullable<FrameReader["audio"]>,
+  probe: VideoProbe,
+  sourceRate: number,
+  span: { readonly start: number; readonly end: number },
+  signal: AbortSignal,
+): Promise<SourceSamples> {
+  const length = span.end - span.start;
+  const channels = Array.from(
+    { length: probe.audio?.channels ?? 1 },
+    () => new Float32Array(length),
+  );
+  let scratch = new Float32Array(0);
+  await audio.decode(
+    {
+      from: probe.start + (span.start * 1_000_000) / sourceRate,
+      to: probe.start + (span.end * 1_000_000) / sourceRate,
+    },
+    (data) => {
+      if (scratch.length < data.numberOfFrames) scratch = new Float32Array(data.numberOfFrames);
+      const offset =
+        Math.round(((data.timestamp - probe.start) * sourceRate) / 1_000_000) - span.start;
+      const skip = Math.max(0, -offset);
+      const take = Math.min(data.numberOfFrames, length - offset) - skip;
+      if (take <= 0) return;
+      for (const [planeIndex, channel] of channels.entries()) {
+        if (planeIndex >= data.numberOfChannels) break;
+        const view = scratch.subarray(0, data.numberOfFrames);
+        data.copyTo(view, { planeIndex, format: "f32-planar" });
+        channel.set(view.subarray(skip, skip + take), offset + skip);
+      }
+    },
+    signal,
+  );
+  return { sampleRate: sourceRate, start: span.start, channels };
 }
 
 /** Wall-clock milliseconds since the epoch, which a page and its workers agree on. */
@@ -105,6 +152,8 @@ export function playbackHandlers(hooks: PlaybackHooks = {}): WorkerHandlers<Play
   let anchor: PlaybackAnchor | null = null;
   /** The plan's output, for keeping the picture through a resize. */
   let output: VideoPlan["output"] | undefined;
+  /** The plan loaded last, which audio windows are made from. */
+  let loadedPlan: VideoPlan | undefined;
   /** Once `drawImage` refuses a frame, every later frame is drawn through an `ImageBitmap`. */
   let throughBitmaps = false;
   let bitmapQueue: Promise<void> = Promise.resolve();
@@ -225,8 +274,26 @@ export function playbackHandlers(hooks: PlaybackHooks = {}): WorkerHandlers<Play
       }
       return undefined;
     },
+    async audio({ from, count, rate }, { signal }) {
+      const plan = loadedPlan;
+      if (!plan) throw new TypeError("No plan is loaded.");
+      const samples = await Promise.all(
+        plan.clips.map(async (clip, index) => {
+          const source = sources.get(clip.source);
+          const sourceRate = source?.probe.audio?.sampleRate;
+          if (!source || clip.muted || sourceRate === undefined) return null;
+          const span = sourceSpan(plan, index, rate, from, count, sourceRate);
+          if (!span) return null;
+          const reader = await readerFor(clip.source);
+          if (!reader.audio) return null;
+          return decodeSpan(reader.audio, source.probe, sourceRate, span, signal);
+        }),
+      );
+      return { channels: mixWindow(plan, rate, from, count, (index) => samples[index] ?? null) };
+    },
     load({ plan, sources: next }) {
       output = plan.output;
+      loadedPlan = plan;
       sources = new Map(next.map((source) => [source.id, source]));
       for (const [id, open] of readers) {
         if (sources.get(id)?.file === open.file) continue;

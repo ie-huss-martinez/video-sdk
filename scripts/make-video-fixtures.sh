@@ -48,6 +48,14 @@ numbered="geq=lum='if(mod(trunc(N/pow(2\\,7-trunc(X/32)))\\,2)\\,235\\,16)':cb=1
 ffmpeg -y -v error -f lavfi -i "color=black:size=256x32:rate=30:duration=4,format=yuv420p,$numbered" \
   -c:v libvpx -deadline good -cpu-used 5 -crf 10 -b:v 200k -threads 1 -g 30 \
   "${exact[@]}" numbered-vp8.webm
+# The same numbered picture with Opus beeps, for the sync test: 50 ms of
+# 1 kHz at 0.5, 1.5, 2.5 and 3.5 s, which are frames 15, 45, 75 and 105,
+# and silence otherwise.
+beeps="aevalsrc='if(gte(t\\,0.5)*lt(mod(t-0.5\\,1)\\,0.05)\\,0.5*sin(2*PI*1000*t)\\,0)|if(gte(t\\,0.5)*lt(mod(t-0.5\\,1)\\,0.05)\\,0.5*sin(2*PI*1000*t)\\,0)':s=48000:d=4"
+ffmpeg -y -v error -f lavfi -i "color=black:size=256x32:rate=30:duration=4,format=yuv420p,$numbered" \
+  -f lavfi -i "$beeps" \
+  -c:v libvpx -deadline good -cpu-used 5 -crf 10 -b:v 200k -threads 1 -g 30 \
+  "${opus[@]}" "${exact[@]}" -shortest numbered-beeps.webm
 # HEVC, which Chromium and Firefox don't decode: for UNSUPPORTED_CODEC.
 ffmpeg -y -v error -f lavfi -i "$(pattern 320x180 0.5)" -f lavfi -i "$(tone 0.5)" \
   -c:v libx265 -preset ultrafast -crf 45 -pix_fmt yuv420p -tag:v hvc1 \

@@ -2,7 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-11-12
-- **Amended:** 2026-11-12, when audio mixing was built: the resampler's kernel and its table, exact-position evaluation so windows join without a seam, and the order of resampling, channel mixing and gain.
+- **Amended:** 2026-11-12, when audio playback was built: the context runs at the device's rate. Earlier, when audio mixing was built: the resampler's kernel and its table, exact-position evaluation so windows join without a seam, and the order of resampling, channel mixing and gain.
 
 ## Context
 
@@ -24,7 +24,7 @@
 
 - **When the plan has audio, the page's `AudioContext` is the master clock.**
   - It's created lazily, on the first play, which is a user gesture, as browsers require.
-  - Its sample rate is the output's where the browser allows it, or the worker resamples to the context's rate.
+  - It runs at the device's own rate, and the worker resamples to it. WebKit in the pinned image opens a context at a requested 48 kHz whose clock then barely moves, and resampling in the worker costs little.
 - **Video follows the clock; audio never waits for video.** The playhead is `VideoOutput.position()`, read from the same clock ([ADR 0003](0003-clip-plan-document-model.md)).
 - **A plan without audio uses `performance.now()` as its clock.**
 

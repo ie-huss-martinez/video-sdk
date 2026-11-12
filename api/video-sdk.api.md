@@ -598,6 +598,9 @@ export interface VideoOutput {
 }
 
 // @public
+export type VideoOutputAudio = "ready" | "blocked";
+
+// @public
 export type VideoOutputEvent = "ended";
 
 // @public
@@ -609,6 +612,7 @@ export interface VideoOutputOptions {
 
 // @public
 export interface VideoOutputSnapshot {
+    readonly audio: VideoOutputAudio;
     readonly droppedFrames: number;
     readonly error: VideoError | null;
     // (undocumented)
