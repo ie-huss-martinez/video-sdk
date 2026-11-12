@@ -2,7 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-11-12
-- **Amended:** 2026-11-12, when decoding was built: a decoded frame's visible picture must fit the probe exactly, and its coded size may carry the decoder's alignment padding.
+- **Amended:** 2026-11-12, when decoding was built: a decoded frame's visible picture must fit the probe exactly, and its coded size may carry the decoder's alignment padding. Then, before export was built: what the encoding order gives in each engine, as measured, and how a configuration is chosen and proved.
 
 ## Context
 
@@ -122,6 +122,16 @@ Only then does the worker open the file with mediabunny.
   4. WebM with VP8 and Opus.
 
   A host may ask for MP4 or WebM. If the browser can't encode either, the export fails with `UNSUPPORTED_CODEC`. A plan without audio writes no audio track.
+- **What the order gives, as measured** in the pinned image's [capability matrix](../capabilities.md): every engine encodes H.264, VP8, VP9, AV1 and Opus, but only WebKit encodes AAC.
+  - **Chromium and Firefox export MP4 with H.264 and Opus.** WebKit exports MP4 with H.264 and AAC.
+  - **MP4 with H.264 and Opus is kept ahead of WebM** when AAC isn't available. H.264 in MP4 is the most widely accepted video, by players, hardware decoders and upload sites, and Opus in MP4 is standardised. Some players, notably older Apple software, don't play Opus in MP4. A host that needs another choice can ask for WebM.
+  - **The export summary names the container and both codecs** before the download ([ADR 0005](0005-playback-and-export.md)), so the user sees which they're getting.
+  - **The export tests decode every exported file in the engine that made it,** so a combination that writes but doesn't play back fails a test.
+- **How a configuration is chosen and proved:**
+  - **The full configuration is checked,** not just the codec: the output's size, frame rate and bitrate for video, and the sample rate, channels and bitrate for audio.
+  - **H.264 is High profile,** at the lowest level whose limits fit the output's size and frame rate: 4.0 for 1080p at 30 fps, and 5.1 for 4K at 30 fps. The codec string carries it, as `avc1.6400` plus the level.
+  - **Opus is encoded at 48 kHz,** the rate Opus works at, whatever the plan's output rate. The mixer makes the export's audio at 48 kHz for it, and the summary shows the rate. AAC keeps the plan's rate.
+  - **A browser can claim a configuration it then fails to encode,** as with decoding. So before an export starts, the worker encodes one black frame and, with audio, one silent chunk with the chosen configuration. If either fails, it tries the next option in the order. Only when none works does the export fail with `UNSUPPORTED_CODEC`.
 - **Writing:** the encoder's chunks go to `EncodedVideoPacketSource` and `EncodedAudioPacketSource`, awaiting each `add()` so the muxer's back-pressure holds. Their timestamps are presentation timestamps.
 - **Metadata:** `setMetadataTags` writes only the fields the user set; nothing is read from a source into an export.
 
