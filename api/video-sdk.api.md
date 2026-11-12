@@ -617,6 +617,7 @@ export interface VideoProbe {
     readonly indexSize: number;
     readonly maxPacketSize: number;
     readonly peakBitrate: number;
+    readonly start: number;
     readonly tracks: number;
     // (undocumented)
     readonly video: VideoTrackProbe;

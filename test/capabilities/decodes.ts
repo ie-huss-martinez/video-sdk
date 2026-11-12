@@ -25,7 +25,7 @@ export async function decodes(file: Blob, track: "video" | "audio"): Promise<boo
           to: Number.POSITIVE_INFINITY,
           limit: SAMPLE,
         };
-        const bounds = await frameBounds(video, probe);
+        const bounds = frameBounds(probe);
         return (await decodeVideoFrames(video, config, bounds, range, () => {})) === SAMPLE;
       }
       const config = audio && (await audio.getDecoderConfig());

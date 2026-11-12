@@ -3,6 +3,7 @@ import { describeVideoEngineContract } from "../../test/contracts/video-engine.c
 import hevcMp4 from "../../test/fixtures/video/hevc.mp4?url";
 import landscapeMp4 from "../../test/fixtures/video/landscape.mp4?url";
 import landscapeVp8 from "../../test/fixtures/video/landscape-vp8.webm?url";
+import offsetWebm from "../../test/fixtures/video/offset.webm?url";
 import rotatedMov from "../../test/fixtures/video/rotated.mov?url";
 import silentVp8 from "../../test/fixtures/video/silent-vp8.webm?url";
 import tinyMp4 from "../../test/fixtures/video/tiny.mp4?url";
@@ -65,6 +66,23 @@ describe("the support check when opening", () => {
     }
     expect(isVideoError(error, "INDEX_TOO_LARGE")).toBe(true);
     await expect(engine.open("a", file, probe)).resolves.toMatchObject({ id: "a" });
+    await engine.destroy();
+  });
+});
+
+describe("a source whose time doesn't start at 0", () => {
+  it("opens, and lines its waveform up from the source's start", async () => {
+    const engine = createVideoEngine();
+    const file = new Blob([await bytes(offsetWebm)]);
+    const probe = await engine.probe(file);
+    expect(probe.start).toBeGreaterThanOrEqual(990_000);
+    // The first frame decodes within bounds that count from the start.
+    await engine.open("o", file, probe);
+    const peaks = await engine.peaks("o");
+    if (peaks === null) throw new Error("expected peaks");
+    expect(peaks.max.length).toBe(Math.ceil(probe.duration / peaks.bucketDuration));
+    // The tone begins at once: buckets counted from 0 would all be empty.
+    expect(Math.max(...peaks.max.subarray(0, 5))).toBeGreaterThan(0.05);
     await engine.destroy();
   });
 });

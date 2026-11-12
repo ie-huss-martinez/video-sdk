@@ -64,6 +64,7 @@ export function createFakeEngine(): FakeEngine {
     const pad = (size: number) => size + (size % 16 === 0 ? 0 : 16 - (size % 16));
     const probe: VideoProbe = {
       container: spec.container ?? "mp4",
+      start: 0,
       duration: Math.max(walked, declared),
       tracks: spec.tracks ?? (spec.audio ? 2 : 1),
       indexSize: 64 * spec.frames,

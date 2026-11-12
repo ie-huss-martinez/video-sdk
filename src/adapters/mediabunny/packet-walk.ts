@@ -16,7 +16,9 @@ const ABORT_EVERY = 1_024;
  * @internal
  */
 export interface PacketWalk {
-  /** The length in microseconds: the larger of the header's and the walk's. */
+  /** The earliest presentation timestamp of the tracks walked, in microseconds. */
+  readonly start: number;
+  /** The length in microseconds from `start`: the larger of the header's and the walk's. */
   readonly duration: number;
   readonly peakBitrate: number;
   readonly maxPacketSize: number;
@@ -129,10 +131,12 @@ export async function walkPackets(
 
     const walked = end - start;
     const claimedSeconds = await input.getDurationFromMetadata();
-    const claimed = claimedSeconds === null ? 0 : Math.round(claimedSeconds * 1_000_000);
+    // The metadata gives an end timestamp, so its length counts from `start`.
+    const claimed = claimedSeconds === null ? 0 : Math.round(claimedSeconds * 1_000_000) - start;
     const rotation = (await video.getRotation()) as VideoRotation;
 
     return {
+      start,
       duration: Math.max(walked, claimed),
       peakBitrate: Math.max(0, ...bytesPerSecond.values()) * 8,
       maxPacketSize,

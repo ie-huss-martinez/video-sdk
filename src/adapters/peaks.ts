@@ -18,20 +18,31 @@ export interface AudioSamples {
  * for each bucket, the lowest and highest sample across all channels. It
  * holds only the peaks, never the audio.
  *
+ * Buckets count from `start`, the source's origin in the container's time,
+ * so the waveform lines up with the video (ADR 0003). Samples are clamped to
+ * [-1, 1], because decoded audio can go over full scale, and samples that
+ * aren't numbers are left out.
+ *
  * @internal
  */
-export function createPeakBuilder(duration: number, bucketDuration = PEAK_BUCKET_DURATION) {
+export function createPeakBuilder(
+  start: number,
+  duration: number,
+  bucketDuration = PEAK_BUCKET_DURATION,
+) {
   const buckets = Math.max(1, Math.ceil(duration / bucketDuration));
   const min = new Float32Array(buckets);
   const max = new Float32Array(buckets);
   return {
     add({ timestamp, sampleRate, numberOfFrames, channels }: AudioSamples): void {
       for (let frame = 0; frame < numberOfFrames; frame += 1) {
-        const time = timestamp + (frame * 1_000_000) / sampleRate;
+        const time = timestamp + (frame * 1_000_000) / sampleRate - start;
         const bucket = Math.floor(time / bucketDuration);
         if (bucket < 0 || bucket >= buckets) continue;
         for (const channel of channels) {
-          const sample = channel[frame] as number;
+          const raw = channel[frame] as number;
+          if (Number.isNaN(raw)) continue;
+          const sample = Math.max(-1, Math.min(1, raw));
           if (sample < (min[bucket] as number)) min[bucket] = sample;
           if (sample > (max[bucket] as number)) max[bucket] = sample;
         }

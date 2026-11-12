@@ -60,4 +60,10 @@ ffmpeg -y -v error -f lavfi -i "$(pattern 64x36 0.2)" -f lavfi -i "$(tone 0.2)" 
   -c:v libvpx-vp9 -deadline good -cpu-used 5 -crf 60 -b:v 0 -threads 1 -row-mt 0 \
   "${opus[@]}" "${exact[@]}" -shortest tiny.webm
 
+# Tiny VP8 and Opus whose timestamps start at 1 s, for sources whose time
+# doesn't begin at 0.
+ffmpeg -y -v error -f lavfi -i "$(pattern 64x36 0.2)" -f lavfi -i "$(tone 0.2)" \
+  -c:v libvpx -deadline good -cpu-used 5 -crf 60 -b:v 100k -threads 1 \
+  "${opus[@]}" "${exact[@]}" -shortest -output_ts_offset 1 offset.webm
+
 ls -l

@@ -47,7 +47,7 @@ export async function checkDecoderSupport(
         details: { codec: videoCodec, track: "video" },
       });
     }
-    const bounds = await frameBounds(video, probe);
+    const bounds = frameBounds(probe);
     const range = { from: Number.NEGATIVE_INFINITY, to: Number.POSITIVE_INFINITY, limit: 1 };
     if ((await decodeVideoFrames(video, videoConfig, bounds, range, () => {}, signal)) === 0) {
       throw new VideoError("DECODE_FAILED", "The video track's first frame didn't decode.", {

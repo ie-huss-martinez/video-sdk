@@ -20,7 +20,7 @@ export async function audioPeaks(
     const { audio } = await pickTracks(input, probe.container);
     const config = audio && (await audio.getDecoderConfig());
     if (!audio || !config) return null;
-    const peaks = createPeakBuilder(probe.duration);
+    const peaks = createPeakBuilder(probe.start, probe.duration);
     let buffers: Float32Array[] = [];
     await decodeAudioData(
       audio,
