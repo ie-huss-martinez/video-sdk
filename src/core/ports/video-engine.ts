@@ -1,5 +1,5 @@
 import type { VideoProbe, VideoSourceInfo } from "../model/source.js";
-import type { VideoCallOptions } from "./options.js";
+import type { VideoCallOptions, VideoProbeOptions } from "./options.js";
 
 /**
  * The port for reading video files: check and probe a file without decoding
@@ -9,8 +9,10 @@ import type { VideoCallOptions } from "./options.js";
  * implementation must pass the engine's contract tests. Thumbnails and
  * waveform peaks join the port with the pull requests that build them.
  *
- * The engine doesn't apply the file policy: the session checks the probe
- * against it between `probe` and `open` (ADR 0004).
+ * The engine applies only the limits that must hold before anything reads
+ * the file's structure: `maxFileSize`, `maxIndexSize`, and the packet walk's
+ * caps (ADR 0001). The session checks the probe against the rest with
+ * `checkProbe`, between `probe` and `open` (ADR 0004).
  *
  * Failures reject with `VideoError`: `UNSUPPORTED_FORMAT` for a container
  * the engine doesn't recognise or refuses, `INVALID_VIDEO` for a malformed
@@ -23,9 +25,12 @@ export interface VideoEngine {
   /**
    * Checks a file and walks its packets, without decoding it. It reads the
    * file through the `Blob`, never all at once. The probe's duration is the
-   * larger of what the header claims and what the walk found.
+   * larger of what the header claims and what the walk found. A file over
+   * `maxFileSize` or `maxIndexSize` rejects with that limit's code, and a
+   * track with more packets than the policy's caps allow rejects with
+   * `FRAME_RATE_TOO_HIGH` or `DURATION_TOO_LONG`.
    */
-  probe(file: Blob, options?: VideoCallOptions): Promise<VideoProbe>;
+  probe(file: Blob, options?: VideoProbeOptions): Promise<VideoProbe>;
   /**
    * Opens a probed file as the source `id`, which playback and export can
    * then read. Rejects with `TypeError` if `id` is already open.
