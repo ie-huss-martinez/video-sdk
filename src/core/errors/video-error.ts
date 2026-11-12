@@ -13,7 +13,8 @@ import { isSdkError, type SdkCoreErrorCode, SdkError } from "@hussmartinez/sdk-c
  * - `UNSUPPORTED_CODEC`: the browser can't decode a track's codec, or can't
  *   encode any container and codecs for an export. `details.codec` names it.
  * - `DECODE_FAILED`: the browser failed to decode a probed, supported file.
- *   `details.codec` names the codec.
+ *   `details.codec` names the codec, and `details.reason` is `"stalled"`
+ *   when its decoder stopped producing frames.
  * - `ENCODE_FAILED`: the browser failed to encode during an export.
  *   `details.codec` names the codec.
  * - `INVALID_COMMAND`: an edit command doesn't apply to the clip plan, such

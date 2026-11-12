@@ -11,6 +11,7 @@ import {
 import { probeFile } from "../../src/adapters/probe.js";
 import { videoLimits } from "../../src/core/errors/video-limits.js";
 import type { VideoProbe } from "../../src/core/model/source.js";
+import { laggingDecoderClass } from "./lagging-decoder.js";
 
 export interface DecodeRequest {
   readonly file: Blob;
@@ -25,6 +26,8 @@ export interface DecodeRequest {
   readonly shrinkBounds?: boolean;
   /** Decodes with another codec's configuration, so that decoding fails. */
   readonly codec?: string;
+  /** Holds this many packets before decoding them, as Firefox's frame-threaded decoding does. */
+  readonly lag?: number;
 }
 
 export interface DecodeContract {
@@ -34,8 +37,14 @@ export interface DecodeContract {
   };
   readonly ledger: {
     readonly input: undefined;
-    readonly output: { readonly open: number; readonly peakDecodeQueue: number };
+    readonly output: {
+      readonly open: number;
+      readonly peakDecodeQueue: number;
+      readonly stalls: number;
+    };
   };
+  /** Starts counting the queue's peak and the stalls afresh, for one test. */
+  readonly resetLedger: { readonly input: undefined; readonly output: undefined };
 }
 
 /** Another codec's configuration, without this one's description. */
@@ -49,6 +58,8 @@ exposeWorker<DecodeContract>({
     const probe: VideoProbe = await probeFile(request.file, videoLimits.resolve());
     const input = openInput(request.file, familyOf(probe.container));
     const controller = new AbortController();
+    const RealDecoder = globalThis.VideoDecoder;
+    if (request.lag !== undefined) globalThis.VideoDecoder = laggingDecoderClass(request.lag);
     try {
       const { video } = await pickTracks(input, probe.container);
       const config = (await video.getDecoderConfig()) as VideoDecoderConfig;
@@ -75,8 +86,14 @@ exposeWorker<DecodeContract>({
       );
       return { timestamps, sizes };
     } finally {
+      globalThis.VideoDecoder = RealDecoder;
       input.dispose();
     }
   },
   ledger: () => ({ ...videoFrameLedger }),
+  resetLedger() {
+    videoFrameLedger.peakDecodeQueue = 0;
+    videoFrameLedger.stalls = 0;
+    return undefined;
+  },
 });
