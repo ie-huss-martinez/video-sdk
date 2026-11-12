@@ -27,7 +27,7 @@ Video's risks differ from the other SDKs':
 
 ### The limits
 
-`videoLimits` is `coreLimits` with video defaults, plus nine video limits, defined with `defineLimits` so that violations throw `VideoError`:
+`videoLimits` is `coreLimits` with video defaults, plus eleven video limits, defined with `defineLimits` so that violations throw `VideoError`:
 
 | Limit | Code | Unit | Default maximum | Default warning | Checked |
 |---|---|---|---|---|---|
