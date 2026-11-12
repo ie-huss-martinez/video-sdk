@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { build, type Rolldown } from "vite";
@@ -108,3 +108,108 @@ describe("importing on a server", () => {
     },
   );
 });
+
+/**
+ * Code generation from strings: `eval(…)`, `new Function(…)` and
+ * `Function(…)`, as whole words, so `evaluate(` doesn't match (ADR 0028).
+ */
+const CODE_GENERATION = /(?<![\w$.])eval\s*\(|(?<![\w$.])(?:new\s+)?Function\s*\(/;
+
+describe("the media worker (docs/adr/0001, docs/adr/0002)", () => {
+  const chunkFile = () => {
+    const found = files.find((file) => /^lazy\/inline-worker-[\w-]+\.js$/.test(file.fileName));
+    if (found?.type !== "chunk") throw new Error("the inlined worker chunk wasn't built");
+    return found;
+  };
+
+  it("recognises code generation, and nothing that merely looks like it", () => {
+    for (const code of ['eval("1")', 'new Function("a", "return a")', "x = Function ('y')"]) {
+      expect(code).toMatch(CODE_GENERATION);
+    }
+    for (const code of ["evaluate(x)", "a.eval(x)", "isFunction(x)"]) {
+      expect(code).not.toMatch(CODE_GENERATION);
+    }
+  });
+
+  it("is inlined in a lazy chunk that only import() loads, never the entries", () => {
+    expect(chunkFile().code).toContain("hm-video-media");
+    for (const entry of ["index.js", "react.js", "element.js"]) {
+      expect(
+        chunk(entry).imports.filter((name) => name.startsWith("lazy/")),
+        entry,
+      ).toEqual([]);
+    }
+    expect(chunk("index.js").dynamicImports).toEqual([chunkFile().fileName]);
+  });
+
+  it("bundles mediabunny only into the worker, never into the entries", () => {
+    expect(workerCode()).toContain("Vanilagy and contributors");
+    for (const entry of ["index.js", "react.js", "element.js"]) {
+      expect(chunk(entry).code, entry).not.toContain("Vanilagy");
+    }
+  });
+
+  it("generates no code from strings, in any chunk, including the worker's own source", () => {
+    for (const file of files) {
+      if (file.type === "chunk") expect(file.code, file.fileName).not.toMatch(CODE_GENERATION);
+    }
+    expect(workerCode()).not.toMatch(CODE_GENERATION);
+  });
+
+  it("can't make requests or start workers: mediabunny's URL source and its own workers are left out", () => {
+    // The worker's only inputs are the Blobs the page sends it (ADR 0028).
+    const code = workerCode();
+    expect(code).not.toMatch(
+      /(?<![\w$.])fetch\s*\(|fetchFn|XMLHttpRequest|importScripts|WebSocket/,
+    );
+    expect(code).not.toMatch(/new\s+Worker\s*\(|createObjectURL/);
+  });
+
+  it("ships no worker source maps", () => {
+    expect(files.filter((file) => /\.worker-[\w-]+\.js\.map$/.test(file.fileName))).toEqual([]);
+    expect(workerCode()).not.toMatch(/sourceMappingURL=/);
+  });
+});
+
+describe("mediabunny's licence (docs/adr/0001)", () => {
+  it("keeps mediabunny's MPL-2.0 notice with its code in the worker", () => {
+    expect(workerCode()).toMatch(
+      /\/\*![\s\S]*?Vanilagy and contributors[\s\S]*?Mozilla Public[\s\S]*?\*\//,
+    );
+  });
+
+  it("credits in NOTICE the exact version the lockfile pins, with its source", async () => {
+    const lockfile = await readFile(new URL("pnpm-lock.yaml", import.meta.url), "utf8");
+    const pinned = /\n {2}mediabunny@(\d+\.\d+\.\d+):/.exec(lockfile)?.[1];
+    expect(pinned).toBeDefined();
+    const notice = await readFile(new URL("NOTICE", import.meta.url), "utf8");
+    expect(notice).toContain(`mediabunny ${pinned}`);
+    expect(notice).toContain(`https://github.com/Vanilagy/mediabunny/tree/v${pinned}`);
+    expect(notice).toContain("Mozilla Public License, Version 2.0");
+  });
+
+  it("ships NOTICE in the package", async () => {
+    const manifest = JSON.parse(
+      await readFile(new URL("package.json", import.meta.url), "utf8"),
+    ) as {
+      files: string[];
+    };
+    expect(manifest.files).toContain("NOTICE");
+  });
+});
+
+/** The media worker's own source, which Vite inlines as a string literal. */
+function workerCode(): string {
+  const found = files.find((file) => /^lazy\/inline-worker-[\w-]+\.js$/.test(file.fileName));
+  if (found?.type !== "chunk") throw new Error("the inlined worker chunk wasn't built");
+  const code = found.code;
+  const start = code.indexOf("var jsContent = ") + "var jsContent = ".length;
+  let end = start + 1;
+  for (let escaped = false; end < code.length; end += 1) {
+    const char = code[end];
+    if (escaped) escaped = false;
+    else if (char === "\\") escaped = true;
+    else if (char === code[start]) break;
+  }
+  return JSON.parse(code.slice(start, end + 1)) as string;
+}

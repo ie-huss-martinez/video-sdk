@@ -46,6 +46,9 @@ export function clipOffsets(plan: VideoPlan): readonly number[];
 export function createPlan(output: VideoPlanOutput): VideoPlan;
 
 // @public
+export function createVideoEngine(options?: VideoEngineOptions): VideoEngine;
+
+// @public
 export function createVideoReducer(sourceInfo: (id: string) => VideoSourceInfo | undefined): Reducer<VideoPlan, VideoCommand>;
 
 // @public
@@ -323,6 +326,11 @@ export interface VideoEngine {
     destroy(): Promise<void>;
     open(id: string, file: Blob, probe: VideoProbe, options?: VideoCallOptions): Promise<VideoSourceInfo>;
     probe(file: Blob, options?: VideoProbeOptions): Promise<VideoProbe>;
+}
+
+// @public
+export interface VideoEngineOptions {
+    readonly idleTimeout?: number;
 }
 
 // @public
