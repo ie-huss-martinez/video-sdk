@@ -180,8 +180,8 @@ catalogs:
       specifier: ^21.2.4
       version: 21.2.4
     '@hussmartinez/sdk-config':
-      specifier: ^0.2.1
-      version: 0.2.1
+      specifier: ^0.4.0
+      version: 0.4.0
     '@hussmartinez/sdk-core':
       specifier: ^0.4.0
       version: 0.4.0
@@ -283,7 +283,7 @@ importers:
         version: 21.2.4(conventional-commits-parser@7.1.4)(typescript@6.0.3)
       '@hussmartinez/sdk-config':
         specifier: 'catalog:'
-        version: 0.2.1(@biomejs/biome@2.6.6)(@commitlint/cli@21.2.4(conventional-commits-parser@7.1.4)(typescript@6.0.3))(@microsoft/api-extractor@7.60.1(@types/node@24.19.2))(dependency-cruiser@18.7.2)(lint-staged@17.6.0)(secretlint@13.1.0(supports-color@10.2.2))(stylelint@18.0.0)(typescript@6.0.3)
+        version: 0.4.0(@biomejs/biome@2.6.6)(@commitlint/cli@21.2.4(conventional-commits-parser@7.1.4)(typescript@6.0.3))(@microsoft/api-extractor@7.60.1(@types/node@24.19.2))(ajv@8.20.0)(dependency-cruiser@18.7.2)(lint-staged@17.6.0)(secretlint@13.1.0(supports-color@10.2.2))(stylelint@18.0.0)(typescript@6.0.3)(vitest@5.1.0)
       '@microsoft/api-extractor':
         specifier: 'catalog:'
         version: 7.60.1(@types/node@24.19.2)
@@ -673,25 +673,29 @@ packages:
   '@emnapi/wasi-threads@2.2.0':
     resolution: {integrity: sha512-JP7OYH38Q7+pyTAe14raZHLQIK7BDKbdwji+Xi3pcd/6QkJYQH3SX4wu6EplGrGJWRepoNzedfm0G3B9Z4e9Rw==}
 
-  '@hussmartinez/sdk-config@0.2.1':
-    resolution: {integrity: sha512-gZiV37m2dPzx7tBttM+nP78XQGb1Ju5XAcaEzeS9Q5E04BHEB2PkE5384dIIHzuMGpE7xUNBtKPf0PITZmUKNg==}
+  '@hussmartinez/sdk-config@0.4.0':
+    resolution: {integrity: sha512-CGzev/2gMSk0xjPAMng56TzN5C2oalk9UW0jIN0IPiU9YVJVTlP6UtrKB7IAuSRdU5DmXWQi1IIz9OHQL7eJLA==}
     engines: {node: '>=24'}
     hasBin: true
     peerDependencies:
       '@biomejs/biome': ^2.6.2
       '@commitlint/cli': ^21.2.4
       '@microsoft/api-extractor': ^7.60.1
+      ajv: ^8.20.0
       dependency-cruiser: ^18.7.2
       lint-staged: ^17.6.0
       secretlint: ^13.1.0
       stylelint: ^18.0.0
       typescript: ^6.0.3
+      vitest: ^5.1.0
     peerDependenciesMeta:
       '@biomejs/biome':
         optional: true
       '@commitlint/cli':
         optional: true
       '@microsoft/api-extractor':
+        optional: true
+      ajv:
         optional: true
       dependency-cruiser:
         optional: true
@@ -702,6 +706,8 @@ packages:
       stylelint:
         optional: true
       typescript:
+        optional: true
+      vitest:
         optional: true
 
   '@hussmartinez/sdk-core@0.3.0':
@@ -2611,7 +2617,7 @@ snapshots:
       tslib: 2.9.1
     optional: true
 
-  '@hussmartinez/sdk-config@0.2.1(@biomejs/biome@2.6.6)(@commitlint/cli@21.2.4(conventional-commits-parser@7.1.4)(typescript@6.0.3))(@microsoft/api-extractor@7.60.1(@types/node@24.19.2))(dependency-cruiser@18.7.2)(lint-staged@17.6.0)(secretlint@13.1.0(supports-color@10.2.2))(stylelint@18.0.0)(typescript@6.0.3)':
+  '@hussmartinez/sdk-config@0.4.0(@biomejs/biome@2.6.6)(@commitlint/cli@21.2.4(conventional-commits-parser@7.1.4)(typescript@6.0.3))(@microsoft/api-extractor@7.60.1(@types/node@24.19.2))(ajv@8.20.0)(dependency-cruiser@18.7.2)(lint-staged@17.6.0)(secretlint@13.1.0(supports-color@10.2.2))(stylelint@18.0.0)(typescript@6.0.3)(vitest@5.1.0)':
     dependencies:
       '@commitlint/config-conventional': 21.2.4
       '@secretlint/secretlint-rule-preset-recommend': 13.1.0
@@ -2621,11 +2627,13 @@ snapshots:
       '@biomejs/biome': 2.6.6
       '@commitlint/cli': 21.2.4(conventional-commits-parser@7.1.4)(typescript@6.0.3)
       '@microsoft/api-extractor': 7.60.1(@types/node@24.19.2)
+      ajv: 8.20.0
       dependency-cruiser: 18.7.2
       lint-staged: 17.6.0
       secretlint: 13.1.0(supports-color@10.2.2)
       stylelint: 18.0.0
       typescript: 6.0.3
+      vitest: 5.1.0(@types/node@24.19.2)(@vitest/browser-playwright@5.1.0)(@vitest/ui@5.1.0)(vite@8.3.8(@types/node@24.19.2)(jiti@2.7.0)(yaml@2.9.1))
 
   '@hussmartinez/sdk-core@0.3.0': {}
 
