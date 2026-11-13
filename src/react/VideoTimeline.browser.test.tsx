@@ -27,6 +27,10 @@ afterEach(async () => {
   await new Promise((resolve) => setTimeout(resolve, 0));
 });
 
+/** Waits for an assertion, with room for a loaded machine: the session and output run in workers. */
+const eventually = <T,>(assertion: () => T | Promise<T>, timeout = 5_000) =>
+  vi.waitFor(assertion, { timeout });
+
 const mod = platformOf(navigator) === "apple" ? "Meta" : "Control";
 
 const fixture = async () => {
@@ -47,9 +51,9 @@ async function editorWith(count: number) {
     root.render(<VideoEditor ref={handle} initialFiles={Array(count).fill(file)} />);
   });
   const view = container;
-  await vi.waitFor(() => expect(clipsIn(view)).toHaveLength(count), { timeout: 15_000 });
+  await eventually(() => expect(clipsIn(view)).toHaveLength(count), 15_000);
   // The output has the plan once the play button is on.
-  await vi.waitFor(() =>
+  await eventually(() =>
     expect((view.querySelector('button[aria-label="Play"]') as HTMLButtonElement).disabled).toBe(
       false,
     ),
@@ -127,12 +131,12 @@ describe("the timeline", () => {
     const [a, b, c] = keysOf(view);
     clipsIn(view)[0]?.focus();
     await userEvent.keyboard("{Alt>}{ArrowRight}{/Alt}");
-    await vi.waitFor(() => expect(keysOf(view)).toEqual([b, a, c]));
-    await vi.waitFor(() =>
+    await eventually(() => expect(keysOf(view)).toEqual([b, a, c]));
+    await eventually(() =>
       expect((document.activeElement as HTMLElement).dataset["hmKey"]).toBe(a),
     );
     await userEvent.keyboard("{Alt>}{ArrowRight}{/Alt}");
-    await vi.waitFor(() => expect(keysOf(view)).toEqual([b, c, a]));
+    await eventually(() => expect(keysOf(view)).toEqual([b, c, a]));
     // Already last: nothing happens.
     await userEvent.keyboard("{Alt>}{ArrowRight}{/Alt}");
     expect(keysOf(view)).toEqual([b, c, a]);
@@ -147,35 +151,35 @@ describe("the timeline", () => {
     const { view, handle } = await editorWith(2);
     act(() => handle.seek(30));
     const trimEnd = button(view, "Trim the clip's end to the playhead");
-    await vi.waitFor(() => expect(trimEnd.disabled).toBe(false));
+    await eventually(() => expect(trimEnd.disabled).toBe(false));
     clipsIn(view)[0]?.focus();
     await userEvent.keyboard("]");
-    await vi.waitFor(() => expect(names(view)[0]).toBe("Clip 1 of 2, 0:00.00 to 0:01.00"));
+    await eventually(() => expect(names(view)[0]).toBe("Clip 1 of 2, 0:00.00 to 0:01.00"));
     // Alt+Shift+] lengthens the end a frame; Alt+[ shortens the start one.
     clipsIn(view)[0]?.focus();
     await userEvent.keyboard("{Alt>}{Shift>}]{/Shift}{/Alt}");
-    await vi.waitFor(() => expect(names(view)[0]).toBe("Clip 1 of 2, 0:00.00 to 0:01.03"));
+    await eventually(() => expect(names(view)[0]).toBe("Clip 1 of 2, 0:00.00 to 0:01.03"));
     await userEvent.keyboard("{Alt>}[[{/Alt}");
-    await vi.waitFor(() => expect(names(view)[0]).toBe("Clip 1 of 2, 0:00.00 to 0:01.00"));
+    await eventually(() => expect(names(view)[0]).toBe("Clip 1 of 2, 0:00.00 to 0:01.00"));
     // The start can't go before the source's: the clip now starts a frame in, so one frame back works, then no more.
     await userEvent.keyboard("{Alt>}{Shift>}[[{/Shift}{/Alt}");
-    await vi.waitFor(() => expect(names(view)[0]).toBe("Clip 1 of 2, 0:00.00 to 0:01.03"));
+    await eventually(() => expect(names(view)[0]).toBe("Clip 1 of 2, 0:00.00 to 0:01.03"));
     await userEvent.keyboard("{Alt>}{Shift>}[[{/Shift}{/Alt}");
     expect(names(view)[0]).toBe("Clip 1 of 2, 0:00.00 to 0:01.03");
     // The buttons do the same, for a pointer: the playhead in clip 2, its start to it.
     act(() => handle.seek(61));
     await userEvent.click(clipsIn(view)[1] as HTMLElement, { position: { x: 30, y: 10 } });
     const trimStart = button(view, "Trim the clip's start to the playhead");
-    await vi.waitFor(() => expect(trimStart.disabled).toBe(false));
+    await eventually(() => expect(trimStart.disabled).toBe(false));
     await userEvent.click(trimStart);
-    await vi.waitFor(() => expect(names(view)[1]).toBe("Clip 2 of 2, 0:01.03 to 0:02.03"));
+    await eventually(() => expect(names(view)[1]).toBe("Clip 2 of 2, 0:01.03 to 0:02.03"));
   });
 
   it("trims by dragging an edge, snapping to the playhead unless Alt is held", async () => {
     const { view, handle } = await editorWith(2);
     act(() => handle.seek(45));
     const slider = view.querySelector('input[type="range"]') as HTMLInputElement;
-    await vi.waitFor(() => expect(slider.getAttribute("aria-valuetext")).toBe("0:01.50"));
+    await eventually(() => expect(slider.getAttribute("aria-valuetext")).toBe("0:01.50"));
     const first = clipsIn(view)[0] as HTMLElement;
     const edge = first.querySelector('[data-hm-edge="end"]') as HTMLElement;
     const box = edge.getBoundingClientRect();
@@ -191,10 +195,10 @@ describe("the timeline", () => {
     };
     // Two frames from the playhead snaps to it: 8 px is 2 frames at about 5 px a frame.
     act(() => drag(43, false));
-    await vi.waitFor(() => expect(names(view)[0]).toBe("Clip 1 of 2, 0:00.00 to 0:01.50"));
+    await eventually(() => expect(names(view)[0]).toBe("Clip 1 of 2, 0:00.00 to 0:01.50"));
     act(() => handle.undo());
     act(() => drag(43, true));
-    await vi.waitFor(() => expect(names(view)[0]).toBe("Clip 1 of 2, 0:00.00 to 0:01.43"));
+    await eventually(() => expect(names(view)[0]).toBe("Clip 1 of 2, 0:00.00 to 0:01.43"));
   });
 
   it("zooms in and out, and fits the whole video", async () => {
@@ -216,7 +220,7 @@ describe("the timeline", () => {
     await act(async () => {
       await handle.insert(file);
     });
-    await vi.waitFor(() => expect(document.activeElement).toBe(clipsIn(view)[1]));
+    await eventually(() => expect(document.activeElement).toBe(clipsIn(view)[1]));
     expect(selected(view)).toEqual([false, true]);
   });
 
@@ -225,7 +229,7 @@ describe("the timeline", () => {
     const slider = view.querySelector('input[type="range"]') as HTMLInputElement;
     slider.focus();
     await userEvent.keyboard("{PageUp}");
-    await vi.waitFor(() => expect(slider.getAttribute("aria-valuetext")).toBe("0:01.00"));
+    await eventually(() => expect(slider.getAttribute("aria-valuetext")).toBe("0:01.00"));
     expect(view.querySelector(".hm-video-transport-time")?.textContent).toBe("0:01.00 of 0:02.00");
   });
 });
