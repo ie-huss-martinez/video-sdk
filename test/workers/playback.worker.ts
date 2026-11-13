@@ -10,6 +10,7 @@ import { mediaWorkerHandlers } from "../../src/adapters/media-worker/handlers.js
 import { audioDataLedger } from "../../src/adapters/mediabunny/audio-decoder.js";
 import { videoFrameLedger } from "../../src/adapters/mediabunny/video-decoder.js";
 import { schedulerLedger } from "../../src/core/playback/scheduler.js";
+import { PACKAGE_VERSION } from "../../src/version.js";
 
 /** One frame drawn, as the test reads it back. */
 export interface DrawnRecord {
@@ -84,4 +85,6 @@ exposeWorker<MediaWorkerContract>(
       } satisfies DrawnRecord);
     },
   }),
+  // The SDK's clients refuse a worker that doesn't announce their version.
+  { packageVersion: PACKAGE_VERSION },
 );

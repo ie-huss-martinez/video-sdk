@@ -350,6 +350,7 @@ export interface VideoEngine {
 
 // @public
 export interface VideoEngineOptions {
+    readonly assetsUrl?: string | URL;
     readonly idleTimeout?: number;
 }
 
@@ -707,6 +708,7 @@ export interface VideoProcessor {
 
 // @public
 export interface VideoProcessorOptions {
+    readonly assetsUrl?: string | URL;
     readonly engine: VideoEngine;
     readonly filePolicy?: VideoFilePolicy;
 }

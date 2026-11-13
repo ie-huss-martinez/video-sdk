@@ -45,6 +45,20 @@ export default [
     limit: "60 kB",
   },
   {
+    // The media worker as self-hosted under assetsUrl (sdk-core ADR 0038):
+    // the same code as the inlined one, as one file.
+    name: "Media worker, self-hosted",
+    path: "dist/assets/video/media.worker.js",
+    brotli: true,
+    limit: "60 kB",
+  },
+  {
+    name: "Export worker, self-hosted",
+    path: "dist/assets/video/export.worker.js",
+    brotli: true,
+    limit: "90 kB",
+  },
+  {
     // The export worker, inlined and loaded on the first export
     // (docs/adr/0002, docs/adr/0005): the readers and decoders as in the
     // media worker, the compose step and mixer, and mediabunny's MP4 and

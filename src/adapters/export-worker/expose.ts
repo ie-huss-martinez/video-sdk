@@ -1,4 +1,5 @@
 import { type ExposeWorkerOptions, exposeWorker } from "@hussmartinez/sdk-core";
+import { PACKAGE_VERSION } from "../../version.js";
 import type { ExportWorkerContract } from "./contract.js";
 import { exportPlan } from "./export-plan.js";
 
@@ -12,6 +13,6 @@ export function exposeExportWorker(options?: ExposeWorkerOptions): void {
       export: (request, { signal, progress }) =>
         exportPlan(request, progress, signal, (limit) => progress({ warning: limit })),
     },
-    options,
+    { ...options, packageVersion: PACKAGE_VERSION },
   );
 }

@@ -2,7 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-11-12
-- **Amended:** 2026-11-12, when playback found a deadlock in Firefox: a decoder that holds a full queue without output may take more packets, up to a hard cap; and when playback was built: each output draws in a media worker of its own, which lives as long as the output.
+- **Amended:** 2026-11-13, when self-hosting was built: which functions take `assetsUrl`. Earlier, 2026-11-12, when playback found a deadlock in Firefox: a decoder that holds a full queue without output may take more packets, up to a hard cap; and when playback was built: each output draws in a media worker of its own, which lives as long as the output.
 
 ## Context
 
@@ -76,6 +76,7 @@ Every call takes an `AbortSignal` and runs under `withProcessingTime`. Long call
 
 - **Inline (the default):** both workers are inlined and started from `blob:` URLs.
 - **Self-hosted:** `assetsUrl` is where the application serves the package's `dist/assets/` directory ([ADR 0038](https://github.com/ie-huss-martinez/sdk-core/blob/main/docs/adr/0038-self-hosted-assets-and-worker-version.md)), resolved with `sdk-core`'s `resolveAssetsBase`. The workers are `video/media.worker.js` and `video/export.worker.js` under it, each one minified file with a fixed name.
+  - **As built:** `createVideoEngine` and `createVideoProcessor` take `assetsUrl`, and resolve it when they're created, so a URL with a query or a fragment fails at once with `TypeError`. An output plays from its engine's media worker file, so it needs no option of its own. The build writes both files as one minified module each, with mediabunny's licence notice and no source maps, and the version is set at build time.
 - **The worker's version is checked by `sdk-core`:** the SDK passes its package version as `packageVersion` to `exposeWorker` and `createWorkerClient`. A self-hosted worker from another version is refused with `WORKER_START_FAILED` before any call reaches it, naming the asset and both versions. There's no `version` method of our own.
 - **No WebAssembly** in the first releases ([ADR 0001](0001-video-engines.md)).
 

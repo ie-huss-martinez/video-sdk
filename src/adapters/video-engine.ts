@@ -1,5 +1,6 @@
 import {
   createWorkerClient,
+  resolveAssetsBase,
   type WorkerClient,
   type WorkerLike,
   withProcessingTime,
@@ -9,6 +10,7 @@ import { VideoError } from "../core/errors/video-error.js";
 import { type VideoFilePolicy, videoLimits } from "../core/errors/video-limits.js";
 import { sourceInfo, type VideoProbe } from "../core/model/source.js";
 import type { VideoEngine } from "../core/ports/video-engine.js";
+import { PACKAGE_VERSION } from "../version.js";
 import type { MediaWorkerContract, PlaybackSource } from "./media-worker/contract.js";
 
 /**
@@ -22,6 +24,29 @@ export interface VideoEngineOptions {
    * again on the next call. Defaults to sdk-core's 30 seconds.
    */
   readonly idleTimeout?: number;
+  /**
+   * Where the application serves the package's `dist/assets/` directory,
+   * absolute or relative to the page, to start the media worker from
+   * `video/media.worker.js` under it rather than inlined (sdk-core ADR 0038).
+   * It needs `worker-src 'self'` in a Content Security Policy, rather than
+   * `blob:`. A worker from another release of the package is refused with
+   * `WORKER_START_FAILED`. Throws `TypeError` for a URL with a query or a
+   * fragment, or a relative one where there's no page.
+   */
+  readonly assetsUrl?: string | URL;
+}
+
+/** The self-hosted media worker, under `assetsUrl` (docs/adr/0002). */
+const MEDIA_WORKER_ASSET = "video/media.worker.js";
+
+/**
+ * How to start a worker from `assetsUrl`'s base: as an ES module, named.
+ *
+ * @internal
+ */
+export function selfHostedWorker(base: string, asset: string, name: string): () => WorkerLike {
+  const url = new URL(asset, base);
+  return () => new Worker(url, { type: "module", name });
 }
 
 /**
@@ -33,6 +58,8 @@ export interface EngineEnvironment {
   /** Loads the worker's code, on the first call, and returns how to start it. */
   readonly loadWorker: () => Promise<() => WorkerLike>;
   readonly idleTimeout?: number;
+  /** The self-hosted worker's file under `assetsUrl`, named in a version mismatch, or `undefined` when inlined. */
+  readonly workerAsset?: string;
 }
 
 /**
@@ -60,8 +87,13 @@ export interface EngineEnvironment {
  * @public
  */
 export function createVideoEngine(options: VideoEngineOptions = {}): VideoEngine {
+  // Resolved now, so a mistake fails when the engine is created.
+  const base = options.assetsUrl === undefined ? undefined : resolveAssetsBase(options.assetsUrl);
   return createEngine({
-    loadWorker: async () => (await import("./media-worker/inline-worker.js")).createInlineWorker,
+    loadWorker: base
+      ? async () => selfHostedWorker(base, MEDIA_WORKER_ASSET, "hm-video-media")
+      : async () => (await import("./media-worker/inline-worker.js")).createInlineWorker,
+    ...(base ? { workerAsset: MEDIA_WORKER_ASSET } : {}),
     ...(options.idleTimeout === undefined ? {} : { idleTimeout: options.idleTimeout }),
   });
 }
@@ -74,6 +106,8 @@ export function createVideoEngine(options: VideoEngineOptions = {}): VideoEngine
  */
 export interface EngineInternals {
   readonly loadWorker: () => Promise<() => WorkerLike>;
+  /** The self-hosted worker's file, or `undefined` when inlined. */
+  readonly workerAsset: string | undefined;
   /** An open source, or `undefined`. */
   source(id: string): PlaybackSource | undefined;
 }
@@ -139,6 +173,8 @@ export function createEngine(environment: EngineEnvironment): VideoEngine {
         return startWorker();
       },
       errorClasses: { VideoError },
+      packageVersion: PACKAGE_VERSION,
+      ...(environment.workerAsset === undefined ? {} : { workerAsset: environment.workerAsset }),
       ...(environment.idleTimeout === undefined ? {} : { idleTimeout: environment.idleTimeout }),
     });
     return client;
@@ -251,6 +287,7 @@ export function createEngine(environment: EngineEnvironment): VideoEngine {
   };
   internals.set(engine, {
     loadWorker: environment.loadWorker,
+    workerAsset: environment.workerAsset,
     source: (id) => sources.get(id),
   });
   return engine;

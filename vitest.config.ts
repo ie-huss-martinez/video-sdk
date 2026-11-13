@@ -1,5 +1,6 @@
 import { playwright } from "@vitest/browser-playwright";
 import { defineConfig } from "vitest/config";
+import { testAssets, versionDefine } from "./tools/self-hosted-workers.js";
 
 const ALL_BROWSERS = ["chromium", "firefox", "webkit"] as const;
 
@@ -9,6 +10,8 @@ export default defineConfig(({ mode }) => {
   const browsers =
     process.env["CI"] || mode === "all-browsers" ? ALL_BROWSERS : (["chromium"] as const);
   return {
+    define: versionDefine(),
+    plugins: [testAssets()],
     test: {
       projects: [
         {
