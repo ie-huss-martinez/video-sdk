@@ -21,9 +21,12 @@ import {
   useSyncExternalStore,
 } from "react";
 import { createVideoEngine } from "../adapters/video-engine.js";
+import { createVideoProcessor } from "../adapters/video-processor.js";
 import type { VideoFilePolicyOverrides } from "../core/errors/video-limits.js";
+import { videoLimits } from "../core/errors/video-limits.js";
 import type { VideoEngine } from "../core/ports/video-engine.js";
 import type { VideoOutput, VideoOutputSnapshot } from "../core/ports/video-output.js";
+import type { VideoProcessor } from "../core/ports/video-processor.js";
 import {
   createVideoSession,
   type VideoSession,
@@ -65,6 +68,11 @@ export type VideoEditorMessageOverrides = MessageOverrides<typeof editorCatalogu
 export interface VideoEditorProviderProps {
   /** Replaces the SDK's engine. The SDK's preview plays only from its own engine. */
   readonly engine?: VideoEngine;
+  /**
+   * Replaces the SDK's processor for exports. Without one, the editor makes
+   * its own from the SDK's engine when the first export starts.
+   */
+  readonly processor?: VideoProcessor;
   /** The limits files and edits are checked against. */
   readonly filePolicy?: VideoFilePolicyOverrides;
   /** Where the application serves the package's `dist/assets/`, to self-host the workers. */
@@ -116,7 +124,19 @@ interface EditorContext {
   readonly cancelInsert: () => void;
   /** Where the toolbar registers its file picker, for the insert tool. */
   readonly fileChooser: { current: (() => void) | null };
+  /** The editor's open dialog, if any. */
+  readonly dialog: VideoEditorDialog | null;
+  readonly setDialog: (dialog: VideoEditorDialog | null) => void;
+  /**
+   * The processor exports use: the host's, or the editor's own, made on
+   * first use. Throws `TypeError` when the engine isn't the SDK's and the
+   * host gave none.
+   */
+  readonly processor: () => VideoProcessor;
 }
+
+/** A dialog the editor shows. */
+type VideoEditorDialog = "export";
 
 /** The default toolbar, from the present tools only. */
 function toolbarOf(present: readonly string[] | undefined): readonly (readonly string[])[] {
@@ -154,6 +174,18 @@ export function VideoEditorProvider(props: VideoEditorProviderProps): ReactNode 
   const [zoom, setZoom] = useState(1);
   const [maxZoom, setMaxZoom] = useState(1);
   const fileChooser = useRef<(() => void) | null>(null);
+  const [dialog, setDialog] = useState<VideoEditorDialog | null>(null);
+  const ownProcessor = useRef<VideoProcessor | null>(null);
+  const givenProcessor = props.processor;
+  const processor = useCallback(() => {
+    if (givenProcessor) return givenProcessor;
+    ownProcessor.current ??= createVideoProcessor({
+      engine,
+      filePolicy: videoLimits.resolve(filePolicy),
+      ...(assetsUrl ? { assetsUrl } : {}),
+    });
+    return ownProcessor.current;
+  }, [givenProcessor, engine, filePolicy, assetsUrl]);
   const inserts = useRef(new Set<AbortController>());
   const mounts = useRef(0);
   const platform = usePlatform();
@@ -204,6 +236,8 @@ export function VideoEditorProvider(props: VideoEditorProviderProps): ReactNode 
       queueMicrotask(() => {
         if (mounts.current !== mount) return;
         void session.destroy();
+        void ownProcessor.current?.destroy();
+        ownProcessor.current = null;
         if (!given) void engine.destroy();
       });
     };
@@ -240,6 +274,9 @@ export function VideoEditorProvider(props: VideoEditorProviderProps): ReactNode 
       insertFiles,
       cancelInsert,
       fileChooser,
+      dialog,
+      setDialog,
+      processor,
     }),
     [
       engine,
@@ -255,6 +292,8 @@ export function VideoEditorProvider(props: VideoEditorProviderProps): ReactNode 
       shortcuts,
       insertFiles,
       cancelInsert,
+      dialog,
+      processor,
     ],
   );
   return <Context.Provider value={value}>{props.children}</Context.Provider>;

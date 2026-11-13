@@ -45,6 +45,8 @@ export interface VideoToolContext {
   setZoom(zoom: number): void;
   /** Opens the file picker to add videos at the end. */
   chooseFiles(): void;
+  /** Opens the export dialog. */
+  openExport(): void;
   /** A key for a new clip, from the session: unique in the plan and its history. */
   newClipKey(): string;
 }
@@ -98,6 +100,15 @@ export const videoTools: readonly VideoTool[] = [
     icon: "add",
     group: "file",
     run: (context: VideoToolContext) => context.chooseFiles(),
+  }),
+  defineTool({
+    id: "video.export",
+    label: "tools.export",
+    icon: "download",
+    group: "file",
+    // Irreversible, so a click through the dialog, never a key (docs/adr/0007).
+    isEnabled: (state: VideoToolState) => frames(state) > 0,
+    run: (context: VideoToolContext) => context.openExport(),
   }),
   defineTool({
     id: "video.undo",
@@ -240,7 +251,7 @@ export const videoTools: readonly VideoTool[] = [
  * @internal
  */
 export const defaultVideoToolbar: readonly (readonly string[])[] = [
-  ["video.insert"],
+  ["video.insert", "video.export"],
   ["video.undo", "video.redo"],
   ["video.split", "video.delete", "video.mute"],
   ["video.zoom-out", "video.zoom-in", "video.zoom-fit"],

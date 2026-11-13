@@ -3,6 +3,7 @@ import { forwardRef, type ReactNode, useEffect, useImperativeHandle, useRef } fr
 import type { VideoSourceInfo } from "../core/model/source.js";
 import { useVideoEditor, VideoEditorProvider, type VideoEditorProviderProps } from "./context.js";
 import { useVideoTools } from "./tools.js";
+import { VideoExportDialog } from "./VideoExportDialog.js";
 import { VideoStage } from "./VideoStage.js";
 import { VideoTimeline } from "./VideoTimeline.js";
 import { VideoToolbar } from "./VideoToolbar.js";
@@ -97,6 +98,7 @@ function Root({ className }: { readonly className?: string | undefined }): React
       <VideoStage />
       <VideoTransport />
       <VideoTimeline />
+      <VideoExportDialog />
     </section>
   );
 }

@@ -169,6 +169,27 @@
     z-index: var(--hm-z-raised);
   }
 
+  .hm-video-export-summary,
+  .hm-video-export-choices {
+    display: grid;
+    gap: var(--hm-gap-tight);
+    margin: 0 0 var(--hm-gap-normal);
+    padding: 0;
+    border: 0;
+    min-inline-size: 0;
+  }
+
+  .hm-video-export-summary p,
+  .hm-video-export-result,
+  .hm-video-export-note,
+  .hm-video-export-error {
+    margin: 0;
+  }
+
+  .hm-video-export-error {
+    color: var(--hm-color-danger-text);
+  }
+
   @media (forced-colors: active) {
     .hm-video-timeline-clip[aria-selected="true"] {
       background: Highlight;

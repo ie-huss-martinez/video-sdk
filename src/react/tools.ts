@@ -34,7 +34,17 @@ export interface VideoTools {
  */
 export function useVideoTools(): VideoTools {
   const editor = useVideoEditor();
-  const { messages, tools, shortcuts, selectedClips, zoom, maxZoom, setZoom, fileChooser } = editor;
+  const {
+    messages,
+    tools,
+    shortcuts,
+    selectedClips,
+    zoom,
+    maxZoom,
+    setZoom,
+    fileChooser,
+    setDialog,
+  } = editor;
   const { session, snapshot } = useVideoSession();
   const { output, snapshot: playback } = useVideoOutput();
   const announce = useAnnounce();
@@ -94,10 +104,12 @@ export function useVideoTools(): VideoTools {
       if (!tool) return false;
       const state = stateAt(output?.position() ?? 0);
       if (tool.isEnabled && !tool.isEnabled(state)) return false;
-      void tool.run(contextOf(state, session, output, setZoom, fileChooser, announce, messages));
+      void tool.run(
+        contextOf(state, { session, output, setZoom, fileChooser, setDialog, announce, messages }),
+      );
       return true;
     },
-    [tools, stateAt, output, session, setZoom, fileChooser, announce, messages],
+    [tools, stateAt, output, session, setZoom, fileChooser, setDialog, announce, messages],
   );
 
   const describe = useCallback(
@@ -127,12 +139,23 @@ export function useVideoTools(): VideoTools {
 
 function contextOf(
   state: VideoToolState,
-  session: VideoSession,
-  output: VideoOutput | null,
-  setZoom: (zoom: number) => void,
-  fileChooser: { current: (() => void) | null },
-  announce: (message: string) => void,
-  messages: ReturnType<typeof useVideoEditor>["messages"],
+  {
+    session,
+    output,
+    setZoom,
+    fileChooser,
+    setDialog,
+    announce,
+    messages,
+  }: {
+    readonly session: VideoSession;
+    readonly output: VideoOutput | null;
+    readonly setZoom: (zoom: number) => void;
+    readonly fileChooser: { current: (() => void) | null };
+    readonly setDialog: (dialog: "export" | null) => void;
+    readonly announce: (message: string) => void;
+    readonly messages: ReturnType<typeof useVideoEditor>["messages"];
+  },
 ): VideoToolContext {
   return {
     state,
@@ -156,6 +179,7 @@ function contextOf(
     step: (delta) => output?.step(delta),
     setZoom,
     chooseFiles: () => fileChooser.current?.(),
+    openExport: () => setDialog("export"),
     newClipKey: () => session.newClipKey(),
   };
 }

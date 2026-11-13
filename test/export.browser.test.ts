@@ -109,6 +109,7 @@ describe("an export's file", () => {
     const file = await processor.export({ plan: smallPlan(clipOf("x", a, 0, 30)) });
     const read = await inspector.call("inspect", file);
     expect(read.container).toBe("mp4");
+    expect(file.type).toBe("video/mp4");
     expect(read.videoCodec).toMatch(/^avc1\./);
     expect(["mp4a.40.2", "opus"]).toContain(read.audioCodec);
     expect(read.numbers).toEqual([...Array(30).keys()]);
@@ -129,6 +130,7 @@ describe("an export's file", () => {
     });
     const read = await inspector.call("inspect", file);
     expect(read.container).toBe("webm");
+    expect(file.type).toBe("video/webm");
     expect(read.videoCodec).toMatch(/^(vp09\.|vp8)/);
     expect(read.audioCodec).toBe("opus");
     expect(read.numbers).toEqual([...Array(15).keys()].map((n) => 128 + 30 + n));
