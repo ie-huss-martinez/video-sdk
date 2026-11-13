@@ -67,7 +67,8 @@
     "verify:fast": "pnpm typecheck && pnpm test && pnpm lint:deps && pnpm check:api"
   },
   "dependencies": {
-    "@hussmartinez/sdk-core": "catalog:"
+    "@hussmartinez/sdk-core": "catalog:",
+    "@hussmartinez/ui": "catalog:"
   },
   "peerDependencies": {
     "react": ">=18.3",
@@ -93,6 +94,7 @@
     "@types/node": "catalog:",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
+    "axe-core": "catalog:",
     "@vitest/browser-playwright": "catalog:",
     "dependency-cruiser": "catalog:",
     "fast-check": "catalog:",
