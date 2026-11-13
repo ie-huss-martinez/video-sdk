@@ -1,3 +1,4 @@
+import { locate, sequenceOffsets } from "@hussmartinez/sdk-core";
 import { addRotations, rotateSize, type VideoRotation, type VideoSourceInfo } from "./source.js";
 import { type FrameRate, framesIn, frameTime, isFrameRate, isOnGrid, isWhole } from "./time.js";
 
@@ -249,13 +250,15 @@ export function planFrames(plan: VideoPlan): number {
  * @public
  */
 export function clipOffsets(plan: VideoPlan): readonly number[] {
-  const offsets: number[] = [];
-  let at = 0;
-  for (const clip of plan.clips) {
-    offsets.push(at);
-    at += clipFrames(clip, plan.output.frameRate);
-  }
-  return offsets;
+  return clipBoundaries(plan).slice(0, -1);
+}
+
+/**
+ * Every clip boundary on the timeline, in output frames: the clips' starts,
+ * then the plan's length (sdk-core ADR 0042).
+ */
+function clipBoundaries(plan: VideoPlan): readonly number[] {
+  return sequenceOffsets(plan.clips.map((clip) => clipFrames(clip, plan.output.frameRate)));
 }
 
 /**
@@ -271,17 +274,14 @@ export function locateFrame(
   frame: number,
 ): { readonly index: number; readonly frame: number; readonly sourceTime: number } | undefined {
   if (!isWhole(frame)) return undefined;
-  const rate = plan.output.frameRate;
-  let at = 0;
-  for (const [index, clip] of plan.clips.entries()) {
-    const frames = clipFrames(clip, rate);
-    if (frame < at + frames) {
-      const within = frame - at;
-      return { index, frame: within, sourceTime: clip.start + frameTime(within, rate) };
-    }
-    at += frames;
-  }
-  return undefined;
+  const found = locate(clipBoundaries(plan), frame);
+  const clip = found && plan.clips[found.index];
+  if (!found || !clip) return undefined;
+  return {
+    index: found.index,
+    frame: found.within,
+    sourceTime: clip.start + frameTime(found.within, plan.output.frameRate),
+  };
 }
 
 /**
