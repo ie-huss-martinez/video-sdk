@@ -87,7 +87,9 @@ function Root({ className }: { readonly className?: string | undefined }): React
       aria-label={messages.t("editor.label")}
       onKeyDown={(event) => {
         // The registry skips handled keys, fields, and a control's own keys.
-        const id = shortcuts.match(event.nativeEvent);
+        // The root is this section, not React's container: a host's modal
+        // dialog around the editor then doesn't silence it (sdk-core 0.4.2).
+        const id = shortcuts.match(event.nativeEvent, { root: event.currentTarget });
         if (id && run(id)) event.preventDefault();
       }}
     >
