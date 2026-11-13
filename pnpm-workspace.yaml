@@ -10,7 +10,7 @@ catalog:
   "@changesets/cli": ^3.0.3
   "@biomejs/biome": ^2.6.5
   "@commitlint/cli": ^21.2.4
-  "@hussmartinez/sdk-config": ^0.2.1
+  "@hussmartinez/sdk-config": ^0.4.0
   "@hussmartinez/sdk-core": ^0.4.0
   "@hussmartinez/ui": ^0.4.0
   "@microsoft/api-extractor": ^7.60.1

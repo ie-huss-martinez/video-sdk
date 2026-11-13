@@ -1,4 +1,5 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { audioOutput } from "@hussmartinez/sdk-config/testing/audio-output";
+import { afterEach, describe, expect, it, type TestContext, vi } from "vitest";
 import { userEvent } from "vitest/browser";
 import { audioLedger, audioTrace, type ScheduledWindow } from "../src/adapters/playback-audio.js";
 import { createEngine } from "../src/adapters/video-engine.js";
@@ -286,31 +287,16 @@ async function playFromGesture(target: VideoOutput): Promise<void> {
 }
 
 /**
- * Why the audio tests skip where there's no audio output. Firefox in the CI
- * image has none until sdk-ci's image gains an audio sink.
+ * Skips a test that needs audio where this browser can't play it at
+ * real-time speed, probed once per run by the family's shared helper
+ * (sdk-core ADR 0043): Firefox in the CI image has no audio output. It's
+ * called inside the tests, not when the file loads, because its click gives
+ * the page user activation, after which the autoplay test can't see audio
+ * blocked.
  */
-const NO_AUDIO_OUTPUT =
-  "no audio output: an AudioContext stays suspended even after a click (Firefox in the CI image, until sdk-ci adds an audio sink)";
-
-/**
- * Whether this browser can play audio here at all: a fresh context resumed
- * from a real click. Firefox in the CI image has no audio output, so its
- * contexts stay suspended even then.
- */
-async function audioOutputExists(): Promise<boolean> {
-  const context = new AudioContext();
-  const button = document.createElement("button");
-  button.textContent = "Probe";
-  button.addEventListener("click", () => {
-    void context.resume().catch(() => {});
-  });
-  document.body.append(button);
-  await userEvent.click(button);
-  button.remove();
-  await sleep(300);
-  const running = context.state === "running";
-  await context.close();
-  return running;
+async function needAudio(context: TestContext): Promise<void> {
+  const audio = await audioOutput({ activate: (button) => userEvent.click(button) });
+  if (!audio.available) context.skip(`no real-time audio output${audio.reason}`);
 }
 
 /**
@@ -401,7 +387,7 @@ describe("audio as the clock", () => {
   });
 
   it("draws each flash within one output frame of when its tone is heard, across cuts", async (context) => {
-    if (!(await audioOutputExists())) context.skip(NO_AUDIO_OUTPUT);
+    await needAudio(context);
     const real = await setup(numberedBeeps);
     output = real.output;
     trace();
@@ -443,7 +429,7 @@ describe("audio as the clock", () => {
   });
 
   it("mutes during playback without a gap, and releases every window", async (context) => {
-    if (!(await audioOutputExists())) context.skip(NO_AUDIO_OUTPUT);
+    await needAudio(context);
     const real = await setup(numberedBeeps);
     output = real.output;
     trace();
