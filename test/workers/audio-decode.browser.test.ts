@@ -77,6 +77,12 @@ describe("decoding audio in a worker", () => {
     });
   });
 
+  it("closes a chunk the decoder delivers after it's closed, as Firefox can after a cancel", async () => {
+    expect(isVideoError(await failure({ abortAt: 5, lateOutput: true }), "ABORTED")).toBe(true);
+    // The late chunk arrives on a task after the call settles.
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  });
+
   it("stops when cancelled, with ABORTED", async () => {
     expect(isVideoError(await failure({ abortAt: 5 }), "ABORTED")).toBe(true);
   });

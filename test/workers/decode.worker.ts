@@ -11,7 +11,7 @@ import {
 import { probeFile } from "../../src/adapters/probe.js";
 import { videoLimits } from "../../src/core/errors/video-limits.js";
 import type { VideoProbe } from "../../src/core/model/source.js";
-import { laggingDecoderClass } from "./lagging-decoder.js";
+import { laggingDecoderClass, lateOutputDecoderClass } from "./lagging-decoder.js";
 
 export interface DecodeRequest {
   readonly file: Blob;
@@ -28,6 +28,8 @@ export interface DecodeRequest {
   readonly codec?: string;
   /** Holds this many packets before decoding them, as Firefox's frame-threaded decoding does. */
   readonly lag?: number;
+  /** Delivers one more frame after the decoder is closed, as Firefox can. */
+  readonly lateOutput?: boolean;
 }
 
 export interface DecodeContract {
@@ -60,6 +62,7 @@ exposeWorker<DecodeContract>({
     const controller = new AbortController();
     const RealDecoder = globalThis.VideoDecoder;
     if (request.lag !== undefined) globalThis.VideoDecoder = laggingDecoderClass(request.lag);
+    if (request.lateOutput) globalThis.VideoDecoder = lateOutputDecoderClass();
     try {
       const { video } = await pickTracks(input, probe.container);
       const config = (await video.getDecoderConfig()) as VideoDecoderConfig;

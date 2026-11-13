@@ -85,6 +85,12 @@ describe("decoding video frames in a worker", () => {
     expect(isVideoError(await failure({ abortAt: 10 }), "ABORTED")).toBe(true);
   });
 
+  it("closes a frame the decoder delivers after it's closed, as Firefox can after a cancel", async () => {
+    expect(isVideoError(await failure({ abortAt: 10, lateOutput: true }), "ABORTED")).toBe(true);
+    // The late frame arrives on a task after the call settles.
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  });
+
   it("refuses frames larger than the probe allows, with INVALID_VIDEO", async () => {
     const error = await failure({ shrinkBounds: true });
     expect(isVideoError(error, "INVALID_VIDEO")).toBe(true);
