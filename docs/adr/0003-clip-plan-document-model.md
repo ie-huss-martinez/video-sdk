@@ -2,7 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-11-12
-- **Amended:** 2026-11-12, to match the model as built: a clip's end matches the grid within one microsecond, `video.restoreClips` and `video.setOutput` carry what undo needs, and a source's time begins at the probe's `start`. Then, when audio playback was built: that `start` is the video track's first timestamp.
+- **Amended:** 2026-11-12, to match the model as built: a clip's end matches the grid within one microsecond, `video.restoreClips` and `video.setOutput` carry what undo needs, and a source's time begins at the probe's `start`. Then, when audio playback was built: that `start` is the video track's first timestamp. Then, with the portable formats ([sdk-core ADR 0045](https://github.com/ie-huss-martinez/sdk-core/blob/main/docs/adr/0045-portable-formats-and-conformance-vectors.md), [`docs/formats/hm-video-plan.md`](../formats/hm-video-plan.md)): undo of `video.setOutput` is its own `video.restoreOutput`, and refusals carry a reason.
 
 ## Context
 
@@ -77,19 +77,20 @@ Commands are plain, structured-cloneable data, named `video.*`:
 | `video.setMuted { keys, muted }` | Mutes or unmutes clips |
 | `video.setFade { key, edge, duration, curve }` | Sets a clip's audio fade in or fade out |
 | `video.setTransform { keys, transform }` | Sets the rotation, crop and fit of clips |
-| `video.setOutput { output, clips }` | Sets the output's size, frame rate, sample rate and channels. Undo passes `clips` to put the clips back as they were |
+| `video.setOutput { output }` | Sets the output's size, frame rate, sample rate and channels |
+| `video.restoreOutput { output, clips }` | Puts the output and every clip back as they were. The inverse of `video.setOutput` |
 | `video.setMetadata { field, value }` | Sets one metadata field |
 
 - **The reducer is `sdk-core`'s `Reducer<VideoPlan, VideoCommand>`:** a pure function that applies one command and returns its inverse. The session applies sequences with `applyCommands`, which returns the inverses in the order undo needs.
 - **Commands carry everything the reducer needs,** so it stays pure. The keys of new clips are in the command (`newKey` in `video.splitClip`, `keys` in `video.deleteRange`), and the session generates them before it executes.
-- **Invalid commands throw `VideoError` with `INVALID_COMMAND`.** Examples:
+- **Invalid commands throw `VideoError` with `INVALID_COMMAND`,** and a stable `details.reason`, such as `off-grid` or `unknown-clip`, which hosts and the conformance vectors compare instead of the message ([`docs/formats/hm-video-plan.md`](../formats/hm-video-plan.md)). The reducer reads commands strictly, as data that may have been stored or sent: it refuses an unknown field rather than dropping it. Examples:
   - a range outside its source, or a clip off the frame grid or shorter than one frame;
   - a crop outside the rotated source, or smaller than 2 × 2 pixels;
   - an unknown key.
 
   The UI clamps what people enter before building a command. The reducer never silently corrects a command.
 - **Edits keep clips valid.** A trim that leaves a fade longer than its clip shortens the fade, and a rotation that changes a source's orientation keeps its crop inside it. The inverse is `video.restoreClips`, with the clip's full previous state, so undo restores both.
-- **Changing the output keeps every clip on the grid.** `video.setOutput` keeps every clip's start. When the frame rate changes, it moves each clip's end to the nearest frame of the new grid that fits its source, and shortens fades to fit, all in the same command. A clip too near the end of its source for even one frame of the new grid moves its start back just enough for that frame, and only a source shorter than one output frame is refused. So the plan is on the grid after every command, and the inverse, which carries the previous output and clips, restores both.
+- **Changing the output keeps every clip on the grid.** `video.setOutput` keeps every clip's start. When the frame rate changes, it moves each clip's end to the nearest frame of the new grid that fits its source, and shortens fades to fit, all in the same command. A clip too near the end of its source for even one frame of the new grid moves its start back just enough for that frame, and only a source shorter than one output frame is refused. So the plan is on the grid after every command, and the inverse, `video.restoreOutput`, which carries the previous output and clips, restores both.
 - **Sources are registered, not carried in commands.** `session.insert(file, { at })`:
   1. probes the file and checks it against the file policy ([ADR 0004](0004-video-limits.md));
   2. opens it in the media worker ([ADR 0002](0002-workers-and-assets.md));

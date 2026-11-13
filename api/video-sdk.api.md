@@ -63,7 +63,7 @@ export function createVideoOutput(options: VideoOutputOptions): VideoOutput;
 export function createVideoProcessor(options: VideoProcessorOptions): VideoProcessor;
 
 // @public
-export function createVideoReducer(sourceInfo: (id: string) => VideoSourceInfo | undefined): Reducer<VideoPlan, VideoCommand>;
+export function createVideoReducer(sourceInfo: (id: string) => VideoSourceBounds | undefined): Reducer<VideoPlan, VideoCommand>;
 
 // @public
 export function createVideoSession(options: VideoSessionOptions): VideoSession;
@@ -165,6 +165,12 @@ export function outputFromSource(source: VideoSourceInfo): VideoPlanOutput;
 // @public
 export function planFrames(plan: VideoPlan): number;
 
+// @public
+export function readVideoPlanDocument(value: unknown): {
+    readonly plan: VideoPlan;
+    readonly sources: ReadonlyMap<string, VideoPlanDocumentSource>;
+};
+
 export { Reducer }
 
 // @public
@@ -183,6 +189,16 @@ export interface RestoreClipsCommand {
     readonly remove?: readonly string[];
     // (undocumented)
     readonly type: "video.restoreClips";
+}
+
+// @public
+export interface RestoreOutputCommand {
+    // (undocumented)
+    readonly clips: readonly VideoClip[];
+    // (undocumented)
+    readonly output: VideoPlanOutput;
+    // (undocumented)
+    readonly type: "video.restoreOutput";
 }
 
 // @public
@@ -234,8 +250,6 @@ export interface SetMutedCommand {
 // @public
 export interface SetOutputCommand {
     // (undocumented)
-    readonly clips?: readonly VideoClip[];
-    // (undocumented)
     readonly output: VideoPlanOutput;
     // (undocumented)
     readonly type: "video.setOutput";
@@ -280,6 +294,9 @@ export interface SplitClipCommand {
 }
 
 // @public
+export function toVideoPlanDocument(plan: VideoPlan, sources: ReadonlyMap<string, VideoPlanDocumentSource>): VideoPlanDocument;
+
+// @public
 export interface TrimClipCommand {
     // (undocumented)
     readonly end: number;
@@ -289,6 +306,19 @@ export interface TrimClipCommand {
     readonly start: number;
     // (undocumented)
     readonly type: "video.trimClip";
+}
+
+// @public
+export const VIDEO_PLAN_FORMAT = "hm-video-plan";
+
+// @public
+export const VIDEO_PLAN_VERSION = 1;
+
+// @public
+export interface VideoAssetReference {
+    readonly asset: string;
+    readonly mediaType: string;
+    readonly size: number;
 }
 
 // @public
@@ -322,7 +352,13 @@ export interface VideoClipEntry {
 }
 
 // @public
-export type VideoCommand = InsertClipsCommand | RemoveClipsCommand | RestoreClipsCommand | DeleteRangeCommand | TrimClipCommand | SplitClipCommand | MoveClipsCommand | SetVolumeCommand | SetMutedCommand | SetFadeCommand | SetTransformCommand | SetOutputCommand | SetMetadataCommand;
+export type VideoClipProblem = "missing-key" | "invalid-range" | "volume-out-of-range" | "invalid-muted" | "invalid-fade" | "invalid-fade-curve" | "invalid-rotation" | "invalid-fit" | "invalid-crop" | "crop-too-small" | "unknown-source" | "off-grid" | "clip-outside-source" | "fades-too-long" | "crop-outside-source";
+
+// @public
+export type VideoCommand = InsertClipsCommand | RemoveClipsCommand | RestoreClipsCommand | DeleteRangeCommand | TrimClipCommand | SplitClipCommand | MoveClipsCommand | SetVolumeCommand | SetMutedCommand | SetFadeCommand | SetTransformCommand | SetOutputCommand | RestoreOutputCommand | SetMetadataCommand;
+
+// @public
+export type VideoCommandRejection = VideoClipProblem | VideoOutputProblem | "malformed-command" | "unknown-command" | "no-clips" | "duplicate-key" | "key-taken" | "unknown-clip" | "not-a-boundary" | "empty-range" | "frame-outside-plan" | "not-inside-clip" | "new-key-required" | "unexpected-key" | "invalid-index" | "invalid-order" | "invalid-edge" | "unknown-metadata-field" | "metadata-too-long" | "no-plan" | "empty-plan";
 
 // @public
 export type VideoContainer = "mp4" | "mov" | "webm" | "mkv";
@@ -338,6 +374,9 @@ export interface VideoCrop {
     // (undocumented)
     readonly y: number;
 }
+
+// @public
+export type VideoDocumentRejection = Exclude<VideoCommandRejection, "malformed-command"> | "malformed-document" | "unknown-format" | "unknown-format-version";
 
 // @public
 export interface VideoEngine {
@@ -360,7 +399,7 @@ export class VideoError extends SdkError<VideoErrorCode> {
 }
 
 // @public
-export type VideoErrorCode = SdkCoreErrorCode | "INVALID_VIDEO" | "UNSUPPORTED_FORMAT" | "UNSUPPORTED_CODEC" | "DECODE_FAILED" | "ENCODE_FAILED" | "INVALID_COMMAND" | "BUSY" | "FRAME_TOO_LARGE" | "FRAME_RATE_TOO_HIGH" | "DURATION_TOO_LONG" | "BITRATE_TOO_HIGH" | "PACKET_TOO_LARGE" | "TOO_MANY_TRACKS" | "INDEX_TOO_LARGE" | "TOO_MANY_CHANNELS" | "SAMPLE_RATE_TOO_HIGH" | "SESSION_TOO_LARGE" | "TOO_MANY_CLIPS";
+export type VideoErrorCode = SdkCoreErrorCode | "INVALID_VIDEO" | "UNSUPPORTED_FORMAT" | "UNSUPPORTED_CODEC" | "DECODE_FAILED" | "ENCODE_FAILED" | "INVALID_COMMAND" | "INVALID_DOCUMENT" | "BUSY" | "FRAME_TOO_LARGE" | "FRAME_RATE_TOO_HIGH" | "DURATION_TOO_LONG" | "BITRATE_TOO_HIGH" | "PACKET_TOO_LARGE" | "TOO_MANY_TRACKS" | "INDEX_TOO_LARGE" | "TOO_MANY_CHANNELS" | "SAMPLE_RATE_TOO_HIGH" | "SESSION_TOO_LARGE" | "TOO_MANY_CLIPS";
 
 // @public
 export type VideoExportContainer = "mp4" | "webm";
@@ -562,6 +601,7 @@ export const videoMessages: {
     readonly "errors.DECODE_FAILED": "This browser couldn't play part of this video. Try another browser, or convert the file to MP4.";
     readonly "errors.ENCODE_FAILED": "The video couldn't be saved. Please try again.";
     readonly "errors.INVALID_COMMAND": "This edit couldn't be made. Please try again.";
+    readonly "errors.INVALID_DOCUMENT": "This project file is damaged or incomplete, so it can't be opened.";
     readonly "errors.BUSY": "A video is already being saved. Wait for it to finish, or cancel it.";
     readonly "errors.FRAME_TOO_LARGE": "This video's picture is larger than the editor can handle. Try a smaller version of it.";
     readonly "errors.FRAME_RATE_TOO_HIGH": "This video has {actual, number} frames per second, which is more than the limit of {maximum, number}.";
@@ -687,6 +727,9 @@ export interface VideoOutputOptions {
 }
 
 // @public
+export type VideoOutputProblem = "invalid-output-size" | "invalid-frame-rate" | "invalid-sample-rate" | "invalid-channels";
+
+// @public
 export interface VideoOutputSnapshot {
     readonly audio: VideoOutputAudio;
     readonly droppedFrames: number;
@@ -716,6 +759,30 @@ export interface VideoPlan {
     // (undocumented)
     readonly output: VideoPlanOutput;
 }
+
+// @public
+export interface VideoPlanDocument extends VideoPlan {
+    // (undocumented)
+    readonly format: typeof VIDEO_PLAN_FORMAT;
+    // (undocumented)
+    readonly sources: Readonly<Record<string, VideoPlanDocumentSource>>;
+    // (undocumented)
+    readonly version: typeof VIDEO_PLAN_VERSION;
+}
+
+// @public
+export interface VideoPlanDocumentSource {
+    // (undocumented)
+    readonly asset?: VideoAssetReference;
+    readonly duration: number;
+    // (undocumented)
+    readonly height: number;
+    readonly rotation: VideoRotation;
+    readonly width: number;
+}
+
+// @public
+export function videoPlanDocumentSource(info: VideoSourceInfo): VideoPlanDocumentSource;
 
 // @public
 export interface VideoPlanOutput {
@@ -815,6 +882,17 @@ export interface VideoSessionSnapshot {
     readonly sources: readonly VideoSourceInfo[];
     readonly status: "empty" | "ready";
     readonly warnings: readonly VideoLimitName[];
+}
+
+// @public
+export interface VideoSourceBounds {
+    readonly duration: number;
+    // (undocumented)
+    readonly video: {
+        readonly width: number;
+        readonly height: number;
+        readonly rotation: VideoRotation;
+    };
 }
 
 // @public

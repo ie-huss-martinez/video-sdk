@@ -120,11 +120,25 @@ export interface VideoPlan {
 }
 
 /**
- * The longest metadata value, in UTF-16 code units.
+ * The longest metadata value, in Unicode code points, as JSON Schema's
+ * `maxLength` and every port count it (sdk-core ADR 0045).
  *
  * @public
  */
 export const MAX_METADATA_LENGTH = 1_000;
+
+/**
+ * A string's length in Unicode code points: an emoji outside the Basic
+ * Multilingual Plane is one, where `String.length` counts two UTF-16 units.
+ * The portable formats count lengths this way (sdk-core ADR 0045).
+ *
+ * @internal
+ */
+export function codePointLength(text: string): number {
+  let length = 0;
+  for (const _ of text) length += 1;
+  return length;
+}
 
 /**
  * The quietest and loudest volume a clip can have, in decibels.
@@ -294,8 +308,111 @@ export function clipEnd(start: number, frames: number, rate: FrameRate): number 
   return start + frameTime(frames, rate);
 }
 
-function isFade(fade: VideoFade): boolean {
-  return isWhole(fade.duration) && (fade.curve === "linear" || fade.curve === "equalPower");
+/**
+ * Why a clip isn't valid, as a stable token: `details.reason` on the error
+ * that refuses it (sdk-core ADR 0045). Tokens never change meaning once
+ * released.
+ *
+ * - `missing-key`: it has no key.
+ * - `invalid-range`: its start or end isn't a whole number of microseconds.
+ * - `volume-out-of-range`: its volume isn't a finite number within
+ *   {@link VOLUME_RANGE}.
+ * - `invalid-muted`: `muted` isn't true or false.
+ * - `invalid-fade`: a fade's duration isn't a whole number of microseconds.
+ * - `invalid-fade-curve`: a fade's curve isn't `linear` or `equalPower`.
+ * - `invalid-rotation`: its rotation isn't 0, 90, 180 or 270.
+ * - `invalid-fit`: its fit isn't `contain` or `cover`.
+ * - `invalid-crop`: its crop isn't in whole pixels.
+ * - `crop-too-small`: its crop is smaller than 2 × 2 pixels.
+ * - `unknown-source`: its source isn't one the plan's sources include.
+ * - `off-grid`: its range isn't a whole number of output frames, at least one.
+ * - `clip-outside-source`: it ends after its source does.
+ * - `fades-too-long`: its fades together are longer than it is.
+ * - `crop-outside-source`: its crop isn't inside the source as it's shown.
+ *
+ * @public
+ */
+export type VideoClipProblem =
+  | "missing-key"
+  | "invalid-range"
+  | "volume-out-of-range"
+  | "invalid-muted"
+  | "invalid-fade"
+  | "invalid-fade-curve"
+  | "invalid-rotation"
+  | "invalid-fit"
+  | "invalid-crop"
+  | "crop-too-small"
+  | "unknown-source"
+  | "off-grid"
+  | "clip-outside-source"
+  | "fades-too-long"
+  | "crop-outside-source";
+
+/**
+ * Why an output isn't valid, as a stable token (sdk-core ADR 0045):
+ * `invalid-output-size` for a width or height that isn't even and at least
+ * 2, `invalid-frame-rate` for a frame rate that isn't a positive fraction of
+ * whole numbers, and `invalid-sample-rate` and `invalid-channels` for an
+ * audio layout that isn't whole and positive.
+ *
+ * @public
+ */
+export type VideoOutputProblem =
+  | "invalid-output-size"
+  | "invalid-frame-rate"
+  | "invalid-sample-rate"
+  | "invalid-channels";
+
+/**
+ * What each problem says, for the error's message. Users get the
+ * catalogue's text for the error's code instead.
+ *
+ * @internal
+ */
+export const PROBLEM_MESSAGES: Readonly<Record<VideoClipProblem | VideoOutputProblem, string>> = {
+  "missing-key": "A clip needs a key.",
+  "invalid-range": "A clip's range must be whole microseconds.",
+  "volume-out-of-range": `A volume must be between ${VOLUME_RANGE.min} and ${VOLUME_RANGE.max} dB.`,
+  "invalid-muted": "Muted must be true or false.",
+  "invalid-fade": "A fade needs a whole number of microseconds.",
+  "invalid-fade-curve": "A fade's curve must be linear or equalPower.",
+  "invalid-rotation": "A rotation must be 0, 90, 180 or 270 degrees.",
+  "invalid-fit": "A fit must be contain or cover.",
+  "invalid-crop": "A crop must be in whole pixels.",
+  "crop-too-small": "A crop must be at least 2 × 2 pixels.",
+  "unknown-source": "A clip's source isn't one of the plan's sources.",
+  "off-grid": "A clip must cover a whole number of output frames, at least one.",
+  "clip-outside-source": "A clip must end within its source.",
+  "fades-too-long": "A clip's fades must fit within it.",
+  "crop-outside-source": "A crop must be inside its source.",
+  "invalid-output-size": "An output's width and height must be even and at least 2.",
+  "invalid-frame-rate": "An output's frame rate must be a positive fraction.",
+  "invalid-sample-rate": "An output's sample rate must be a positive whole number.",
+  "invalid-channels": "An output needs at least one audio channel.",
+};
+
+/**
+ * What the plan's checks need to know of a source: how long it is, and its
+ * picture's size and rotation, for crops. A {@link VideoSourceInfo} has
+ * them, and so does a plan document's source.
+ *
+ * @public
+ */
+export interface VideoSourceBounds {
+  /** In microseconds. */
+  readonly duration: number;
+  readonly video: {
+    readonly width: number;
+    readonly height: number;
+    readonly rotation: VideoRotation;
+  };
+}
+
+function cropShapeProblem(crop: VideoCrop): VideoClipProblem | undefined {
+  if (![crop.x, crop.y, crop.width, crop.height].every(isWhole)) return "invalid-crop";
+  if (crop.width < 2 || crop.height < 2) return "crop-too-small";
+  return undefined;
 }
 
 /**
@@ -307,16 +424,14 @@ function isFade(fade: VideoFade): boolean {
  */
 export function cropProblem(
   crop: VideoCrop,
-  source: VideoSourceInfo,
+  source: VideoSourceBounds,
   rotation: VideoRotation,
-): string | undefined {
+): VideoClipProblem | undefined {
+  const shape = cropShapeProblem(crop);
+  if (shape !== undefined) return shape;
   const shown = rotateSize(source.video, addRotations(source.video.rotation, rotation));
-  if (![crop.x, crop.y, crop.width, crop.height].every(isWhole)) {
-    return "A crop must be in whole pixels.";
-  }
-  if (crop.width < 2 || crop.height < 2) return "A crop must be at least 2 × 2 pixels.";
   if (crop.x + crop.width > shown.width || crop.y + crop.height > shown.height) {
-    return "A crop must be inside its source.";
+    return "crop-outside-source";
   }
   return undefined;
 }
@@ -325,44 +440,44 @@ export function cropProblem(
  * Why a clip isn't valid in a plan with this frame rate, over this source,
  * or `undefined` if it is (ADR 0003): a range inside the source on the
  * frame grid, a finite volume in range, fades that fit, and a transform
- * whose crop fits the source.
+ * whose crop fits the source. Problems of the clip's own values come first,
+ * then those that depend on its source and the frame rate, so a clip that
+ * a format's schema refuses is refused for that.
  *
  * @internal
  */
 export function clipProblem(
   clip: VideoClip,
   rate: FrameRate,
-  source: VideoSourceInfo | undefined,
-): string | undefined {
-  if (typeof clip.key !== "string" || clip.key === "") return "A clip needs a key.";
-  if (source === undefined) return `Unknown source "${clip.source}".`;
-  if (!isWhole(clip.start) || !isWhole(clip.end)) {
-    return "A clip's range must be whole microseconds.";
-  }
-  if (!isOnGrid(clip.start, clip.end, rate)) {
-    return "A clip must cover a whole number of output frames, at least one.";
-  }
-  if (clip.end > source.duration) return "A clip must end within its source.";
+  source: VideoSourceBounds | undefined,
+): VideoClipProblem | undefined {
+  if (typeof clip.key !== "string" || clip.key === "") return "missing-key";
+  if (!isWhole(clip.start) || !isWhole(clip.end)) return "invalid-range";
   if (
+    typeof clip.volumeDb !== "number" ||
     !Number.isFinite(clip.volumeDb) ||
     clip.volumeDb < VOLUME_RANGE.min ||
     clip.volumeDb > VOLUME_RANGE.max
   ) {
-    return `A volume must be between ${VOLUME_RANGE.min} and ${VOLUME_RANGE.max} dB.`;
+    return "volume-out-of-range";
   }
-  if (typeof clip.muted !== "boolean") return "Muted must be true or false.";
-  if (!isFade(clip.fadeIn) || !isFade(clip.fadeOut)) {
-    return "A fade needs a whole number of microseconds and a known curve.";
-  }
-  if (clip.fadeIn.duration + clip.fadeOut.duration > clip.end - clip.start) {
-    return "A clip's fades must fit within it.";
+  if (typeof clip.muted !== "boolean") return "invalid-muted";
+  for (const fade of [clip.fadeIn, clip.fadeOut]) {
+    if (!isWhole(fade.duration)) return "invalid-fade";
+    if (fade.curve !== "linear" && fade.curve !== "equalPower") return "invalid-fade-curve";
   }
   const { transform } = clip;
-  if (![0, 90, 180, 270].includes(transform.rotation)) {
-    return "A rotation must be 0, 90, 180 or 270 degrees.";
+  if (![0, 90, 180, 270].includes(transform.rotation)) return "invalid-rotation";
+  if (transform.fit !== "contain" && transform.fit !== "cover") return "invalid-fit";
+  if (transform.crop !== null) {
+    const shape = cropShapeProblem(transform.crop);
+    if (shape !== undefined) return shape;
   }
-  if (transform.fit !== "contain" && transform.fit !== "cover") {
-    return "A fit must be contain or cover.";
+  if (source === undefined) return "unknown-source";
+  if (!isOnGrid(clip.start, clip.end, rate)) return "off-grid";
+  if (clip.end > source.duration) return "clip-outside-source";
+  if (clip.fadeIn.duration + clip.fadeOut.duration > clip.end - clip.start) {
+    return "fades-too-long";
   }
   return transform.crop === null
     ? undefined
@@ -376,17 +491,17 @@ export function clipProblem(
  *
  * @internal
  */
-export function outputProblem(output: VideoPlanOutput): string | undefined {
+export function outputProblem(output: VideoPlanOutput): VideoOutputProblem | undefined {
   const evenSize = (value: number) => isWhole(value) && value >= 2 && value % 2 === 0;
-  if (!evenSize(output.width) || !evenSize(output.height)) {
-    return "An output's width and height must be even and at least 2.";
+  if (!evenSize(output.width) || !evenSize(output.height)) return "invalid-output-size";
+  if (
+    typeof output.frameRate !== "object" ||
+    output.frameRate === null ||
+    !isFrameRate(output.frameRate)
+  ) {
+    return "invalid-frame-rate";
   }
-  if (!isFrameRate(output.frameRate)) return "An output's frame rate must be a positive fraction.";
-  if (!isWhole(output.sampleRate) || output.sampleRate < 1) {
-    return "An output's sample rate must be a positive whole number.";
-  }
-  if (!isWhole(output.channels) || output.channels < 1) {
-    return "An output needs at least one audio channel.";
-  }
+  if (!isWhole(output.sampleRate) || output.sampleRate < 1) return "invalid-sample-rate";
+  if (!isWhole(output.channels) || output.channels < 1) return "invalid-channels";
   return undefined;
 }

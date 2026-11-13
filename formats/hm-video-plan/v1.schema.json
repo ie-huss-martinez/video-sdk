@@ -1,0 +1,324 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/ie-huss-martinez/video-sdk/blob/main/formats/hm-video-plan/v1.schema.json",
+  "title": "hm-video-plan, version 1",
+  "description": "A video-sdk clip plan: clips played back to back on one track over immutable sources, with the output and the metadata export writes (docs/formats/hm-video-plan.md, sdk-core ADR 0045). Every time is a whole number of microseconds, and frame rates are exact fractions. Beyond this schema, readers check that every clip lies within a source the document lists, on the output's frame grid, that its fades and crop fit, and that keys are unique.",
+  "type": "object",
+  "required": ["format", "version", "output", "sources", "clips", "metadata"],
+  "additionalProperties": false,
+  "properties": {
+    "format": {
+      "const": "hm-video-plan"
+    },
+    "version": {
+      "const": 1
+    },
+    "output": {
+      "$ref": "#/$defs/output"
+    },
+    "sources": {
+      "description": "The sources the clips play, by the ids the clips use.",
+      "type": "object",
+      "propertyNames": {
+        "minLength": 1
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/source"
+      }
+    },
+    "clips": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/clip"
+      }
+    },
+    "metadata": {
+      "$ref": "#/$defs/metadata"
+    }
+  },
+  "$defs": {
+    "microseconds": {
+      "description": "A whole number of microseconds.",
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    },
+    "frames": {
+      "description": "A whole number of output frames on the timeline.",
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    },
+    "key": {
+      "description": "A clip key, stable across edits.",
+      "type": "string",
+      "minLength": 1
+    },
+    "volumeDb": {
+      "description": "A volume in decibels. Copied, never computed, so it compares exactly.",
+      "type": "number",
+      "minimum": -96,
+      "maximum": 24
+    },
+    "muted": {
+      "type": "boolean"
+    },
+    "curve": {
+      "enum": ["linear", "equalPower"]
+    },
+    "fade": {
+      "description": "An audio fade at one end of a clip. A duration of 0 is no fade.",
+      "type": "object",
+      "required": ["duration", "curve"],
+      "additionalProperties": false,
+      "properties": {
+        "duration": {
+          "$ref": "#/$defs/microseconds"
+        },
+        "curve": {
+          "$ref": "#/$defs/curve"
+        }
+      }
+    },
+    "rotation": {
+      "description": "Degrees, clockwise.",
+      "enum": [0, 90, 180, 270]
+    },
+    "crop": {
+      "description": "A rectangle in whole pixels of the source as it's shown, after its own rotation and the clip's.",
+      "type": "object",
+      "required": ["x", "y", "width", "height"],
+      "additionalProperties": false,
+      "properties": {
+        "x": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "y": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "width": {
+          "type": "integer",
+          "minimum": 2,
+          "maximum": 9007199254740991
+        },
+        "height": {
+          "type": "integer",
+          "minimum": 2,
+          "maximum": 9007199254740991
+        }
+      }
+    },
+    "transform": {
+      "description": "A clip's picture: its rotation, added to the source's own, its crop, and how it fills the output.",
+      "type": "object",
+      "required": ["rotation", "crop", "fit"],
+      "additionalProperties": false,
+      "properties": {
+        "rotation": {
+          "$ref": "#/$defs/rotation"
+        },
+        "crop": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/crop"
+            }
+          ]
+        },
+        "fit": {
+          "enum": ["contain", "cover"]
+        }
+      }
+    },
+    "clip": {
+      "description": "One piece of a source, played in the plan.",
+      "type": "object",
+      "required": [
+        "key",
+        "source",
+        "start",
+        "end",
+        "volumeDb",
+        "muted",
+        "fadeIn",
+        "fadeOut",
+        "transform"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "key": {
+          "$ref": "#/$defs/key"
+        },
+        "source": {
+          "description": "The id of a source the document lists.",
+          "type": "string",
+          "minLength": 1
+        },
+        "start": {
+          "description": "The first source microsecond the clip plays, inclusive.",
+          "$ref": "#/$defs/microseconds"
+        },
+        "end": {
+          "description": "The source microsecond the clip stops before, exclusive: a whole number of output frames after start.",
+          "$ref": "#/$defs/microseconds"
+        },
+        "volumeDb": {
+          "$ref": "#/$defs/volumeDb"
+        },
+        "muted": {
+          "$ref": "#/$defs/muted"
+        },
+        "fadeIn": {
+          "$ref": "#/$defs/fade"
+        },
+        "fadeOut": {
+          "$ref": "#/$defs/fade"
+        },
+        "transform": {
+          "$ref": "#/$defs/transform"
+        }
+      }
+    },
+    "frameRate": {
+      "description": "An exact frame rate, num / den frames per second, such as 30000/1001.",
+      "type": "object",
+      "required": ["num", "den"],
+      "additionalProperties": false,
+      "properties": {
+        "num": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "den": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        }
+      }
+    },
+    "output": {
+      "description": "What an export produces: its frame size, frame rate and audio layout.",
+      "type": "object",
+      "required": ["width", "height", "frameRate", "sampleRate", "channels"],
+      "additionalProperties": false,
+      "properties": {
+        "width": {
+          "type": "integer",
+          "minimum": 2,
+          "maximum": 9007199254740991,
+          "multipleOf": 2
+        },
+        "height": {
+          "type": "integer",
+          "minimum": 2,
+          "maximum": 9007199254740991,
+          "multipleOf": 2
+        },
+        "frameRate": {
+          "$ref": "#/$defs/frameRate"
+        },
+        "sampleRate": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "channels": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        }
+      }
+    },
+    "metadataField": {
+      "enum": ["title", "description", "artist", "date", "comment"]
+    },
+    "metadataValue": {
+      "description": "At most 1000 Unicode code points, as maxLength counts them.",
+      "type": "string",
+      "maxLength": 1000
+    },
+    "metadata": {
+      "description": "The only metadata an export writes. An empty value writes nothing.",
+      "type": "object",
+      "required": ["title", "description", "artist", "date", "comment"],
+      "additionalProperties": false,
+      "properties": {
+        "title": {
+          "$ref": "#/$defs/metadataValue"
+        },
+        "description": {
+          "$ref": "#/$defs/metadataValue"
+        },
+        "artist": {
+          "$ref": "#/$defs/metadataValue"
+        },
+        "date": {
+          "$ref": "#/$defs/metadataValue"
+        },
+        "comment": {
+          "$ref": "#/$defs/metadataValue"
+        }
+      }
+    },
+    "asset": {
+      "description": "A content-addressed reference to the source's bytes (sdk-core ADR 0045).",
+      "type": "object",
+      "required": ["asset", "mediaType", "size"],
+      "additionalProperties": false,
+      "properties": {
+        "asset": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "mediaType": {
+          "type": "string",
+          "maxLength": 255,
+          "pattern": "^[a-z0-9][a-z0-9!#$&^_.+-]*/[a-z0-9][a-z0-9!#$&^_.+-]*$"
+        },
+        "size": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        }
+      }
+    },
+    "source": {
+      "description": "A source, as clips are checked against it.",
+      "type": "object",
+      "required": ["duration", "width", "height", "rotation"],
+      "additionalProperties": false,
+      "properties": {
+        "duration": {
+          "description": "In microseconds.",
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "width": {
+          "description": "The picture's width before its rotation, in pixels.",
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "height": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "rotation": {
+          "$ref": "#/$defs/rotation"
+        },
+        "asset": {
+          "$ref": "#/$defs/asset"
+        }
+      }
+    }
+  }
+}

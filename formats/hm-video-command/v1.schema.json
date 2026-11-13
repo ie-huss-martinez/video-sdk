@@ -1,0 +1,248 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/ie-huss-martinez/video-sdk/blob/main/formats/hm-video-command/v1.schema.json",
+  "title": "hm-video-command, version 1",
+  "description": "One user-level edit to an hm-video-plan (docs/formats/hm-video-plan.md, sdk-core ADR 0045). The commands undo runs, video.restoreClips and video.restoreOutput, are internal and not part of this format. Beyond this schema, the reducer checks each command against the plan it applies to.",
+  "oneOf": [
+    {
+      "description": "Inserts clips at a timeline frame where a clip starts or ends.",
+      "type": "object",
+      "required": ["type", "at", "clips"],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "video.insertClips"
+        },
+        "at": {
+          "$ref": "https://github.com/ie-huss-martinez/video-sdk/blob/main/formats/hm-video-plan/v1.schema.json#/$defs/frames"
+        },
+        "clips": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "https://github.com/ie-huss-martinez/video-sdk/blob/main/formats/hm-video-plan/v1.schema.json#/$defs/clip"
+          }
+        }
+      }
+    },
+    {
+      "description": "Removes clips.",
+      "type": "object",
+      "required": ["type", "keys"],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "video.removeClips"
+        },
+        "keys": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "https://github.com/ie-huss-martinez/video-sdk/blob/main/formats/hm-video-plan/v1.schema.json#/$defs/key"
+          }
+        }
+      }
+    },
+    {
+      "description": "Removes the timeline frames from start to end. A range strictly inside one clip splits it, and keys holds the key of its second part; otherwise keys is empty.",
+      "type": "object",
+      "required": ["type", "start", "end", "keys"],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "video.deleteRange"
+        },
+        "start": {
+          "$ref": "https://github.com/ie-huss-martinez/video-sdk/blob/main/formats/hm-video-plan/v1.schema.json#/$defs/frames"
+        },
+        "end": {
+          "$ref": "https://github.com/ie-huss-martinez/video-sdk/blob/main/formats/hm-video-plan/v1.schema.json#/$defs/frames"
+        },
+        "keys": {
+          "type": "array",
+          "items": {
+            "$ref": "https://github.com/ie-huss-martinez/video-sdk/blob/main/formats/hm-video-plan/v1.schema.json#/$defs/key"
+          }
+        }
+      }
+    },
+    {
+      "description": "Sets the source range a clip plays, on the frame grid. Fades longer than the clip are shortened to fit.",
+      "type": "object",
+      "required": ["type", "key", "start", "end"],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "video.trimClip"
+        },
+        "key": {
+          "$ref": "https://github.com/ie-huss-martinez/video-sdk/blob/main/formats/hm-video-plan/v1.schema.json#/$defs/key"
+        },
+        "start": {
+          "$ref": "https://github.com/ie-huss-martinez/video-sdk/blob/main/formats/hm-video-plan/v1.schema.json#/$defs/microseconds"
+        },
+        "end": {
+          "$ref": "https://github.com/ie-huss-martinez/video-sdk/blob/main/formats/hm-video-plan/v1.schema.json#/$defs/microseconds"
+        }
+      }
+    },
+    {
+      "description": "Splits a clip at a timeline frame strictly inside it. The second part takes newKey.",
+      "type": "object",
+      "required": ["type", "key", "at", "newKey"],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "video.splitClip"
+        },
+        "key": {
+          "$ref": "https://github.com/ie-huss-martinez/video-sdk/blob/main/formats/hm-video-plan/v1.schema.json#/$defs/key"
+        },
+        "at": {
+          "$ref": "https://github.com/ie-huss-martinez/video-sdk/blob/main/formats/hm-video-plan/v1.schema.json#/$defs/frames"
+        },
+        "newKey": {
+          "$ref": "https://github.com/ie-huss-martinez/video-sdk/blob/main/formats/hm-video-plan/v1.schema.json#/$defs/key"
+        }
+      }
+    },
+    {
+      "description": "Moves clips, in their order, to a timeline frame of the plan without them, where a clip starts or ends.",
+      "type": "object",
+      "required": ["type", "keys", "to"],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "video.moveClips"
+        },
+        "keys": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "https://github.com/ie-huss-martinez/video-sdk/blob/main/formats/hm-video-plan/v1.schema.json#/$defs/key"
+          }
+        },
+        "to": {
+          "$ref": "https://github.com/ie-huss-martinez/video-sdk/blob/main/formats/hm-video-plan/v1.schema.json#/$defs/frames"
+        }
+      }
+    },
+    {
+      "description": "Sets clips' volume.",
+      "type": "object",
+      "required": ["type", "keys", "volumeDb"],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "video.setVolume"
+        },
+        "keys": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "https://github.com/ie-huss-martinez/video-sdk/blob/main/formats/hm-video-plan/v1.schema.json#/$defs/key"
+          }
+        },
+        "volumeDb": {
+          "$ref": "https://github.com/ie-huss-martinez/video-sdk/blob/main/formats/hm-video-plan/v1.schema.json#/$defs/volumeDb"
+        }
+      }
+    },
+    {
+      "description": "Mutes or unmutes clips.",
+      "type": "object",
+      "required": ["type", "keys", "muted"],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "video.setMuted"
+        },
+        "keys": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "https://github.com/ie-huss-martinez/video-sdk/blob/main/formats/hm-video-plan/v1.schema.json#/$defs/key"
+          }
+        },
+        "muted": {
+          "$ref": "https://github.com/ie-huss-martinez/video-sdk/blob/main/formats/hm-video-plan/v1.schema.json#/$defs/muted"
+        }
+      }
+    },
+    {
+      "description": "Sets a clip's fade in or fade out.",
+      "type": "object",
+      "required": ["type", "key", "edge", "duration", "curve"],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "video.setFade"
+        },
+        "key": {
+          "$ref": "https://github.com/ie-huss-martinez/video-sdk/blob/main/formats/hm-video-plan/v1.schema.json#/$defs/key"
+        },
+        "edge": {
+          "enum": ["in", "out"]
+        },
+        "duration": {
+          "$ref": "https://github.com/ie-huss-martinez/video-sdk/blob/main/formats/hm-video-plan/v1.schema.json#/$defs/microseconds"
+        },
+        "curve": {
+          "$ref": "https://github.com/ie-huss-martinez/video-sdk/blob/main/formats/hm-video-plan/v1.schema.json#/$defs/curve"
+        }
+      }
+    },
+    {
+      "description": "Sets clips' rotation, crop and fit.",
+      "type": "object",
+      "required": ["type", "keys", "transform"],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "video.setTransform"
+        },
+        "keys": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "https://github.com/ie-huss-martinez/video-sdk/blob/main/formats/hm-video-plan/v1.schema.json#/$defs/key"
+          }
+        },
+        "transform": {
+          "$ref": "https://github.com/ie-huss-martinez/video-sdk/blob/main/formats/hm-video-plan/v1.schema.json#/$defs/transform"
+        }
+      }
+    },
+    {
+      "description": "Sets the output. Clips keep their starts, and move their ends to the new frame grid.",
+      "type": "object",
+      "required": ["type", "output"],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "video.setOutput"
+        },
+        "output": {
+          "$ref": "https://github.com/ie-huss-martinez/video-sdk/blob/main/formats/hm-video-plan/v1.schema.json#/$defs/output"
+        }
+      }
+    },
+    {
+      "description": "Sets one metadata field.",
+      "type": "object",
+      "required": ["type", "field", "value"],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "video.setMetadata"
+        },
+        "field": {
+          "$ref": "https://github.com/ie-huss-martinez/video-sdk/blob/main/formats/hm-video-plan/v1.schema.json#/$defs/metadataField"
+        },
+        "value": {
+          "$ref": "https://github.com/ie-huss-martinez/video-sdk/blob/main/formats/hm-video-plan/v1.schema.json#/$defs/metadataValue"
+        }
+      }
+    }
+  ]
+}

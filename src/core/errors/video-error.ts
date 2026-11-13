@@ -8,8 +8,12 @@ import { isSdkError, type SdkCoreErrorCode, SdkError } from "@hussmartinez/sdk-c
  * - `INVALID_VIDEO`: the file is malformed, its headers disagree with its
  *   packets, or it decodes to more than its probe allows.
  * - `UNSUPPORTED_FORMAT`: the container isn't recognised, it uses an edit
- *   list or encryption the SDK refuses, or it has no video track.
- *   `details.reason` says which.
+ *   list or encryption the SDK refuses, or it has no video track; or a plan
+ *   document is of another format (`unknown-format`) or a later version
+ *   (`unknown-format-version`). `details.reason` says which.
+ * - `INVALID_DOCUMENT`: a plan document isn't valid, with the reason in
+ *   `details.reason`, such as `malformed-document` or `unknown-source`
+ *   (docs/formats/hm-video-plan.md).
  * - `UNSUPPORTED_CODEC`: the browser can't decode a track's codec, or can't
  *   encode any container and codecs for an export. `details.codec` names it.
  * - `DECODE_FAILED`: the browser failed to decode a probed, supported file.
@@ -19,7 +23,7 @@ import { isSdkError, type SdkCoreErrorCode, SdkError } from "@hussmartinez/sdk-c
  *   `details.codec` names the codec.
  * - `INVALID_COMMAND`: an edit command doesn't apply to the clip plan, such
  *   as a range outside its source, a clip off the frame grid or an unknown
- *   clip key.
+ *   clip key. `details.reason` is a `VideoCommandRejection` token.
  * - `BUSY`: an export was requested while another is running.
  * - `FRAME_TOO_LARGE`: a video track, a decoded frame or the output exceeds
  *   the `maxFramePixels` limit.
@@ -52,6 +56,7 @@ export type VideoErrorCode =
   | "DECODE_FAILED"
   | "ENCODE_FAILED"
   | "INVALID_COMMAND"
+  | "INVALID_DOCUMENT"
   | "BUSY"
   | "FRAME_TOO_LARGE"
   | "FRAME_RATE_TOO_HIGH"

@@ -321,7 +321,11 @@ export async function exportPlan(
     if (!sources.has(clip.source)) throw new TypeError(`The source "${clip.source}" isn't open.`);
   }
   const total = planFrames(plan);
-  if (total === 0) throw new VideoError("INVALID_COMMAND", "An empty plan can't be exported.");
+  if (total === 0) {
+    throw new VideoError("INVALID_COMMAND", "An empty plan can't be exported.", {
+      details: { reason: "empty-plan" },
+    });
+  }
   const withAudio = plan.clips.some((clip) => sources.get(clip.source)?.probe.audio);
   const readers = createReaderCache();
   readers.setSources(sources);

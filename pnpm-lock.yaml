@@ -206,6 +206,9 @@ catalogs:
     '@vitest/browser-playwright':
       specifier: 5.1.0
       version: 5.1.0
+    ajv:
+      specifier: ^8.20.0
+      version: 8.20.0
     axe-core:
       specifier: ^4.11.0
       version: 4.14.0
@@ -302,6 +305,9 @@ importers:
       '@vitest/browser-playwright':
         specifier: 'catalog:'
         version: 5.1.0(playwright@1.65.0)(vite@8.3.8(@types/node@24.19.2)(jiti@2.7.0)(yaml@2.9.1))(vitest@5.1.0)
+      ajv:
+        specifier: 'catalog:'
+        version: 8.20.0
       axe-core:
         specifier: 'catalog:'
         version: 4.14.0
@@ -2780,7 +2786,7 @@ snapshots:
     dependencies:
       ajv: 8.20.0
       ajv-draft-04: 1.0.0(ajv@8.20.0)
-      ajv-formats: 3.0.1
+      ajv-formats: 3.0.1(ajv@8.20.0)
       fs-extra: 11.3.6
       import-lazy: 4.0.0
       jju: 1.4.0
@@ -3043,8 +3049,8 @@ snapshots:
     optionalDependencies:
       ajv: 8.20.0
 
-  ajv-formats@3.0.1:
-    dependencies:
+  ajv-formats@3.0.1(ajv@8.20.0):
+    optionalDependencies:
       ajv: 8.20.0
 
   ajv@8.18.0:

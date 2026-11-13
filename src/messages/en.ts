@@ -66,6 +66,7 @@ export const videoOwnMessages = /* @__PURE__ */ defineMessages({
     "This browser couldn't play part of this video. Try another browser, or convert the file to MP4.",
   "errors.ENCODE_FAILED": "The video couldn't be saved. Please try again.",
   "errors.INVALID_COMMAND": "This edit couldn't be made. Please try again.",
+  "errors.INVALID_DOCUMENT": "This project file is damaged or incomplete, so it can't be opened.",
   "errors.BUSY": "A video is already being saved. Wait for it to finish, or cancel it.",
   "errors.FRAME_TOO_LARGE":
     "This video's picture is larger than the editor can handle. Try a smaller version of it.",
