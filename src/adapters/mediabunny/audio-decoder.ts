@@ -68,6 +68,8 @@ export async function decodeAudioData(
   signal?: AbortSignal,
 ): Promise<number> {
   const maxFrames = maxFramesPerChunk(config.codec);
+  /** Set once the call settles; any output after it is closed at once. */
+  let finished = false;
   const waiting: AudioData[] = [];
   let failure: unknown;
   let consumerFailure: unknown;
@@ -87,6 +89,9 @@ export async function decodeAudioData(
 
   const decoder = new AudioDecoder({
     output(data) {
+      // Firefox can run an output task it queued before close(): nothing
+      // would take this one, so it's closed here.
+      if (finished) return data.close();
       audioDataLedger.open += 1;
       waiting.push(data);
       notify();
@@ -199,6 +204,7 @@ export async function decodeAudioData(
       cause: error,
     });
   } finally {
+    finished = true;
     signal?.removeEventListener("abort", notify);
     for (const data of waiting.splice(0)) close(data);
     if (decoder.state !== "closed") decoder.close();

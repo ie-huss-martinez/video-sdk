@@ -97,6 +97,8 @@ export async function decodeVideoFrames(
   signal?: AbortSignal,
 ): Promise<number> {
   const limit = range.limit ?? Number.POSITIVE_INFINITY;
+  /** Set once the call settles; any output after it is closed at once. */
+  let finished = false;
   const waiting: VideoFrame[] = [];
   let failure: unknown;
   /** What the consumer threw, which is passed on as it is. */
@@ -115,6 +117,9 @@ export async function decodeVideoFrames(
 
   const decoder = new VideoDecoder({
     output(frame) {
+      // Firefox can run an output task it queued before close(): nothing
+      // would take this one, so it's closed here.
+      if (finished) return frame.close();
       videoFrameLedger.open += 1;
       waiting.push(frame);
       notify();
@@ -267,6 +272,7 @@ export async function decodeVideoFrames(
       cause: error,
     });
   } finally {
+    finished = true;
     signal?.removeEventListener("abort", notify);
     for (const frame of waiting.splice(0)) close(frame);
     if (decoder.state !== "closed") decoder.close();

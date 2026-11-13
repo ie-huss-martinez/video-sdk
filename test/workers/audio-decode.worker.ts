@@ -7,6 +7,7 @@ import { audioDataLedger, decodeAudioData } from "../../src/adapters/mediabunny/
 import { familyOf, openInput, pickTracks } from "../../src/adapters/mediabunny/tracks.js";
 import { probeFile } from "../../src/adapters/probe.js";
 import { videoLimits } from "../../src/core/errors/video-limits.js";
+import { lateOutputAudioDecoderClass } from "./lagging-decoder.js";
 
 export interface AudioDecodeRequest {
   readonly file: Blob;
@@ -16,6 +17,8 @@ export interface AudioDecodeRequest {
   readonly throwAt?: number;
   /** The call is cancelled on this delivered chunk. */
   readonly abortAt?: number;
+  /** Delivers one more chunk after the decoder is closed, as Firefox can. */
+  readonly lateOutput?: boolean;
   /** Decodes with a wrong channel count, so every chunk is out of bounds. */
   readonly wrongChannels?: boolean;
   /** Decodes with another codec's configuration, so that decoding fails. */
@@ -46,6 +49,8 @@ exposeWorker<AudioDecodeContract>({
     const probe = await probeFile(request.file, videoLimits.resolve());
     const input = openInput(request.file, familyOf(probe.container));
     const controller = new AbortController();
+    const RealDecoder = globalThis.AudioDecoder;
+    if (request.lateOutput) globalThis.AudioDecoder = lateOutputAudioDecoderClass();
     try {
       const { audio } = await pickTracks(input, probe.container);
       const config = audio && (await audio.getDecoderConfig());
@@ -81,6 +86,7 @@ exposeWorker<AudioDecodeContract>({
       const firstPacket = (await sink.getFirstPacket())?.microsecondTimestamp ?? Number.NaN;
       return { chunks, frames, first, placed, firstPacket };
     } finally {
+      globalThis.AudioDecoder = RealDecoder;
       input.dispose();
     }
   },
