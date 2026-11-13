@@ -3,26 +3,12 @@ import type { VideoErrorCode } from "../core/errors/video-error.js";
 import type { VideoLimitName } from "../core/errors/video-limits.js";
 
 /**
- * The video SDK's English message catalogue: sdk-core's messages, and text
- * for every {@link VideoErrorCode} and every limit's warning. Pass it to
- * `createMessages` from `@hussmartinez/sdk-core`, with the host's locale and
- * overrides. It also holds the editor's text; the React editor adds
- * `uiMessages` from `@hussmartinez/ui` to it, for `ui`'s own components.
+ * The video SDK's own messages, without sdk-core's. Kept apart so a test can
+ * check they don't take any of sdk-core's or ui's keys (sdk-core ADR 0046).
  *
- * Error text is looked up by code, with the error's `details` as
- * parameters, and never taken from `error.message` (ADR 0019).
- *
- * @example
- * ```ts
- * const messages = createMessages(videoMessages, { locale: "en", overrides: props.messages });
- * messages.error(error); // "This video has 240 frames per second, which is more than the limit of 120."
- * messages.t("warnings.maxSessionSize", { actual: 300e6 });
- * ```
- *
- * @public
+ * @internal
  */
-export const videoMessages = /* @__PURE__ */ defineMessages({
-  ...sdkCoreMessages,
+export const videoOwnMessages = /* @__PURE__ */ defineMessages({
   "editor.label": "Video editor",
   "stage.label": "Video preview, frame {frame, number} of {frames, number}",
   "stage.empty": "Add a video to start editing.",
@@ -47,10 +33,30 @@ export const videoMessages = /* @__PURE__ */ defineMessages({
   "timeline.clipMuted": "Clip {index, number} of {count, number}, {start} to {end}, muted",
   "timeline.trimStart": "Trim the clip's start to the playhead",
   "timeline.trimEnd": "Trim the clip's end to the playhead",
-  "timeline.zoomIn": "Zoom in",
-  "timeline.zoomOut": "Zoom out",
-  "timeline.zoomFit": "Fit the whole video",
   "timeline.snap": "Snap to clip edges and the playhead",
+  "toolbar.label": "Editing tools",
+  "toolbar.file": "File",
+  "toolbar.history": "History",
+  "toolbar.edit": "Edit",
+  "toolbar.playback": "Playback",
+  "toolbar.view": "View",
+  "toolbar.withKeys": "{label} ({keys})",
+  "tools.insert": "Add videos",
+  "tools.undo": "Undo",
+  "tools.redo": "Redo",
+  "tools.playPause": "Play or pause",
+  "tools.previousFrame": "Previous frame",
+  "tools.nextFrame": "Next frame",
+  "tools.start": "Go to the start",
+  "tools.end": "Go to the end",
+  "tools.split": "Split at the playhead",
+  "tools.delete": "Delete the selected clips",
+  "tools.mute": "Mute the selected clips",
+  "tools.zoomIn": "Zoom in",
+  "tools.zoomOut": "Zoom out",
+  "tools.zoomFit": "Fit the whole video",
+  "announce.undone": "Undone",
+  "announce.redone": "Redone",
   "errors.INVALID_VIDEO": "This file isn't a valid video, or it's too damaged to open.",
   "errors.UNSUPPORTED_FORMAT":
     "This video format isn't supported. Try converting the file to MP4 or WebM, then open it again.",
@@ -107,6 +113,30 @@ export const videoMessages = /* @__PURE__ */ defineMessages({
     one: "This video has {actual} clip. Many clips may be slow to play and save.",
     other: "This video has {actual, number} clips. Many clips may be slow to play and save.",
   }),
+});
+
+/**
+ * The video SDK's English message catalogue: sdk-core's messages, and text
+ * for every {@link VideoErrorCode} and every limit's warning. Pass it to
+ * `createMessages` from `@hussmartinez/sdk-core`, with the host's locale and
+ * overrides. It also holds the editor's text; the React editor adds
+ * `uiMessages` from `@hussmartinez/ui` to it, for `ui`'s own components.
+ *
+ * Error text is looked up by code, with the error's `details` as
+ * parameters, and never taken from `error.message` (ADR 0019).
+ *
+ * @example
+ * ```ts
+ * const messages = createMessages(videoMessages, { locale: "en", overrides: props.messages });
+ * messages.error(error); // "This video has 240 frames per second, which is more than the limit of 120."
+ * messages.t("warnings.maxSessionSize", { actual: 300e6 });
+ * ```
+ *
+ * @public
+ */
+export const videoMessages = /* @__PURE__ */ defineMessages({
+  ...sdkCoreMessages,
+  ...videoOwnMessages,
 }) satisfies Record<`errors.${VideoErrorCode}`, MessageValue> &
   Record<`warnings.${VideoLimitName}`, MessageValue>;
 

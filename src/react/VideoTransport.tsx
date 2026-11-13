@@ -11,6 +11,7 @@ import { planFrames } from "../core/model/plan.js";
 import { frameTime } from "../core/model/time.js";
 import { useVideoEditor, useVideoOutput, useVideoPlayhead, useVideoSession } from "./context.js";
 import { formatTimecode } from "./timecode.js";
+import { useVideoTools } from "./tools.js";
 
 /**
  * Props of {@link VideoTransport}.
@@ -33,6 +34,12 @@ export function VideoTransport(props: VideoTransportProps): ReactNode {
   const { snapshot } = useVideoSession();
   const { output, snapshot: playback } = useVideoOutput();
   const frame = useVideoPlayhead();
+  const { ariaKeyShortcuts, labelWithKeys } = useVideoTools();
+  /** A tool's shortcuts and tooltip, for the transport's own buttons. */
+  const keysOf = (id: string) => ({
+    title: labelWithKeys(id),
+    "aria-keyshortcuts": ariaKeyShortcuts(id),
+  });
   const plan = snapshot.plan;
   const frames = plan ? planFrames(plan) : 0;
   const disabled = !output || frames === 0;
@@ -52,6 +59,7 @@ export function VideoTransport(props: VideoTransportProps): ReactNode {
         label={messages.t("transport.previousFrame")}
         icon={<ChevronLeftIcon />}
         disabled={disabled}
+        {...keysOf("video.previous-frame")}
         onClick={() => output?.step(-1)}
       />
       <ToggleButton
@@ -59,9 +67,10 @@ export function VideoTransport(props: VideoTransportProps): ReactNode {
         icon={playing ? <PauseIcon /> : <PlayIcon />}
         pressed={playing}
         disabled={disabled}
+        {...keysOf("video.play-pause")}
         onPressedChange={(pressed) => {
           if (!output) return;
-          if (pressed) void output.play();
+          if (pressed) void output.play().catch(() => {});
           else output.pause();
         }}
       />
@@ -69,6 +78,7 @@ export function VideoTransport(props: VideoTransportProps): ReactNode {
         label={messages.t("transport.nextFrame")}
         icon={<ChevronRightIcon />}
         disabled={disabled}
+        {...keysOf("video.next-frame")}
         onClick={() => output?.step(1)}
       />
       <span className="hm-video-transport-time" aria-live="off">

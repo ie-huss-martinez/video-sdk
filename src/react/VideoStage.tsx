@@ -4,6 +4,7 @@ import { createVideoOutput } from "../adapters/video-output.js";
 import { videoLimits } from "../core/errors/video-limits.js";
 import { planFrames } from "../core/model/plan.js";
 import { useVideoEditor, useVideoOutput, useVideoPlayhead, useVideoSession } from "./context.js";
+import { ACCEPT } from "./files.js";
 
 /**
  * Props of {@link VideoStage}.
@@ -13,9 +14,6 @@ import { useVideoEditor, useVideoOutput, useVideoPlayhead, useVideoSession } fro
 export interface VideoStageProps {
   readonly className?: string;
 }
-
-/** The containers the drop zone and file picker accept. */
-const ACCEPT = "video/mp4,video/quicktime,video/webm,video/x-matroska,.mp4,.mov,.webm,.mkv";
 
 /**
  * The preview (docs/adr/0007): the canvas the output draws into, letterboxed
@@ -30,15 +28,14 @@ const ACCEPT = "video/mp4,video/quicktime,video/webm,video/x-matroska,.mp4,.mov,
  * @public
  */
 export function VideoStage(props: VideoStageProps): ReactNode {
-  const { engine, messages, filePolicy, setOutput } = useVideoEditor();
-  const { session, snapshot } = useVideoSession();
+  const { engine, messages, filePolicy, setOutput, insertFiles, cancelInsert } = useVideoEditor();
+  const { snapshot } = useVideoSession();
   const { output, snapshot: playback } = useVideoOutput();
   const frame = useVideoPlayhead();
   const frames = snapshot.plan ? planFrames(snapshot.plan) : 0;
   const surface = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [unavailable, setUnavailable] = useState(false);
-  const inserting = useRef<AbortController | null>(null);
 
   useEffect(() => {
     const container = surface.current;
@@ -111,21 +108,11 @@ export function VideoStage(props: VideoStageProps): ReactNode {
     );
   }, [paused, frame, frames, messages]);
 
-  const insert = (files: readonly File[]) => {
-    const controller = new AbortController();
-    inserting.current = controller;
-    void (async () => {
-      for (const file of files) {
-        if (controller.signal.aborted) return;
-        // A failure is in the session's snapshot, which the stage shows.
-        await session.insert(file, { signal: controller.signal }).catch(() => {});
-      }
-    })();
-  };
-
   const empty = snapshot.plan === null || frames === 0;
   return (
-    <div className={["hm-video-stage", props.className].filter(Boolean).join(" ")}>
+    // Focusable by a click, not by Tab: after a click on the preview, focus is
+    // in the editor on no control, so Space plays and the arrows step.
+    <div className={["hm-video-stage", props.className].filter(Boolean).join(" ")} tabIndex={-1}>
       <div className="hm-video-stage-surface" ref={surface} data-hm-empty={empty || undefined} />
       {unavailable ? (
         <p className="hm-video-stage-note">{messages.t("stage.unavailable")}</p>
@@ -135,14 +122,14 @@ export function VideoStage(props: VideoStageProps): ReactNode {
           className="hm-video-stage-drop"
           accept={ACCEPT}
           multiple
-          onFiles={insert}
+          onFiles={insertFiles}
           hint={messages.t("stage.empty")}
         />
       ) : null}
       {snapshot.inserting > 0 ? (
         <div className="hm-video-stage-progress">
           <ProgressBar label={messages.t("insert.progress", { count: snapshot.inserting })} />
-          <Button onClick={() => inserting.current?.abort()}>{messages.t("insert.cancel")}</Button>
+          <Button onClick={cancelInsert}>{messages.t("insert.cancel")}</Button>
         </div>
       ) : null}
       {snapshot.error ? (

@@ -1,8 +1,9 @@
-import { createMessages } from "@hussmartinez/sdk-core";
+import { createMessages, sdkCoreMessages } from "@hussmartinez/sdk-core";
+import { uiMessages } from "@hussmartinez/ui";
 import { describe, expect, it } from "vitest";
 import { VideoError, type VideoErrorCode } from "../core/errors/video-error.js";
 import { videoLimitDefinitions, videoLimits } from "../core/errors/video-limits.js";
-import { videoMessages } from "./en.js";
+import { videoMessages, videoOwnMessages } from "./en.js";
 
 // Listing every code here makes the type checker fail when a code is added
 // to VideoErrorCode without being listed, and the test fail when its text is
@@ -52,6 +53,12 @@ function violation(run: () => unknown): unknown {
 }
 
 describe("videoMessages", () => {
+  it("takes none of sdk-core's or ui's keys, so neither can change its text, nor it theirs (sdk-core ADR 0046)", () => {
+    const own = Object.keys(videoOwnMessages);
+    expect(own.filter((key) => key in sdkCoreMessages)).toEqual([]);
+    expect(own.filter((key) => key in uiMessages)).toEqual([]);
+  });
+
   it("has text for every VideoError code and every limit's warning", () => {
     for (const code of Object.keys(ALL_CODES)) {
       expect(videoMessages, code).toHaveProperty(`errors.${code}`);

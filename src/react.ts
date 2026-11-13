@@ -30,5 +30,7 @@ export type { VideoStageProps } from "./react/VideoStage.js";
 export { VideoStage } from "./react/VideoStage.js";
 export type { VideoTimelineProps } from "./react/VideoTimeline.js";
 export { VideoTimeline } from "./react/VideoTimeline.js";
+export type { VideoToolbarProps } from "./react/VideoToolbar.js";
+export { VideoToolbar } from "./react/VideoToolbar.js";
 export type { VideoTransportProps } from "./react/VideoTransport.js";
 export { VideoTransport } from "./react/VideoTransport.js";

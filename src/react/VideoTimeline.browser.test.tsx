@@ -205,11 +205,12 @@ describe("the timeline", () => {
     const { view } = await editorWith(2);
     const track = view.querySelector(".hm-video-timeline-track") as HTMLElement;
     const fitted = track.getBoundingClientRect().width;
-    expect(button(view, "Zoom out").disabled).toBe(true);
-    expect(button(view, "Fit the whole video").disabled).toBe(true);
+    // Zoom is the editor's tools now, kept focusable while they can't run.
+    expect(button(view, "Zoom out").getAttribute("aria-disabled")).toBe("true");
+    expect(button(view, "Fit the whole video").getAttribute("aria-disabled")).toBe("true");
     await userEvent.click(button(view, "Zoom in"));
     expect(track.getBoundingClientRect().width).toBeCloseTo(fitted * 1.5, 0);
-    expect(button(view, "Zoom out").disabled).toBe(false);
+    expect(button(view, "Zoom out").getAttribute("aria-disabled")).toBeNull();
     await userEvent.click(button(view, "Fit the whole video"));
     expect(track.getBoundingClientRect().width).toBeCloseTo(fitted, 0);
   });

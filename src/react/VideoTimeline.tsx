@@ -1,6 +1,5 @@
 import { platformOf, snap } from "@hussmartinez/sdk-core";
 import {
-  FitIcon,
   IconButton,
   Slider,
   SnapIcon,
@@ -8,8 +7,6 @@ import {
   Toolbar,
   TrimEndIcon,
   TrimStartIcon,
-  ZoomInIcon,
-  ZoomOutIcon,
 } from "@hussmartinez/ui/react";
 import {
   type KeyboardEvent,
@@ -46,8 +43,6 @@ export interface VideoTimelineProps {
   readonly className?: string;
 }
 
-/** Each zoom step multiplies or divides the pixels per frame by this. */
-const ZOOM_STEP = 1.5;
 /** The closest zoom, in CSS pixels per output frame. */
 const MAX_PIXELS_PER_FRAME = 48;
 /** The snapping distance, in CSS pixels (docs/adr/0007). */
@@ -77,7 +72,8 @@ interface EdgeDrag {
 /**
  * The timeline (docs/adr/0007): the plan's clips on one track, as a
  * horizontal listbox with roving focus, the playhead as a slider, and
- * buttons to zoom, snap and trim.
+ * buttons to snap and trim. Its zoom is the editor's, which the zoom tools
+ * set.
  *
  * Every drag has a keyboard alternative, and a single-pointer one: a clip's
  * edges trim by dragging, by `[` and `]` to the playhead, by `Alt+[` and
@@ -89,7 +85,7 @@ interface EdgeDrag {
  * @public
  */
 export function VideoTimeline(props: VideoTimelineProps): ReactNode {
-  const { messages, locale, selectedClips, setSelectedClips } = useVideoEditor();
+  const { messages, locale, selectedClips, setSelectedClips, zoom, setMaxZoom } = useVideoEditor();
   const { session, snapshot } = useVideoSession();
   const { output, snapshot: playback } = useVideoOutput();
   const playhead = useVideoPlayhead();
@@ -104,17 +100,16 @@ export function VideoTimeline(props: VideoTimelineProps): ReactNode {
   const scroller = useRef<HTMLDivElement>(null);
   const options = useRef(new Map<string, HTMLDivElement>());
   const [width, setWidth] = useState(0);
-  // Pixels per frame, or null to fit the plan to the track.
-  const [zoom, setZoom] = useState<number | null>(null);
   const [snapping, setSnapping] = useState(true);
   const [focusKey, setFocusKey] = useState<string | null>(null);
   const [drag, setDrag] = useState<EdgeDrag | null>(null);
   const anchor = useRef<string | null>(null);
   const hadFocus = useRef(false);
-  const knownKeys = useRef<ReadonlySet<string> | null>(null);
+  const knownKeys = useRef<readonly string[] | null>(null);
 
   const fit = frames > 0 && width > 0 ? width / frames : 1;
-  const pixelsPerFrame = Math.max(fit, zoom ?? fit);
+  // The editor's zoom is a multiple of fitting the plan to the track.
+  const pixelsPerFrame = Math.min(Math.max(fit, fit * zoom), Math.max(fit, MAX_PIXELS_PER_FRAME));
   const tolerance = Math.round(SNAP_PIXELS / pixelsPerFrame);
   const focusIndex = Math.max(
     0,
@@ -152,25 +147,33 @@ export function VideoTimeline(props: VideoTimelineProps): ReactNode {
     };
   }, []);
 
-  // Keep the selection to clips that exist, and move focus to new clips
-  // (docs/adr/0007) when the editor had focus: an insert by the host on
-  // load doesn't take it.
+  // Keep the selection to clips that exist, and move focus (docs/adr/0007)
+  // when the editor had focus, so an insert by the host on load doesn't take
+  // it: to a new clip, such as a split's second part, an insert or a clip an
+  // undo restored; or, when the focused clip goes, to the one that took its
+  // place, or else the one before.
   useEffect(() => {
     const keys = new Set(clips.map((clip) => clip.key));
     const before = knownKeys.current;
-    knownKeys.current = keys;
+    knownKeys.current = clips.map((clip) => clip.key);
     if (selectedClips.some((key) => !keys.has(key))) {
       setSelectedClips(selectedClips.filter((key) => keys.has(key)));
     }
-    const added = before ? clips.find((clip) => !before.has(clip.key)) : undefined;
-    if (added && hadFocus.current) {
-      setFocusKey(added.key);
-      setSelectedClips([added.key]);
-      anchor.current = added.key;
+    const moveFocus = (key: string) => {
+      setFocusKey(key);
+      setSelectedClips([key]);
+      anchor.current = key;
       // The option renders with this commit; focus it after.
-      requestAnimationFrame(() => options.current.get(added.key)?.focus());
+      requestAnimationFrame(() => options.current.get(key)?.focus());
+    };
+    const added = before ? clips.find((clip) => !before.includes(clip.key)) : undefined;
+    if (added && hadFocus.current) {
+      moveFocus(added.key);
     } else if (focusKey !== null && !keys.has(focusKey)) {
-      setFocusKey(null);
+      const was = before?.indexOf(focusKey) ?? -1;
+      const next = clips[Math.min(Math.max(was, 0), clips.length - 1)];
+      if (next && hadFocus.current) moveFocus(next.key);
+      else setFocusKey(null);
     }
   }, [clips, selectedClips, setSelectedClips, focusKey]);
 
@@ -262,9 +265,10 @@ export function VideoTimeline(props: VideoTimelineProps): ReactNode {
         go(event.key === "Home" ? 0 : clips.length - 1);
         return;
       case " ":
-        if (!mod) return;
+        // A listbox's own key (sdk-core ADR 0030 leaves Space to options):
+        // it toggles the focused clip, and with Shift selects up to it.
         handled();
-        select(focused.key, { extend: false, toggle: true });
+        select(focused.key, { extend: event.shiftKey, toggle: !event.shiftKey });
         return;
       case "a":
       case "A":
@@ -357,18 +361,20 @@ export function VideoTimeline(props: VideoTimelineProps): ReactNode {
     handle.addEventListener("pointercancel", end);
   };
 
-  const zoomBy = (factor: number) => {
-    const next = pixelsPerFrame * factor;
-    setZoom(next <= fit ? null : Math.min(next, MAX_PIXELS_PER_FRAME));
-  };
+  // The zoom tools stop where a frame is MAX_PIXELS_PER_FRAME wide.
+  useEffect(() => {
+    setMaxZoom(Math.max(1, MAX_PIXELS_PER_FRAME / fit));
+  }, [fit, setMaxZoom]);
 
-  // After a zoom, bring the playhead back into view; not as it moves.
-  const playheadNow = useRef(playhead);
-  playheadNow.current = playhead;
+  // After a zoom, bring the playhead back into view; not as it moves, or as
+  // the width changes.
+  const view = useRef({ playhead, pixelsPerFrame });
+  view.current = { playhead, pixelsPerFrame };
   useLayoutEffect(() => {
     const element = scroller.current;
-    if (!element || zoom === null) return;
-    element.scrollLeft = Math.max(0, playheadNow.current * zoom - element.clientWidth / 2);
+    if (!element || zoom <= 1) return;
+    const { playhead: at, pixelsPerFrame: scale } = view.current;
+    element.scrollLeft = Math.max(0, at * scale - element.clientWidth / 2);
   }, [zoom]);
 
   const empty = !plan || frames === 0;
@@ -394,24 +400,6 @@ export function VideoTimeline(props: VideoTimelineProps): ReactNode {
           icon={<TrimEndIcon />}
           disabled={!endTrim}
           onClick={() => focused && trim(focused.key, endTrim)}
-        />
-        <IconButton
-          label={messages.t("timeline.zoomOut")}
-          icon={<ZoomOutIcon />}
-          disabled={empty || zoom === null}
-          onClick={() => zoomBy(1 / ZOOM_STEP)}
-        />
-        <IconButton
-          label={messages.t("timeline.zoomIn")}
-          icon={<ZoomInIcon />}
-          disabled={empty || pixelsPerFrame >= MAX_PIXELS_PER_FRAME}
-          onClick={() => zoomBy(ZOOM_STEP)}
-        />
-        <IconButton
-          label={messages.t("timeline.zoomFit")}
-          icon={<FitIcon />}
-          disabled={empty || zoom === null}
-          onClick={() => setZoom(null)}
         />
         <ToggleButton
           label={messages.t("timeline.snap")}
