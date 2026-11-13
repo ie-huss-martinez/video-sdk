@@ -60,7 +60,10 @@ function collector(counted: (size: number) => void) {
       if (from < to) part.set(data.subarray(from - position, to - position), from - start);
     }
   };
-  return { stream: new WritableStream<StreamTargetChunk>({ write }), blob: () => new Blob(parts) };
+  return {
+    stream: new WritableStream<StreamTargetChunk>({ write }),
+    blob: (type: string) => new Blob(parts, { type }),
+  };
 }
 
 /** The plan's metadata as tags: only the fields the user set, and no creation time (docs/adr/0005). */
@@ -111,7 +114,8 @@ export async function createExportWriter(
     addAudio: async (chunk, meta) => audio?.add(EncodedPacket.fromEncodedChunk(chunk), meta),
     async finish() {
       await output.finalize();
-      return target.blob();
+      // The container's media type, so a host can name and play the file.
+      return target.blob(candidate.container === "mp4" ? "video/mp4" : "video/webm");
     },
     async cancel() {
       if (output.state !== "finalized" && output.state !== "canceled") await output.cancel();

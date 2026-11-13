@@ -66,7 +66,8 @@ export interface VideoProcessor {
    * only the metadata the plan sets: nothing from a source is copied into it
    * (ADR 0005). A cancelled export returns no file. A file that grows past
    * the policy's `maxFileSize` fails with `FILE_TOO_LARGE`, as soon as it
-   * does, and returns no file either.
+   * does, and returns no file either. The file's `type` is its container's
+   * media type: `video/mp4` or `video/webm`.
    */
   export(job: VideoExportJob, options?: VideoExportOptions): Promise<Blob>;
   /** Releases the processor and its worker. Pending calls reject, and later calls throw. */

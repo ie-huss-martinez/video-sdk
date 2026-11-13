@@ -66,6 +66,7 @@ function contextFor(current: VideoToolState) {
     step: vi.fn(),
     setZoom: vi.fn(),
     chooseFiles: vi.fn(),
+    openExport: vi.fn(),
     newClipKey: () => "new",
   };
   return { context, executed };
@@ -132,6 +133,16 @@ describe("the video editor's tools", () => {
     const { context, executed } = contextFor(state({ playhead: 45 }));
     split.run(context);
     expect(executed).toEqual([{ type: "video.splitClip", key: "b", at: 45, newKey: "new" }]);
+  });
+
+  it("export through the dialog only, with no keys, once there's something to export", () => {
+    const exporter = tool("video.export");
+    expect(exporter.shortcuts).toBeUndefined();
+    expect(exporter.isEnabled?.(state({ plan: { ...plan, clips: [] } }))).toBe(false);
+    expect(exporter.isEnabled?.(state())).toBe(true);
+    const { context } = contextFor(state());
+    exporter.run(context);
+    expect(context.openExport).toHaveBeenCalled();
   });
 
   it("delete and mute the selection, and mute shows on when every selected clip is muted", () => {

@@ -114,6 +114,14 @@ Focus always lands somewhere meaningful, and never on `<body>`:
 - **After undo or redo,** on the clip the command changed, when there is one. An announcement says what was undone, such as "Undid split".
 - **Dialogs** are `ui`'s native `<dialog>` with `showModal()`, which returns focus to the opener on close.
 - **Export** runs in its dialog. The summary comes first, as the standards require for irreversible outputs; then progress, which can be cancelled; then a download button, which gets focus, and an announcement.
+
+  **As built** (the export dialog's first release): the `video.export` tool, in the toolbar's File group with no shortcut, opens it.
+  - **The summary:** the picture's size, the frame rate and length, the audio, and that nothing else from the source files is copied, only the metadata fields the plan sets.
+  - **The choices:** a file type (automatic, MP4 or WebM) and a quality (smaller file, balanced or higher quality). The output's own settings belong to the inspector.
+  - **While it runs:** a Stop button, and a status line when the file passes `maxFileSize`'s warning.
+  - **When it's done:** Download, focused, and Done. A host's `onExport` takes the file instead, and the dialog closes.
+  - **Closing:** whatever closes the dialog, or unmounts it, stops its export and resets it, and a result that arrives after that is dropped, as image-sdk's dialog does.
+  - **The processor:** the host's `processor`, or the editor's own, made from the SDK's engine on the first export. With a host's engine and no processor, the dialog says export isn't available.
 - **Announcements** go through `ui`'s Announcer, politely: inserts done or failed, export done, undo and redo, and audio blocked.
 
 ### The React API
