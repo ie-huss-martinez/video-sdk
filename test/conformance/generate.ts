@@ -32,6 +32,12 @@ const GENERATED_PLANS = 20;
 
 const NTSC: FrameRate = { num: 30_000, den: 1_001 };
 
+/**
+ * 🎬, outside the Basic Multilingual Plane: one code point, which the
+ * formats count, and two UTF-16 code units, which `String.length` counts.
+ */
+const ASTRAL = "\u{1F3AC}";
+
 /** The generators' sources, as a document records them. */
 const generatedSources = new Map(SOURCES.map((info) => [info.id, videoPlanDocumentSource(info)]));
 
@@ -304,6 +310,16 @@ export function commandCases(): ConformanceFile {
     [
       "refuses metadata over 1,000 characters",
       on({ type: "video.setMetadata", field: "title", value: "x".repeat(1_001) }),
+      refused("metadata-too-long"),
+    ],
+    [
+      "counts metadata in code points: takes 1,000 emoji outside the BMP",
+      on({ type: "video.setMetadata", field: "title", value: ASTRAL.repeat(1_000) }),
+      applied,
+    ],
+    [
+      "counts metadata in code points: refuses 1,001 emoji outside the BMP",
+      on({ type: "video.setMetadata", field: "title", value: ASTRAL.repeat(1_001) }),
       refused("metadata-too-long"),
     ],
     [
@@ -589,6 +605,16 @@ export function planCases(): ConformanceFile {
     [
       "refuses metadata over 1,000 characters",
       document({ metadata: { ...BASE.metadata, title: "x".repeat(1_001) } }),
+      invalidDocument("metadata-too-long"),
+    ],
+    [
+      "counts metadata in code points: reads 1,000 emoji outside the BMP",
+      document({ metadata: { ...BASE.metadata, comment: ASTRAL.repeat(1_000) } }),
+      applied,
+    ],
+    [
+      "counts metadata in code points: refuses 1,001 emoji outside the BMP",
+      document({ metadata: { ...BASE.metadata, comment: ASTRAL.repeat(1_001) } }),
       invalidDocument("metadata-too-long"),
     ],
     [

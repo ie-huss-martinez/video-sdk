@@ -120,11 +120,25 @@ export interface VideoPlan {
 }
 
 /**
- * The longest metadata value, in UTF-16 code units.
+ * The longest metadata value, in Unicode code points, as JSON Schema's
+ * `maxLength` and every port count it (sdk-core ADR 0045).
  *
  * @public
  */
 export const MAX_METADATA_LENGTH = 1_000;
+
+/**
+ * A string's length in Unicode code points: an emoji outside the Basic
+ * Multilingual Plane is one, where `String.length` counts two UTF-16 units.
+ * The portable formats count lengths this way (sdk-core ADR 0045).
+ *
+ * @internal
+ */
+export function codePointLength(text: string): number {
+  let length = 0;
+  for (const _ of text) length += 1;
+  return length;
+}
 
 /**
  * The quietest and loudest volume a clip can have, in decibels.

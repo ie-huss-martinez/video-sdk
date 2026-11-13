@@ -240,7 +240,7 @@
       "enum": ["title", "description", "artist", "date", "comment"]
     },
     "metadataValue": {
-      "description": "At most 1000 UTF-16 code units, which readers count; JSON Schema counts characters, so this bound is looser for text outside the Basic Multilingual Plane.",
+      "description": "At most 1000 Unicode code points, as maxLength counts them.",
       "type": "string",
       "maxLength": 1000
     },

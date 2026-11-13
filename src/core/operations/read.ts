@@ -1,5 +1,6 @@
 import {
   clipProblem,
+  codePointLength,
   MAX_METADATA_LENGTH,
   outputProblem,
   PROBLEM_MESSAGES,
@@ -45,7 +46,7 @@ import type { FrameRate } from "../model/time.js";
  * - `invalid-edge`: a fade's edge isn't `in` or `out`.
  * - `unknown-metadata-field`: the metadata has no such field.
  * - `metadata-too-long`: a metadata value is over {@link MAX_METADATA_LENGTH}
- *   UTF-16 code units.
+ *   Unicode code points.
  *
  * The session adds `no-plan`, for an edit before any file is in, and the
  * processor `empty-plan`, for an export of no clips.
@@ -256,8 +257,9 @@ export function isMetadataField(value: unknown): value is keyof VideoMetadata {
 /** A metadata value, checked. @internal */
 export function metadataValue(value: unknown, field: string): string {
   if (typeof value !== "string") malformed(`metadata.${field} is text`);
-  if (value.length > MAX_METADATA_LENGTH) {
-    reject("metadata-too-long", `metadata.${field} is over ${MAX_METADATA_LENGTH} characters`);
+  // Code points, as JSON Schema's maxLength and every port count them.
+  if (codePointLength(value) > MAX_METADATA_LENGTH) {
+    reject("metadata-too-long", `metadata.${field} is over ${MAX_METADATA_LENGTH} code points`);
   }
   return value;
 }
