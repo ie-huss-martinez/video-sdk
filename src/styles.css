@@ -12,7 +12,7 @@
   /* The editor (docs/adr/0007): a column of regions that fills its container. */
   .hm-video-editor {
     display: grid;
-    grid-template-rows: minmax(calc(var(--hm-space-12) * 2), 1fr) auto auto;
+    grid-template-rows: auto minmax(calc(var(--hm-space-12) * 2), 1fr) auto auto;
     gap: var(--hm-gap-normal);
     min-block-size: calc(var(--hm-space-12) * 3);
     container-type: inline-size;

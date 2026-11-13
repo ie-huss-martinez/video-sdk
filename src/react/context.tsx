@@ -1,8 +1,18 @@
-import { createMessages, type MessageOverrides, type Messages } from "@hussmartinez/sdk-core";
+import {
+  createMessages,
+  createShortcutRegistry,
+  createToolRegistry,
+  type MessageOverrides,
+  type Messages,
+  type ShortcutRegistry,
+  type ToolRegistry,
+} from "@hussmartinez/sdk-core";
 import { uiMessages } from "@hussmartinez/ui";
+import { usePlatform } from "@hussmartinez/ui/react";
 import {
   createContext,
   type ReactNode,
+  useCallback,
   useContext,
   useEffect,
   useMemo,
@@ -20,10 +30,18 @@ import {
   type VideoSessionEvent,
   type VideoSessionSnapshot,
 } from "../core/session/session.js";
+import { defaultVideoToolbar, type VideoTool, videoTools } from "../features/tools/tools.js";
 import { videoMessages } from "../messages/en.js";
 
-/** The editor's catalogue: the SDK's, and `ui`'s for its own components. */
-const editorCatalogue = { ...videoMessages, ...uiMessages };
+/**
+ * The editor's catalogue: the SDK's, and `ui`'s for its own components, as
+ * one catalogue for one `Messages` object (sdk-core ADR 0046). A host
+ * overrides `ui`'s text, such as `fileDropZone.choose`, through the same
+ * `messages` prop.
+ *
+ * @internal
+ */
+export const editorCatalogue = { ...videoMessages, ...uiMessages };
 
 /**
  * The text the editor uses: the SDK's catalogue with `ui`'s.
@@ -57,6 +75,17 @@ export interface VideoEditorProviderProps {
   readonly locale?: string;
   /** Anonymous usage events: never file names or contents. */
   readonly onEvent?: (event: VideoSessionEvent) => void;
+  /**
+   * Which tools are present, by id, in order, such as
+   * `["video.undo", "video.redo", "video.split"]`. All of them by default. A
+   * tool that's left out has no button and no shortcut.
+   */
+  readonly tools?: readonly string[];
+  /**
+   * The toolbar's groups, by tool id. By default: adding videos, history,
+   * editing and zoom, from the present tools.
+   */
+  readonly toolbar?: readonly (readonly string[])[];
   readonly children?: ReactNode;
 }
 
@@ -71,6 +100,31 @@ interface EditorContext {
   /** The clips selected in the timeline, by key, in plan order. */
   readonly selectedClips: readonly string[];
   readonly setSelectedClips: (keys: readonly string[]) => void;
+  /** The timeline's zoom, as a multiple of fitting the whole plan. */
+  readonly zoom: number;
+  readonly setZoom: (zoom: number) => void;
+  /** The closest zoom the timeline allows at its width. */
+  readonly maxZoom: number;
+  readonly setMaxZoom: (zoom: number) => void;
+  /** The present tools, and the toolbar's groups of them. */
+  readonly tools: ToolRegistry<VideoTool>;
+  /** The present tools' shortcuts, for this platform. */
+  readonly shortcuts: ShortcutRegistry;
+  /** Adds files at the end, one after another, until cancelled. */
+  readonly insertFiles: (files: readonly Blob[]) => void;
+  /** Cancels the inserts in progress. */
+  readonly cancelInsert: () => void;
+  /** Where the toolbar registers its file picker, for the insert tool. */
+  readonly fileChooser: { current: (() => void) | null };
+}
+
+/** The default toolbar, from the present tools only. */
+function toolbarOf(present: readonly string[] | undefined): readonly (readonly string[])[] {
+  if (!present) return defaultVideoToolbar;
+  const ids = new Set(present);
+  return defaultVideoToolbar
+    .map((group) => group.filter((id) => ids.has(id)))
+    .filter((group) => group.length > 0);
 }
 
 const Context = /* @__PURE__ */ createContext<EditorContext | null>(null);
@@ -97,7 +151,51 @@ export function VideoEditorProvider(props: VideoEditorProviderProps): ReactNode 
   );
   const [output, setOutput] = useState<VideoOutput | null>(null);
   const [selectedClips, setSelectedClips] = useState<readonly string[]>([]);
+  const [zoom, setZoom] = useState(1);
+  const [maxZoom, setMaxZoom] = useState(1);
+  const fileChooser = useRef<(() => void) | null>(null);
+  const inserts = useRef(new Set<AbortController>());
   const mounts = useRef(0);
+  const platform = usePlatform();
+
+  // The props are plain data, often written inline: compare them by value.
+  const toolsKey = JSON.stringify(props.tools ?? null);
+  const toolbarKey = JSON.stringify(props.toolbar ?? null);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: by value, through the keys
+  const tools = useMemo(
+    () =>
+      createToolRegistry(videoTools, {
+        ...(props.tools ? { tools: props.tools } : {}),
+        toolbar: props.toolbar ?? toolbarOf(props.tools),
+      }),
+    [toolsKey, toolbarKey],
+  );
+  const shortcuts = useMemo(
+    () => createShortcutRegistry({ platform, tools: tools.tools }),
+    [platform, tools],
+  );
+
+  const insertFiles = useCallback(
+    (files: readonly Blob[]) => {
+      const controller = new AbortController();
+      inserts.current.add(controller);
+      void (async () => {
+        try {
+          for (const file of files) {
+            if (controller.signal.aborted) return;
+            // A failure is in the session's snapshot, which the stage shows.
+            await session.insert(file, { signal: controller.signal }).catch(() => {});
+          }
+        } finally {
+          inserts.current.delete(controller);
+        }
+      })();
+    },
+    [session],
+  );
+  const cancelInsert = useCallback(() => {
+    for (const controller of inserts.current) controller.abort();
+  }, []);
 
   useEffect(() => {
     const mount = ++mounts.current;
@@ -113,12 +211,12 @@ export function VideoEditorProvider(props: VideoEditorProviderProps): ReactNode 
 
   const messages = useMemo(
     () =>
-      // A host's overrides are checked for unknown keys and placeholders
-      // when they're created; as a prop they're only known to be overrides.
+      // One object for the SDK's text and ui's (sdk-core ADR 0046). A host's
+      // overrides are checked for unknown keys and placeholders here.
       createMessages(editorCatalogue, {
         ...(locale ? { locale } : {}),
         ...(props.messages ? { overrides: props.messages } : {}),
-      } as never) as VideoEditorMessages,
+      }),
     [locale, props.messages],
   );
 
@@ -133,8 +231,31 @@ export function VideoEditorProvider(props: VideoEditorProviderProps): ReactNode 
       setOutput,
       selectedClips,
       setSelectedClips,
+      zoom,
+      setZoom,
+      maxZoom,
+      setMaxZoom,
+      tools,
+      shortcuts,
+      insertFiles,
+      cancelInsert,
+      fileChooser,
     }),
-    [engine, session, messages, locale, filePolicy, output, selectedClips],
+    [
+      engine,
+      session,
+      messages,
+      locale,
+      filePolicy,
+      output,
+      selectedClips,
+      zoom,
+      maxZoom,
+      tools,
+      shortcuts,
+      insertFiles,
+      cancelInsert,
+    ],
   );
   return <Context.Provider value={value}>{props.children}</Context.Provider>;
 }

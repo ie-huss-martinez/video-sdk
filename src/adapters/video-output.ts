@@ -414,7 +414,16 @@ export function createOutput(environment: OutputEnvironment): VideoOutput {
       // The context is created and resumed now, within the user's gesture:
       // after an await, some browsers no longer count it as one.
       const waking = player && plan && hasAudio() ? player.start() : undefined;
-      await begin(playhead >= length ? 0 : playhead, waking);
+      // `begin` may return before it awaits the start, if it's overtaken.
+      waking?.catch(() => {});
+      try {
+        await begin(playhead >= length ? 0 : playhead, waking);
+      } catch (error) {
+        // Destroyed meanwhile: the worker or the audio was torn down under
+        // the start. That's a cancelled play, not a failure.
+        if (destroyed) return;
+        throw error;
+      }
     },
     pause() {
       assertAlive();

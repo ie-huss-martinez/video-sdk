@@ -338,6 +338,24 @@ describe("the video output's page side", () => {
     expect(context.close).toHaveBeenCalled();
   });
 
+  it("treats a play that destroy overtakes while the audio starts as cancelled, with no rejection", async () => {
+    const context = fakeAudioContext(true);
+    const t = setup({ audio: context });
+    t.output.load(planOf(90));
+    // A first play loads the player, and finds the audio blocked.
+    await t.output.play();
+    t.output.pause();
+    // Then a resume that waits for a gesture that never comes: the second
+    // play is waiting on the audio's start when the output is destroyed.
+    context.resume = () => new Promise(() => {});
+    const playing = t.output.play();
+    await vi.advanceTimersByTimeAsync(10);
+    await t.output.destroy();
+    await vi.advanceTimersByTimeAsync(200);
+    await expect(playing).resolves.toBeUndefined();
+    expect(context.close).toHaveBeenCalled();
+  });
+
   it("takes the clock from the audio when it plays", async () => {
     const context = fakeAudioContext(false);
     const t = setup({ audio: context });

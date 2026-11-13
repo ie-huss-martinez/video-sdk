@@ -78,6 +78,8 @@ export interface VideoEditorProviderProps {
     readonly messages?: VideoEditorMessageOverrides;
     // Warning: (ae-forgotten-export) The symbol "VideoSessionEvent" needs to be exported by the entry point react.d.ts
     readonly onEvent?: (event: VideoSessionEvent) => void;
+    readonly toolbar?: readonly (readonly string[])[];
+    readonly tools?: readonly string[];
 }
 
 // @public
@@ -99,6 +101,15 @@ export interface VideoTimelineProps {
 }
 
 // @public
+export function VideoToolbar(props: VideoToolbarProps): ReactNode;
+
+// @public
+export interface VideoToolbarProps {
+    // (undocumented)
+    readonly className?: string;
+}
+
+// @public
 export function VideoTransport(props: VideoTransportProps): ReactNode;
 
 // @public
@@ -109,9 +120,9 @@ export interface VideoTransportProps {
 
 // Warnings were encountered during analysis:
 //
-// temp/types/react/context.d.ts:199:5 - (ae-forgotten-export) The symbol "VideoSession" needs to be exported by the entry point react.d.ts
-// temp/types/react/context.d.ts:200:5 - (ae-forgotten-export) The symbol "VideoSessionSnapshot" needs to be exported by the entry point react.d.ts
-// temp/types/react/context.d.ts:209:5 - (ae-forgotten-export) The symbol "VideoOutput" needs to be exported by the entry point react.d.ts
-// temp/types/react/context.d.ts:210:5 - (ae-forgotten-export) The symbol "VideoOutputSnapshot" needs to be exported by the entry point react.d.ts
+// temp/types/react/context.d.ts:256:5 - (ae-forgotten-export) The symbol "VideoSession" needs to be exported by the entry point react.d.ts
+// temp/types/react/context.d.ts:257:5 - (ae-forgotten-export) The symbol "VideoSessionSnapshot" needs to be exported by the entry point react.d.ts
+// temp/types/react/context.d.ts:266:5 - (ae-forgotten-export) The symbol "VideoOutput" needs to be exported by the entry point react.d.ts
+// temp/types/react/context.d.ts:267:5 - (ae-forgotten-export) The symbol "VideoOutputSnapshot" needs to be exported by the entry point react.d.ts
 
 ```

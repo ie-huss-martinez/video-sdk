@@ -55,7 +55,7 @@ Below a container width of 720 px the inspector moves under the timeline. Sizes 
 - **Snapping:** a dragged edge or the playhead snaps with `snap` to the clips' boundaries and the playhead. Its tolerance is in output frames, converted from a fixed distance of 8 CSS pixels at the current zoom: `Math.round(8 × framesPerPixel)`, where `framesPerPixel` is the visible length in frames divided by the timeline's width. So snapping feels the same at every zoom. `Alt` while dragging turns it off.
 - **They replace this SDK's own `clipOffsets` and `locateFrame`** in the UI. The core's are kept, as they're public, and later reimplemented over the helpers.
 
-- **The track is a `listbox`** of clips, horizontal, with `aria-multiselectable`. One tab stop, with roving focus: Left and Right move between clips, Home and End to the first and last, and the selection follows focus. Shift extends it from the last clip chosen; Mod moves focus without it, `Mod+Space` adds or removes the focused clip, and `Mod+A` selects every clip. A click selects, Shift-click extends and Mod-click toggles. In a right-to-left layout, Left and Right swap, as time runs leftward. Each clip's accessible name is its source's position and its range: "Clip 2 of 5, 0:04.00 to 0:09.20, muted".
+- **The track is a `listbox`** of clips, horizontal, with `aria-multiselectable`. One tab stop, with roving focus: Left and Right move between clips, Home and End to the first and last, and the selection follows focus. Shift extends it from the last clip chosen; Mod moves focus without it, `Space` (or `Mod+Space`) adds or removes the focused clip, `Shift+Space` selects up to it, and `Mod+A` selects every clip. Space is the listbox's own key here: sdk-core's registry counts an option as a control, whose Space it never takes. A click selects, Shift-click extends and Mod-click toggles. In a right-to-left layout, Left and Right swap, as time runs leftward. Each clip's accessible name is its source's position and its range: "Clip 2 of 5, 0:04.00 to 0:09.20, muted".
 - **The playhead is a `ui` Slider** over output frames, with `aria-valuetext` the time, so a screen reader reads "0:12.40" and not a frame number. Its arrow keys step one frame, and Page Up and Page Down one second, as the slider's own keys.
 - **Every drag has a keyboard alternative:**
 
@@ -70,11 +70,24 @@ Below a container width of 720 px the inspector moves under the timeline. Sizes 
 - **Zoom** is the family's `+`, `-` and `0`, without a modifier ([ADR 0030](https://github.com/ie-huss-martinez/sdk-core/blob/main/docs/adr/0030-tools-and-keyboard-shortcuts.md)), and `0` fits the plan to the track.
 - **Scrolling** follows the playhead while playing, and the focused clip otherwise.
 
-**As built** (the timeline's first release): the track, the playhead slider, the keys above, dragging an edge to trim, and the zoom and snap buttons. Zoom's `+`, `-` and `0` come with the shortcut registry, with the other tools. The waveform lane comes after it. An insert moves focus to the new clip only while focus is in the editor, or was lost from it, as when the drop zone goes: a host's insert on load doesn't take focus from the page.
+**As built** (the timeline's first release): the track, the playhead slider, the keys above, dragging an edge to trim, and the snap button. Zoom moved to the editor's tools, with `+`, `-` and `0`, and the timeline reads the editor's zoom: a multiple of fitting the plan, up to 48 px a frame. The waveform lane comes after it. An insert moves focus to the new clip only while focus is in the editor, or was lost from it, as when the drop zone goes: a host's insert on load doesn't take focus from the page.
 
 ### Tools and shortcuts
 
 Each feature is a folder under `src/features/` with its command, UI, styles, messages and tests, registered with `defineTool` ([ADR 0009](https://github.com/ie-huss-martinez/sdk-core/blob/main/docs/adr/0009-features-as-tools.md)). The shortcut registry is created with the platform, and the editor listens on its root.
+
+**As built** (the tools' first release):
+
+- **The tools are headless definitions in `src/features/tools/`,** one module for now, with their state and context types. A feature gets its own folder when it has UI or styles of its own, such as the inspector's panels. The React layer binds them in `useVideoTools`, and `VideoToolbar` renders them in `ui`'s Toolbar. The provider's `tools` and `toolbar` props choose them as plain data.
+- **The default toolbar** is adding videos, history, editing (split, delete, mute) and zoom. Playback's tools aren't on it, because the transport is their controls: its buttons carry the same tools' `aria-keyshortcuts` and tooltips, and their keys work everywhere in the editor. `video.export` comes with the export dialog.
+- **The platform comes from `ui`'s `usePlatform()`,** so the server render and hydration use the other platform's keys, and Apple devices switch right after.
+- **A tool that can't run stays in the toolbar's keyboard order,** with `aria-disabled`, through `ui`'s `focusableWhenDisabled`.
+- **The tooltip is the native `title`** for now, such as "Undo (Ctrl+Z)" or "Undo (⌘Z)", with the keys from sdk-core's `keys.*` messages. `ui` has no tooltip yet; when it has one, the toolbar uses it.
+- **The toolbar re-renders only when a tool's state changes,** not every frame while playing: the playhead is read on animation frames, and the tools' flags are compared before they're set.
+- **Space plays, and the arrows step, while focus is in the editor on no control.** On a clip, Space selects, and on a button it presses the button. The stage is focusable by a click, not by Tab, so a click on the preview and then Space plays.
+- **Undo and redo are announced** as "Undone" and "Redone". Naming what was undone, as "Undid split", needs the session to say which step it was, which it doesn't yet.
+- **Focus after an edit,** as above: a split's second part, the clip that took a deleted one's place or the one before, and a clip that an undo restored.
+- **One `Messages` object** for the SDK's text and `ui`'s, from the host's locale and `messages`, goes to `UiMessagesProvider` (sdk-core ADR 0046). A test checks that the SDK's own keys take none of `sdkCoreMessages`' or `uiMessages`'.
 
 | Tool | Keys | Notes |
 |---|---|---|
@@ -89,7 +102,7 @@ Each feature is a folder under `src/features/` with its command, UI, styles, mes
 | `video.insert` | none | `Mod+O` is the browser's own |
 | `video.export` | none | Irreversible, so a click, through the export dialog |
 
-**Single-key shortcuts,** `S`, `M`, `[`, `]`, `+`, `-` and `0`, and the unmodified `Home`, `End`, `Left` and `Right`, are active only while focus is inside the editor's root ([ADR 0030](https://github.com/ie-huss-martinez/sdk-core/blob/main/docs/adr/0030-tools-and-keyboard-shortcuts.md)). That's WCAG 2.1.4's condition for character-key shortcuts that are active only while their component has focus. They never fire in a text field, `select` or `contenteditable`, whose keys are the field's own. Each tool's button carries `aria-keyshortcuts` from the registry, and its tooltip shows the keys from the catalogue.
+**Single-key shortcuts,** `S`, `M`, `[`, `]`, `+`, `-` and `0`, and the unmodified `Home`, `End`, `Left` and `Right`, are active only while focus is inside the editor's root ([ADR 0030](https://github.com/ie-huss-martinez/sdk-core/blob/main/docs/adr/0030-tools-and-keyboard-shortcuts.md)). That's WCAG 2.1.4's condition for character-key shortcuts that are active only while their component has focus. They never fire in a text field, `select` or `contenteditable`, whose keys are the field's own. Each tool's button carries `aria-keyshortcuts` from the registry, and its tooltip shows the keys from the catalogue. Tools that a host leaves out with `tools` have no keys either.
 
 ### Focus
 
