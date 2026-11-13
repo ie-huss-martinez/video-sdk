@@ -260,6 +260,18 @@ describe("the page's audio", () => {
     }
   });
 
+  it("cancels a start that close overtakes, with ABORTED, never reading the closed context", async () => {
+    const t = setup({ blocked: true });
+    // A resume that waits for a gesture that never comes.
+    t.context.resume = () => new Promise(() => {});
+    const started = t.player.start();
+    started.catch(() => {});
+    await t.player.close();
+    await vi.advanceTimersByTimeAsync(100);
+    await expect(started).rejects.toMatchObject({ name: "VideoError", code: "ABORTED" });
+    await expect(t.player.start()).rejects.toMatchObject({ code: "ABORTED" });
+  });
+
   it("releases every node on stop, and closes the context", async () => {
     const t = setup();
     await t.player.start();

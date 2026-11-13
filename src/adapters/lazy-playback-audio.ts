@@ -1,4 +1,5 @@
 import type { PlaybackAnchor } from "../core/playback/timeline.js";
+import { audioClosedError } from "./audio-closed.js";
 import type { AudioEnvironment, PlaybackAudio } from "./playback-audio.js";
 
 /**
@@ -15,9 +16,13 @@ export function createLazyPlaybackAudio(environment: AudioEnvironment): Playback
   let player: PlaybackAudio | undefined;
   let hidden = false;
   let loading: Promise<PlaybackAudio> | undefined;
+  /** Set by `close`: nothing starts or loads after it. */
+  let closed = false;
 
   const load = () => {
     loading ??= import("./playback-audio.js").then(({ createPlaybackAudio }) => {
+      // Closed while loading: a player now would create a new context.
+      if (closed) throw audioClosedError();
       player = createPlaybackAudio({
         ...environment,
         createContext: () => context ?? environment.createContext(),
@@ -30,6 +35,7 @@ export function createLazyPlaybackAudio(environment: AudioEnvironment): Playback
 
   return {
     start() {
+      if (closed) return Promise.reject(audioClosedError());
       if (!context) {
         context = environment.createContext();
         // Within the gesture: some browsers no longer count it after an await.
@@ -38,6 +44,7 @@ export function createLazyPlaybackAudio(environment: AudioEnvironment): Playback
       return load().then((loaded) => loaded.start());
     },
     async play(fromTime: number, endTime: number): Promise<PlaybackAnchor | undefined> {
+      if (closed) return undefined;
       return (await load()).play(fromTime, endTime);
     },
     anchor: () => player?.anchor(),
@@ -53,6 +60,7 @@ export function createLazyPlaybackAudio(environment: AudioEnvironment): Playback
       player?.stop();
     },
     async close() {
+      closed = true;
       if (player) return player.close();
       await context?.close().catch(() => {});
       context = undefined;

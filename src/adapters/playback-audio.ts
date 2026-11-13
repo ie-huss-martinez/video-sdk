@@ -1,4 +1,5 @@
 import type { PlaybackAnchor } from "../core/playback/timeline.js";
+import { audioClosedError } from "./audio-closed.js";
 
 /** How long a window is: a quarter of a second (docs/adr/0005). */
 export const WINDOW_SECONDS = 0.25;
@@ -118,6 +119,8 @@ interface Scheduled {
  */
 export function createPlaybackAudio(environment: AudioEnvironment): PlaybackAudio {
   let context: AudioContext | undefined;
+  /** Set by `close`: the player never starts again. */
+  let closed = false;
   let hidden = false;
   /** Bumped by every stop, play and switch: windows fetched for an older one are dropped. */
   let generation = 0;
@@ -231,15 +234,19 @@ export function createPlaybackAudio(environment: AudioEnvironment): PlaybackAudi
 
   return {
     async start() {
+      if (closed) throw audioClosedError();
       context ??= environment.createContext();
-      if (context.state !== "running") {
+      const audio = context;
+      if (audio.state !== "running") {
         // `resume` stays pending until a gesture allows it in some browsers.
         await Promise.race([
-          context.resume().catch(() => {}),
+          audio.resume().catch(() => {}),
           new Promise((resolve) => setTimeout(resolve, 100)),
         ]);
       }
-      return context.state === "running" ? "running" : "blocked";
+      // Closed meanwhile, as when the output is destroyed: a cancelled start.
+      if (closed) throw audioClosedError();
+      return audio.state === "running" ? "running" : "blocked";
     },
     async play(fromTime, endTime) {
       halt();
@@ -317,6 +324,7 @@ export function createPlaybackAudio(environment: AudioEnvironment): PlaybackAudi
       halt();
     },
     async close() {
+      closed = true;
       halt();
       const audio = context;
       context = undefined;
