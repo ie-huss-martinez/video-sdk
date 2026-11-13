@@ -171,6 +171,28 @@ describe("the page's audio", () => {
     expect(anchor?.at).toBeCloseTo(1_700_000_000_000 + START_LEAD * 1_000 + 20, 6);
   });
 
+  it("doesn't believe an output timestamp in the future, as a young context's on WebKit is, so the clock doesn't jump", async () => {
+    const t = setup();
+    await t.player.start();
+    t.context.currentTime = 0.1;
+    t.setPerformanceNow(1_000);
+    // WebKit on Linux, 100 ms into a context's life: the stamp is 100 ms
+    // ahead of now, within the 200 ms that a stale one may be.
+    t.context.getOutputTimestamp = () => ({ contextTime: 0.097, performanceTime: 1_100 });
+    const first = await t.player.play(0, 10_000_000);
+    // A quarter of a second later, the stamp is 350 ms ahead and refused either way.
+    t.context.currentTime = 0.35;
+    t.setPerformanceNow(1_250);
+    t.context.getOutputTimestamp = () => ({ contextTime: 0.347, performanceTime: 1_600 });
+    const second = t.player.anchor();
+    // Both anchors read the context's own time, so they agree: the clock
+    // doesn't jump between them.
+    const mediaAt = (anchor: typeof first, wall: number) =>
+      (anchor?.media ?? 0) + (wall - (anchor?.at ?? 0)) * 1_000;
+    const wall = 1_700_000_000_000 + 2_000;
+    expect(Math.abs(mediaAt(first, wall) - mediaAt(second, wall))).toBeLessThan(1_000);
+  });
+
   it(`keeps ${LEAD_WINDOWS} windows ahead of the one playing, no more, and every sample once`, async () => {
     const t = setup();
     await t.player.start();
