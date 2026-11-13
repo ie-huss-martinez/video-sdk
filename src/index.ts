@@ -9,6 +9,7 @@
  * @packageDocumentation
  */
 
+export type { Applied, Reducer } from "@hussmartinez/sdk-core";
 export type { VideoEngineOptions } from "./adapters/video-engine.js";
 export { createVideoEngine } from "./adapters/video-engine.js";
 export type { VideoOutputOptions } from "./adapters/video-output.js";
@@ -94,7 +95,6 @@ export type {
   VideoCommand,
 } from "./core/operations/commands.js";
 export { createVideoReducer } from "./core/operations/commands.js";
-export type { Applied, Reducer } from "./core/operations/reducer-types.js";
 export type {
   VideoCallOptions,
   VideoProbeOptions,

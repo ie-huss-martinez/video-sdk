@@ -1,5 +1,5 @@
+import { createWindowReader } from "@hussmartinez/sdk-core";
 import type { VideoFilePolicy } from "../../core/errors/video-limits.js";
-import { createWindowReader } from "../bytes/window-reader.js";
 import { checkEbml, looksEbml } from "./ebml.js";
 import { refused } from "./errors.js";
 import { checkIsobmff, looksIsobmff } from "./isobmff.js";

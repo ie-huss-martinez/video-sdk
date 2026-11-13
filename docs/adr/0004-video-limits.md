@@ -2,7 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-11-12
-- **Amended:** 2026-11-12, when decoding was built: `maxDecodedSize` counts the decoders' alignment padding.
+- **Amended:** 2026-11-12, when decoding was built: `maxDecodedSize` counts the decoders' alignment padding. Then, on `sdk-core` 0.3.0: `maxBitrate` uses its `bitsPerSecond` unit.
 
 ## Context
 
@@ -39,7 +39,7 @@ Video's risks differ from the other SDKs':
 | `maxFramePixels` | `FRAME_TOO_LARGE` | pixels | 3840 × 2160 (8,294,400) | 2560 × 1440 (3,686,400) | Each video track's coded size, from the probe; every decoded frame; and the output, on `video.setOutput` |
 | `maxFrameRate` | `FRAME_RATE_TOO_HIGH` | hertz | 120 | none | Each video track, from the packet walk; and the output |
 | `maxDuration` | `DURATION_TOO_LONG` | milliseconds | 3 hours | 1 hour | Each file, from the packet walk; and the plan, on each command that lengthens it |
-| `maxBitrate` | `BITRATE_TOO_HIGH` | count (bits per second) | 200 Mbit/s | none | Each file's peak over one-second windows, from the packet walk |
+| `maxBitrate` | `BITRATE_TOO_HIGH` | bitsPerSecond | 200 Mbit/s | none | Each file's peak over one-second windows, from the packet walk |
 | `maxPacketSize` | `PACKET_TOO_LARGE` | bytes | 32 MB | none | Each packet, from the packet walk |
 | `maxTracks` | `TOO_MANY_TRACKS` | count | 16 | none | Each file's tracks of every kind, from mediabunny's track list |
 | `maxIndexSize` | `INDEX_TOO_LARGE` | bytes | 64 MB | none | Each file's index, from the front check, before mediabunny parses it ([ADR 0001](0001-video-engines.md)) |
@@ -51,7 +51,7 @@ Video's risks differ from the other SDKs':
 - **The same names and codes as audio-sdk** for duration, channels, sample rate, session size and clips. That's one name per concept, for hosts that use both.
 - **`maxFramePixels` is 4K by default.** Larger footage is uncommon in browsers. Each 8K frame is about 133 MB decoded, and phones' decoders and memory give out well before that. Hosts can raise it.
 - **`maxTracks` is 16, not 8.** Phones record timed-metadata tracks alongside video and audio, and a file the SDK uses only two tracks of shouldn't fail on a third and fourth that it ignores.
-- **`maxBitrate` uses the unit `count`.** `sdk-core`'s units are bytes, count, milliseconds, pixels and hertz ([ADR 0032](https://github.com/ie-huss-martinez/sdk-core/blob/main/docs/adr/0032-duration-format-and-hertz-unit.md)), and none is a rate of bits. The value is in bits per second. Messages format it with `Intl.NumberFormat`'s `megabit-per-second` unit. If `sdk-core` adds a rate unit, the limit adopts it.
+- **`maxBitrate` uses `bitsPerSecond`,** which `sdk-core` 0.3.0 added for data rates. Messages format it with `Intl.NumberFormat`'s `megabit-per-second` unit.
 - **`maxFrameRate` and `maxSampleRate` use `hertz`,** which is in `sdk-core` 0.3.0 ([ADR 0032](https://github.com/ie-huss-martinez/sdk-core/blob/main/docs/adr/0032-duration-format-and-hertz-unit.md)).
 - **These are starting values, measured before the first release** by opening, playing and exporting files at each limit in the end-to-end suites, on all three engines. WebKit stands in for mobile Safari. If any is too high for phones, its default goes down, and the change gets its own record.
 

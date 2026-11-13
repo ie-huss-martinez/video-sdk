@@ -91,7 +91,7 @@ export async function walkPackets(
                 limit,
                 maximum: policy.limits[limit].maximum,
                 actual: isVideo ? count / seconds : policy.limits.maxDuration.maximum + 1,
-                unit: isVideo ? "count" : "milliseconds",
+                unit: isVideo ? "hertz" : "milliseconds",
               },
             },
           );

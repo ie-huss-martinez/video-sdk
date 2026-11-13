@@ -36,9 +36,10 @@ export const videoMessages = /* @__PURE__ */ defineMessages({
     "This video's picture is larger than the editor can handle. Try a smaller version of it.",
   "errors.FRAME_RATE_TOO_HIGH":
     "This video has {actual, number} frames per second, which is more than the limit of {maximum, number}.",
-  // TODO(sdk-core 0.3.0): state the length and the limit with the duration
-  // format (sdk-core ADR 0032) once a fixed 0.3.0 is published.
-  "errors.DURATION_TOO_LONG": "This video is longer than the editor can open.",
+  // The limit, not the length: when the packet walk stops at its cap, it
+  // knows only that the video is longer.
+  "errors.DURATION_TOO_LONG":
+    "This video is longer than the {maximum, duration} the editor can open.",
   "errors.BITRATE_TOO_HIGH":
     "This video holds more data per second than the editor can play. Try a version with a lower quality setting.",
   "errors.PACKET_TOO_LARGE":

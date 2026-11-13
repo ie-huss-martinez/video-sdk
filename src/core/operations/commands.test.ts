@@ -1,3 +1,4 @@
+import { applyCommands } from "@hussmartinez/sdk-core";
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import { isVideoError } from "../errors/video-error.js";
@@ -17,7 +18,6 @@ import {
 import { rotateSize, type VideoRotation, type VideoSourceInfo } from "../model/source.js";
 import { type FrameRate, frameTime, isOnGrid } from "../model/time.js";
 import { createVideoReducer, type VideoCommand } from "./commands.js";
-import { applyCommands } from "./reducer-types.js";
 
 function source(
   id: string,
