@@ -2,7 +2,7 @@ import "@hussmartinez/ui/styles.css";
 import "../styles.css";
 import { platformOf } from "@hussmartinez/sdk-core";
 import axe from "axe-core";
-import { act, createRef } from "react";
+import { act, createRef, useEffect, useRef } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { userEvent } from "vitest/browser";
@@ -73,6 +73,20 @@ const announced = (view: HTMLElement) =>
   [...view.querySelectorAll(".hm-announcer [aria-live]")]
     .map((region) => region.textContent)
     .join(" ");
+
+/**
+ * A host app's own dialog, opened with showModal(), around the editor. React
+ * listens on the app's root, outside the dialog.
+ */
+function HostDialog({ file }: { readonly file: File }) {
+  const dialog = useRef<HTMLDialogElement>(null);
+  useEffect(() => dialog.current?.showModal(), []);
+  return (
+    <dialog ref={dialog} style={{ inlineSize: "640px", blockSize: "520px" }}>
+      <VideoEditor initialFiles={[file]} />
+    </dialog>
+  );
+}
 
 describe("the editor's tools", () => {
   it("shows the toolbar's groups, with each tool's keys, and no violations", async () => {
@@ -159,6 +173,24 @@ describe("the editor's tools", () => {
     await eventually(() => expect(track.getBoundingClientRect().width).toBeCloseTo(fitted, 0));
     await userEvent.keyboard("++0");
     await eventually(() => expect(track.getBoundingClientRect().width).toBeCloseTo(fitted, 0));
+  });
+
+  it("keeps its shortcuts inside a host's modal dialog", async () => {
+    const view = render({});
+    const file = await fixture();
+    act(() => root?.render(<HostDialog file={file} />));
+    await eventually(() => expect(clipsIn(view)).toHaveLength(1), 15_000);
+    expect(view.querySelector("dialog")?.matches(":modal")).toBe(true);
+    await eventually(() =>
+      expect(tool(view, "video.zoom-in")?.getAttribute("aria-disabled")).toBeNull(),
+    );
+    const track = view.querySelector(".hm-video-timeline-track") as HTMLElement;
+    const fitted = track.getBoundingClientRect().width;
+    clipsIn(view)[0]?.focus();
+    await userEvent.keyboard("+");
+    await eventually(() =>
+      expect(track.getBoundingClientRect().width).toBeCloseTo(fitted * 1.5, 0),
+    );
   });
 
   it("has only the tools a host chooses, with their keys and nothing else's", async () => {
