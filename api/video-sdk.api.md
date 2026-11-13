@@ -506,6 +506,24 @@ export type VideoMessageCatalogue = typeof videoMessages;
 
 // @public
 export const videoMessages: {
+    readonly "editor.label": "Video editor";
+    readonly "stage.label": "Video preview, frame {frame, number} of {frames, number}";
+    readonly "stage.empty": "Add a video to start editing.";
+    readonly "stage.unavailable": "The preview isn't available with this engine.";
+    readonly "insert.progress": {
+        readonly $plural: "count";
+    } & {
+        readonly one: "Adding a video";
+        readonly other: "Adding {count, number} videos";
+    };
+    readonly "insert.cancel": "Cancel";
+    readonly "transport.label": "Playback";
+    readonly "transport.play": "Play";
+    readonly "transport.pause": "Pause";
+    readonly "transport.previousFrame": "Previous frame";
+    readonly "transport.nextFrame": "Next frame";
+    readonly "transport.time": "{position} of {length}";
+    readonly "transport.audioBlocked": "Sound is off: press play to turn it on.";
     readonly "errors.INVALID_VIDEO": "This file isn't a valid video, or it's too damaged to open.";
     readonly "errors.UNSUPPORTED_FORMAT": "This video format isn't supported. Try converting the file to MP4 or WebM, then open it again.";
     readonly "errors.UNSUPPORTED_CODEC": "This browser can't play or save this kind of video. Try another browser, or convert the file to MP4.";

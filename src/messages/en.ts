@@ -6,7 +6,8 @@ import type { VideoLimitName } from "../core/errors/video-limits.js";
  * The video SDK's English message catalogue: sdk-core's messages, and text
  * for every {@link VideoErrorCode} and every limit's warning. Pass it to
  * `createMessages` from `@hussmartinez/sdk-core`, with the host's locale and
- * overrides. The editor's text joins it as the editor arrives.
+ * overrides. It also holds the editor's text; the React editor adds
+ * `uiMessages` from `@hussmartinez/ui` to it, for `ui`'s own components.
  *
  * Error text is looked up by code, with the error's `details` as
  * parameters, and never taken from `error.message` (ADR 0019).
@@ -22,6 +23,22 @@ import type { VideoLimitName } from "../core/errors/video-limits.js";
  */
 export const videoMessages = /* @__PURE__ */ defineMessages({
   ...sdkCoreMessages,
+  "editor.label": "Video editor",
+  "stage.label": "Video preview, frame {frame, number} of {frames, number}",
+  "stage.empty": "Add a video to start editing.",
+  "stage.unavailable": "The preview isn't available with this engine.",
+  "insert.progress": /* @__PURE__ */ plural("count", {
+    one: "Adding a video",
+    other: "Adding {count, number} videos",
+  }),
+  "insert.cancel": "Cancel",
+  "transport.label": "Playback",
+  "transport.play": "Play",
+  "transport.pause": "Pause",
+  "transport.previousFrame": "Previous frame",
+  "transport.nextFrame": "Next frame",
+  "transport.time": "{position} of {length}",
+  "transport.audioBlocked": "Sound is off: press play to turn it on.",
   "errors.INVALID_VIDEO": "This file isn't a valid video, or it's too damaged to open.",
   "errors.UNSUPPORTED_FORMAT":
     "This video format isn't supported. Try converting the file to MP4 or WebM, then open it again.",

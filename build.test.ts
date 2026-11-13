@@ -21,6 +21,34 @@ async function buildInMemory(): Promise<Array<Rolldown.OutputChunk | Rolldown.Ou
 
 const files = await buildInMemory();
 
+/**
+ * What an entry loads lazily: the `import()`s of the entry and of the shared
+ * chunks it loads. Code that two entries use goes in shared chunks, and its
+ * `import()`s go with it.
+ */
+function lazyImports(entry: string): string[] {
+  const seen = new Set<string>();
+  const lazy = new Set<string>();
+  const visit = (fileName: string) => {
+    if (seen.has(fileName)) return;
+    seen.add(fileName);
+    const found = chunk(fileName);
+    for (const name of found.dynamicImports) lazy.add(name);
+    for (const name of found.imports) if (name.startsWith("shared/")) visit(name);
+  };
+  visit(entry);
+  return [...lazy];
+}
+
+/** The code of an entry and the shared chunks it loads. */
+function entryCode(entry: string): string {
+  const parts = [chunk(entry).code];
+  for (const name of chunk(entry).imports) {
+    if (name.startsWith("shared/")) parts.push(chunk(name).code);
+  }
+  return parts.join("\n");
+}
+
 function chunk(fileName: string): Rolldown.OutputChunk {
   const found = files.find((file) => file.fileName === fileName);
   if (found?.type !== "chunk") {
@@ -139,20 +167,20 @@ describe("the media worker (docs/adr/0001, docs/adr/0002)", () => {
         entry,
       ).toEqual([]);
     }
-    expect(chunk("index.js").dynamicImports).toContain(chunkFile().fileName);
+    expect(lazyImports("index.js")).toContain(chunkFile().fileName);
   });
 
   it("loads the page's audio player lazily, never in the entries (docs/adr/0006)", () => {
-    const player = chunk("index.js").dynamicImports.filter((name) =>
+    const player = lazyImports("index.js").filter((name) =>
       name.startsWith("lazy/playback-audio-"),
     );
     expect(player).toHaveLength(1);
     // The window scheduler is in it, and only the small lazy wrapper is in the entry.
     expect(chunk(player[0] as string).code).toContain("src/adapters/playback-audio.ts");
-    expect(chunk("index.js").code).not.toContain("src/adapters/playback-audio.ts");
-    expect(chunk("index.js").code).toContain("src/adapters/lazy-playback-audio.ts");
+    expect(entryCode("index.js")).not.toContain("src/adapters/playback-audio.ts");
+    expect(entryCode("index.js")).toContain("src/adapters/lazy-playback-audio.ts");
     // The media worker, the audio player, the export runner and the export worker.
-    expect(chunk("index.js").dynamicImports).toHaveLength(4);
+    expect(lazyImports("index.js")).toHaveLength(4);
   });
 
   it("bundles mediabunny only into the worker, never into the entries", () => {
@@ -195,10 +223,10 @@ describe("the export worker (docs/adr/0002, docs/adr/0005)", () => {
 
   it("is inlined in its own lazy chunk, loaded with the export runner on the first export", () => {
     expect(exportChunk().code).toContain("hm-video-export");
-    const lazy = chunk("index.js").dynamicImports;
+    const lazy = lazyImports("index.js");
     expect(lazy).toContain(exportChunk().fileName);
     expect(lazy.filter((name) => name.startsWith("lazy/runner-"))).toHaveLength(1);
-    expect(chunk("index.js").code).not.toContain("src/adapters/export-worker/export-plan.ts");
+    expect(entryCode("index.js")).not.toContain("src/adapters/export-worker/export-plan.ts");
   });
 
   it("bundles mediabunny's muxers, with its licence notice, and can't make requests or start workers", () => {

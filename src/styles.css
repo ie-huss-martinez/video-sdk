@@ -7,3 +7,76 @@
  * host's unlayered CSS beats every hm layer without !important (ADR 0005).
  */
 @layer hm.tokens, hm.base, hm.components, hm.sdk;
+
+@layer hm.sdk {
+  /* The editor (docs/adr/0007): a column of regions that fills its container. */
+  .hm-video-editor {
+    display: grid;
+    grid-template-rows: minmax(calc(var(--hm-space-12) * 2), 1fr) auto;
+    gap: var(--hm-gap-normal);
+    min-block-size: calc(var(--hm-space-12) * 3);
+    container-type: inline-size;
+  }
+
+  .hm-video-stage {
+    position: relative;
+    display: grid;
+    min-block-size: 0;
+  }
+
+  .hm-video-stage-surface {
+    grid-area: 1 / 1;
+    min-block-size: 0;
+    overflow: hidden;
+  }
+
+  .hm-video-stage-surface[data-hm-empty] {
+    visibility: hidden;
+  }
+
+  /* The canvas's backing size follows the stage; its CSS size fills it. */
+  .hm-video-stage-canvas {
+    display: block;
+    inline-size: 100%;
+    block-size: 100%;
+  }
+
+  .hm-video-stage-drop,
+  .hm-video-stage-progress,
+  .hm-video-stage-note {
+    grid-area: 1 / 1;
+    place-self: center;
+  }
+
+  .hm-video-stage-progress {
+    display: grid;
+    gap: var(--hm-gap-tight);
+    justify-items: center;
+    min-inline-size: min(calc(var(--hm-space-12) * 3), 100%);
+  }
+
+  .hm-video-stage-error {
+    grid-area: 1 / 1;
+    align-self: end;
+    margin: 0;
+  }
+
+  .hm-video-transport {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--hm-gap-tight);
+    margin: 0;
+    padding: 0;
+    border: 0;
+    min-inline-size: 0;
+  }
+
+  .hm-video-transport-time {
+    font-variant-numeric: tabular-nums;
+  }
+
+  .hm-video-transport-note {
+    margin: 0;
+  }
+}

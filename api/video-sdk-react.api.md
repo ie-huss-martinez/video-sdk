@@ -4,4 +4,105 @@
 
 ```ts
 
+import { FilePolicy } from '@hussmartinez/sdk-core';
+import { FilePolicyOverrides } from '@hussmartinez/sdk-core';
+import { ForwardRefExoticComponent } from 'react';
+import { MessageOverrides } from '@hussmartinez/sdk-core';
+import { Messages } from '@hussmartinez/sdk-core';
+import { ReactNode } from 'react';
+import { RefAttributes } from 'react';
+import { SdkCoreErrorCode } from '@hussmartinez/sdk-core';
+import { SdkError } from '@hussmartinez/sdk-core';
+
+// @public
+export function useVideoOutput(): {
+    readonly output: VideoOutput | null;
+    readonly snapshot: VideoOutputSnapshot | null;
+};
+
+// @public
+export function useVideoPlayhead(): number;
+
+// @public
+export function useVideoSession(): {
+    readonly session: VideoSession;
+    readonly snapshot: VideoSessionSnapshot;
+};
+
+// @public
+export const VideoEditor: ForwardRefExoticComponent<VideoEditorProps & RefAttributes<VideoEditorHandle>>;
+
+// @public
+export interface VideoEditorHandle {
+    // Warning: (ae-forgotten-export) The symbol "VideoSourceInfo" needs to be exported by the entry point react.d.ts
+    insert(file: Blob, at?: number): Promise<VideoSourceInfo>;
+    // (undocumented)
+    pause(): void;
+    // (undocumented)
+    play(): Promise<void>;
+    // (undocumented)
+    redo(): boolean;
+    // (undocumented)
+    seek(frame: number): void;
+    // (undocumented)
+    undo(): boolean;
+}
+
+// Warning: (ae-forgotten-export) The symbol "editorCatalogue" needs to be exported by the entry point react.d.ts
+//
+// @public
+export type VideoEditorMessageOverrides = MessageOverrides<typeof editorCatalogue>;
+
+// @public
+export type VideoEditorMessages = Messages<typeof editorCatalogue>;
+
+// @public
+export interface VideoEditorProps extends Omit<VideoEditorProviderProps, "children"> {
+    readonly className?: string;
+    readonly initialFiles?: readonly Blob[];
+}
+
+// @public
+export function VideoEditorProvider(props: VideoEditorProviderProps): ReactNode;
+
+// @public
+export interface VideoEditorProviderProps {
+    readonly assetsUrl?: string | URL;
+    // (undocumented)
+    readonly children?: ReactNode;
+    // Warning: (ae-forgotten-export) The symbol "VideoEngine" needs to be exported by the entry point react.d.ts
+    readonly engine?: VideoEngine;
+    // Warning: (ae-forgotten-export) The symbol "VideoFilePolicyOverrides" needs to be exported by the entry point react.d.ts
+    readonly filePolicy?: VideoFilePolicyOverrides;
+    readonly locale?: string;
+    readonly messages?: VideoEditorMessageOverrides;
+    // Warning: (ae-forgotten-export) The symbol "VideoSessionEvent" needs to be exported by the entry point react.d.ts
+    readonly onEvent?: (event: VideoSessionEvent) => void;
+}
+
+// @public
+export function VideoStage(props: VideoStageProps): ReactNode;
+
+// @public
+export interface VideoStageProps {
+    // (undocumented)
+    readonly className?: string;
+}
+
+// @public
+export function VideoTransport(props: VideoTransportProps): ReactNode;
+
+// @public
+export interface VideoTransportProps {
+    // (undocumented)
+    readonly className?: string;
+}
+
+// Warnings were encountered during analysis:
+//
+// temp/types/react/context.d.ts:184:5 - (ae-forgotten-export) The symbol "VideoSession" needs to be exported by the entry point react.d.ts
+// temp/types/react/context.d.ts:185:5 - (ae-forgotten-export) The symbol "VideoSessionSnapshot" needs to be exported by the entry point react.d.ts
+// temp/types/react/context.d.ts:194:5 - (ae-forgotten-export) The symbol "VideoOutput" needs to be exported by the entry point react.d.ts
+// temp/types/react/context.d.ts:195:5 - (ae-forgotten-export) The symbol "VideoOutputSnapshot" needs to be exported by the entry point react.d.ts
+
 ```
