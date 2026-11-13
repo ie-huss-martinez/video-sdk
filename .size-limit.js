@@ -1,6 +1,6 @@
 /**
  * Size budgets per entry point (ADR 0015): the brotli size of each built
- * entry, with the shared chunks it loads. They measure the unminified files in
+ * entry, with the shared chunks it loads, and only those. They measure the unminified files in
  * dist, an upper bound: applications ship less, because their bundler
  * minifies and drops what they don't import.
  *
@@ -9,25 +9,42 @@
  * their own budgets when they're added. The feature pull requests revisit
  * these against real sizes.
  */
+import { existsSync, readFileSync } from "node:fs";
+import { dirname, join, normalize } from "node:path";
+
+/**
+ * The built files an entry loads up front: the entry, and every chunk it
+ * imports statically, directly or through other chunks. Counting only these,
+ * rather than every shared chunk, keeps one entry's budget from paying for
+ * code that only another entry loads, such as the React editor's in the
+ * core's. Chunks loaded with `import()`, in `lazy/`, have budgets of their
+ * own, as in ai-core.
+ */
+function loadedFiles(file) {
+  const seen = new Set();
+  const visit = (path) => {
+    if (seen.has(path) || !existsSync(path)) return;
+    seen.add(path);
+    const code = readFileSync(path, "utf8");
+    for (const [, specifier] of code.matchAll(/(?:from\s*|import\s+)"(\.{1,2}\/[^"]+\.js)"/g)) {
+      visit(normalize(join(dirname(path), specifier)));
+    }
+  };
+  visit(join("dist", file));
+  return [...seen];
+}
+
+const entry = (name, file, limit) => ({
+  name: `${name}, with the shared code it loads`,
+  path: loadedFiles(file),
+  brotli: true,
+  limit,
+});
+
 export default [
-  {
-    name: "Server-safe core (.), with the shared code it loads",
-    path: ["dist/index.js", "dist/shared/*.js"],
-    brotli: true,
-    limit: "15 kB",
-  },
-  {
-    name: "React entry (./react), with the shared code it loads",
-    path: ["dist/react.js", "dist/shared/*.js"],
-    brotli: true,
-    limit: "40 kB",
-  },
-  {
-    name: "Element entry (./element), with the shared code it loads",
-    path: ["dist/element.js", "dist/shared/*.js"],
-    brotli: true,
-    limit: "40 kB",
-  },
+  entry("Server-safe core (.)", "index.js", "15 kB"),
+  entry("React entry (./react)", "react.js", "40 kB"),
+  entry("Element entry (./element)", "element.js", "40 kB"),
   {
     name: "Stylesheet (./styles.css)",
     path: "dist/styles.css",
