@@ -1,3 +1,4 @@
+import type { Reducer } from "@hussmartinez/sdk-core";
 import { VideoError } from "../errors/video-error.js";
 import {
   clipEnd,
@@ -16,7 +17,6 @@ import {
 } from "../model/plan.js";
 import type { VideoSourceInfo } from "../model/source.js";
 import { type FrameRate, framesIn, frameTime, isWhole } from "../model/time.js";
-import type { Reducer } from "./reducer-types.js";
 
 /**
  * A clip and the index it has, or had, in the plan's clip list.

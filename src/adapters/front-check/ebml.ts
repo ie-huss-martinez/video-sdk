@@ -1,5 +1,5 @@
+import type { WindowReader } from "@hussmartinez/sdk-core";
 import type { VideoFilePolicy } from "../../core/errors/video-limits.js";
-import type { WindowReader } from "../bytes/window-reader.js";
 import { malformed, refused } from "./errors.js";
 import type { FrontCheck } from "./types.js";
 

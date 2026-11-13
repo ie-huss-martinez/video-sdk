@@ -1,27 +1,24 @@
-// TODO(sdk-core 0.3.0): replace with `createErrorHelpers` from
-// `@hussmartinez/sdk-core` (sdk-core ADR 0034) once 0.3.0 passes the
-// release-age policy, keeping these exported names.
-import { isSdkError } from "@hussmartinez/sdk-core";
+import { createErrorHelpers } from "@hussmartinez/sdk-core";
 import { VideoError } from "./video-error.js";
 
 /**
- * Makes any failure an `VideoError`, as every port promises: an `VideoError`
+ * The family's error helpers for `VideoError` (sdk-core ADR 0034): failures
+ * that aren't an `SdkError` become `UNKNOWN`.
+ */
+const helpers = /* @__PURE__ */ createErrorHelpers(VideoError, {
+  fallbackCode: "UNKNOWN",
+  fallbackMessage: "Video processing failed.",
+});
+
+/**
+ * Makes any failure a `VideoError`, as every port promises: a `VideoError`
  * as it is, another `SdkError` with its code, details and message, and
  * anything else as `UNKNOWN`. The original is kept as `cause`.
  *
  * @internal
  */
-export function asVideoError(reason: unknown, message = "Video processing failed."): VideoError {
-  if (reason instanceof VideoError) {
-    return reason;
-  }
-  if (isSdkError(reason)) {
-    return new VideoError(reason.code as never, reason.message, {
-      ...(reason.details === undefined ? {} : { details: reason.details }),
-      cause: reason,
-    });
-  }
-  return new VideoError("UNKNOWN", message, { cause: reason });
+export function asVideoError(reason: unknown, message?: string): VideoError {
+  return helpers.adapt(reason, message);
 }
 
 /**
@@ -33,16 +30,7 @@ export function asVideoError(reason: unknown, message = "Video processing failed
  * @internal
  */
 export function abortError(signal: AbortSignal): VideoError {
-  const { reason } = signal;
-  if (isSdkError(reason)) {
-    return asVideoError(reason);
-  }
-  const timedOut = (reason as { name?: unknown } | undefined)?.name === "TimeoutError";
-  return new VideoError(
-    timedOut ? "TIMEOUT" : "ABORTED",
-    timedOut ? "The operation timed out." : "The operation was cancelled.",
-    { cause: reason },
-  );
+  return helpers.abortError(signal);
 }
 
 /**
@@ -51,7 +39,5 @@ export function abortError(signal: AbortSignal): VideoError {
  * @internal
  */
 export function throwIfAborted(signal: AbortSignal | undefined): void {
-  if (signal?.aborted) {
-    throw abortError(signal);
-  }
+  helpers.throwIfAborted(signal);
 }

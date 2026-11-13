@@ -50,25 +50,19 @@ export const videoLimitDefinitions = {
     default: 3840 * 2160,
     warning: 2560 * 1440,
   },
-  // TODO(sdk-core 0.3.0): use the "hertz" unit (sdk-core ADR 0032) once a
-  // fixed 0.3.0 is published, as ADR 0004 records.
-  maxFrameRate: { code: "FRAME_RATE_TOO_HIGH", unit: "count", default: 120 },
+  maxFrameRate: { code: "FRAME_RATE_TOO_HIGH", unit: "hertz", default: 120 },
   maxDuration: {
     code: "DURATION_TOO_LONG",
     unit: "milliseconds",
     default: 3 * 60 * 60 * 1000,
     warning: 60 * 60 * 1000,
   },
-  // TODO(sdk-core): use a bits-per-second unit once sdk-core has one; the
-  // value is in bits per second (ADR 0004).
-  maxBitrate: { code: "BITRATE_TOO_HIGH", unit: "count", default: 200_000_000 },
+  maxBitrate: { code: "BITRATE_TOO_HIGH", unit: "bitsPerSecond", default: 200_000_000 },
   maxPacketSize: { code: "PACKET_TOO_LARGE", unit: "bytes", default: 32_000_000 },
   maxTracks: { code: "TOO_MANY_TRACKS", unit: "count", default: 16 },
   maxIndexSize: { code: "INDEX_TOO_LARGE", unit: "bytes", default: 64_000_000 },
   maxChannels: { code: "TOO_MANY_CHANNELS", unit: "count", default: 8 },
-  // TODO(sdk-core 0.3.0): use the "hertz" unit (sdk-core ADR 0032) once a
-  // fixed 0.3.0 is published, as ADR 0004 records.
-  maxSampleRate: { code: "SAMPLE_RATE_TOO_HIGH", unit: "count", default: 192_000 },
+  maxSampleRate: { code: "SAMPLE_RATE_TOO_HIGH", unit: "hertz", default: 192_000 },
   maxSessionSize: {
     code: "SESSION_TOO_LARGE",
     unit: "bytes",

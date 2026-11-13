@@ -81,6 +81,9 @@ describe("videoMessages", () => {
     expect(messages.error(violation(() => policy.check("maxSessionSize", 600_000_000)))).toBe(
       "The open videos' previews would use 600 MB of memory, which is over the 512 MB limit. Remove a video, and try again.",
     );
+    expect(messages.error(violation(() => policy.check("maxDuration", 4 * 60 * 60 * 1_000)))).toBe(
+      "This video is longer than the 3 hr the editor can open.",
+    );
     expect(messages.error(violation(() => policy.check("maxFramePixels", 16_384 ** 2)))).toBe(
       "This video's picture is larger than the editor can handle. Try a smaller version of it.",
     );

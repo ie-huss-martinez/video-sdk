@@ -4,22 +4,18 @@
 
 ```ts
 
+import { Applied } from '@hussmartinez/sdk-core';
 import { FilePolicy } from '@hussmartinez/sdk-core';
 import { FilePolicyOverrides } from '@hussmartinez/sdk-core';
 import { Limits } from '@hussmartinez/sdk-core';
+import { Reducer } from '@hussmartinez/sdk-core';
 import { SdkCoreErrorCode } from '@hussmartinez/sdk-core';
 import { SdkError } from '@hussmartinez/sdk-core';
 
 // @public
 export function addRotations(a: VideoRotation, b: VideoRotation): VideoRotation;
 
-// @public
-export interface Applied<S, C> {
-    // (undocumented)
-    readonly inverse: C;
-    // (undocumented)
-    readonly state: S;
-}
+export { Applied }
 
 // @public
 export interface AudioTrackProbe {
@@ -169,8 +165,7 @@ export function outputFromSource(source: VideoSourceInfo): VideoPlanOutput;
 // @public
 export function planFrames(plan: VideoPlan): number;
 
-// @public
-export type Reducer<S, C> = (state: S, command: C) => Applied<S, C>;
+export { Reducer }
 
 // @public
 export interface RemoveClipsCommand {
@@ -437,7 +432,7 @@ export const videoLimitDefinitions: {
     };
     readonly maxFrameRate: {
         readonly code: "FRAME_RATE_TOO_HIGH";
-        readonly unit: "count";
+        readonly unit: "hertz";
         readonly default: 120;
     };
     readonly maxDuration: {
@@ -448,7 +443,7 @@ export const videoLimitDefinitions: {
     };
     readonly maxBitrate: {
         readonly code: "BITRATE_TOO_HIGH";
-        readonly unit: "count";
+        readonly unit: "bitsPerSecond";
         readonly default: 200000000;
     };
     readonly maxPacketSize: {
@@ -473,7 +468,7 @@ export const videoLimitDefinitions: {
     };
     readonly maxSampleRate: {
         readonly code: "SAMPLE_RATE_TOO_HIGH";
-        readonly unit: "count";
+        readonly unit: "hertz";
         readonly default: 192000;
     };
     readonly maxSessionSize: {
@@ -519,7 +514,7 @@ export const videoMessages: {
     readonly "errors.BUSY": "A video is already being saved. Wait for it to finish, or cancel it.";
     readonly "errors.FRAME_TOO_LARGE": "This video's picture is larger than the editor can handle. Try a smaller version of it.";
     readonly "errors.FRAME_RATE_TOO_HIGH": "This video has {actual, number} frames per second, which is more than the limit of {maximum, number}.";
-    readonly "errors.DURATION_TOO_LONG": "This video is longer than the editor can open.";
+    readonly "errors.DURATION_TOO_LONG": "This video is longer than the {maximum, duration} the editor can open.";
     readonly "errors.BITRATE_TOO_HIGH": "This video holds more data per second than the editor can play. Try a version with a lower quality setting.";
     readonly "errors.PACKET_TOO_LARGE": "Part of this video is larger than the editor can read. Try converting the file, then open it again.";
     readonly "errors.TOO_MANY_TRACKS": "This file has {actual, number} tracks, which is over the {maximum, number}-track limit.";
@@ -572,6 +567,28 @@ export const videoMessages: {
     readonly "warnings.maxFiles": "Adding {actual} files at once may be slow.";
     readonly "warnings.maxDecodedSize": "This file is very large once opened and may be slow to process.";
     readonly "warnings.maxProcessingTime": "This is taking longer than usual.";
+    readonly "keys.control": "Ctrl";
+    readonly "keys.alt": "Alt";
+    readonly "keys.shift": "Shift";
+    readonly "keys.meta": "Meta";
+    readonly "keys.apple.control": "\u2303";
+    readonly "keys.apple.alt": "\u2325";
+    readonly "keys.apple.shift": "\u21E7";
+    readonly "keys.apple.meta": "\u2318";
+    readonly "keys.space": "Space";
+    readonly "keys.enter": "Enter";
+    readonly "keys.escape": "Esc";
+    readonly "keys.tab": "Tab";
+    readonly "keys.delete": "Delete";
+    readonly "keys.backspace": "Backspace";
+    readonly "keys.arrowUp": "\u2191";
+    readonly "keys.arrowDown": "\u2193";
+    readonly "keys.arrowLeft": "\u2190";
+    readonly "keys.arrowRight": "\u2192";
+    readonly "keys.home": "Home";
+    readonly "keys.end": "End";
+    readonly "keys.pageUp": "Page Up";
+    readonly "keys.pageDown": "Page Down";
 };
 
 // @public
