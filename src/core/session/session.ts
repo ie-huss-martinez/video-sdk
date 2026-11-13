@@ -140,6 +140,13 @@ export interface VideoSession {
   undo(): boolean;
   /** Redoes the last undone step. Returns whether there was one. */
   redo(): boolean;
+  /**
+   * A key for a new clip, such as a split's second part: one no clip has
+   * had in this session, in the plan or anywhere in its undo history, and
+   * one this method hasn't returned before. Commands carry their new keys
+   * (ADR 0003), so the reducer stays pure; this is where they come from.
+   */
+  newClipKey(): string;
   /** Sets or clears the selection, in timeline frames within the plan. */
   select(range: VideoTimelineRange | null): void;
   /** Closes every source the session opened. Later calls throw. */
@@ -212,6 +219,18 @@ export function createVideoSession(options: VideoSessionOptions): VideoSession {
     nextId += 1;
     return `${prefix}-${nextId}`;
   };
+  /**
+   * Every clip key the session has held, or handed out. Each plan in the
+   * undo history was the current plan once, so this covers the history too,
+   * and keys a host chose itself.
+   */
+  const usedKeys = new Set<string>();
+  const newClipKey = () => {
+    let key = fresh("clip");
+    while (usedKeys.has(key)) key = fresh("clip");
+    usedKeys.add(key);
+    return key;
+  };
 
   const snapshot = (): VideoSessionSnapshot => {
     const bounds = [...sources.values()]
@@ -231,7 +250,10 @@ export function createVideoSession(options: VideoSessionOptions): VideoSession {
     };
   };
   const store = createStore<VideoSessionSnapshot>(snapshot());
-  const publish = () => store.set(snapshot());
+  const publish = () => {
+    for (const clip of plan?.clips ?? []) usedKeys.add(clip.key);
+    store.set(snapshot());
+  };
   const emit = (event: VideoSessionEvent) => {
     try {
       options.onEvent?.(event);
@@ -340,7 +362,7 @@ export function createVideoSession(options: VideoSessionOptions): VideoSession {
           const from = offsets[index] ?? 0;
           return from < frame && frame < from + clipFrames(clip, rate);
         });
-        const key = () => fresh("clip");
+        const key = newClipKey;
         if (inside >= 0) {
           commands.push({
             type: "video.splitClip",
@@ -413,6 +435,11 @@ export function createVideoSession(options: VideoSessionOptions): VideoSession {
       } finally {
         publish();
       }
+    },
+
+    newClipKey() {
+      assertAlive();
+      return newClipKey();
     },
 
     undo: () => replay("undo"),

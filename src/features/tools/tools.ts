@@ -45,7 +45,7 @@ export interface VideoToolContext {
   setZoom(zoom: number): void;
   /** Opens the file picker to add videos at the end. */
   chooseFiles(): void;
-  /** A key for a new clip, unique in the plan and its history. */
+  /** A key for a new clip, from the session: unique in the plan and its history. */
   newClipKey(): string;
 }
 

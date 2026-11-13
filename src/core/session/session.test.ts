@@ -246,6 +246,33 @@ describe("the video session", () => {
     ]);
   });
 
+  it("gives new clip keys that no clip has had, in the plan or its history, nor a host's own", async () => {
+    const { session } = setup();
+    await session.insert(file());
+    const first = session.getSnapshot().plan?.clips[0]?.key as string;
+    // A split's second part, then undone: its key is still in the redo history.
+    const split = session.newClipKey();
+    session.execute({ type: "video.splitClip", key: first, at: 30, newKey: split });
+    session.undo();
+    // A host's own keys, in the session's style, ahead of its counter.
+    const taken = Array.from({ length: 6 }, (_, index) => `clip-${index + 1}`);
+    const host = taken.filter((key) => key !== first && key !== split);
+    const keys = new Set<string>([first, split]);
+    session.execute({ type: "video.splitClip", key: first, at: 10, newKey: host[0] as string });
+    session.execute({ type: "video.splitClip", key: first, at: 5, newKey: host[1] as string });
+    for (const key of host.slice(0, 2)) keys.add(key);
+    const fresh = [session.newClipKey(), session.newClipKey(), session.newClipKey()];
+    expect(new Set(fresh).size).toBe(3);
+    for (const key of fresh) expect(keys.has(key), key).toBe(false);
+    // Each is usable: undo and redo of edits that use them never collide.
+    session.execute({ type: "video.splitClip", key: first, at: 2, newKey: fresh[0] as string });
+    session.undo();
+    session.redo();
+    expect(session.getSnapshot().plan?.clips.map((clip) => clip.key)).toContain(fresh[0]);
+    await session.destroy();
+    expect(() => session.newClipKey()).toThrow();
+  });
+
   it("refuses an output over the limits", async () => {
     const { session } = setup();
     await session.insert(file());
