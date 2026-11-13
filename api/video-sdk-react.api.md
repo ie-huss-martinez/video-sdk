@@ -90,6 +90,15 @@ export interface VideoStageProps {
 }
 
 // @public
+export function VideoTimeline(props: VideoTimelineProps): ReactNode;
+
+// @public
+export interface VideoTimelineProps {
+    // (undocumented)
+    readonly className?: string;
+}
+
+// @public
 export function VideoTransport(props: VideoTransportProps): ReactNode;
 
 // @public
@@ -100,9 +109,9 @@ export interface VideoTransportProps {
 
 // Warnings were encountered during analysis:
 //
-// temp/types/react/context.d.ts:184:5 - (ae-forgotten-export) The symbol "VideoSession" needs to be exported by the entry point react.d.ts
-// temp/types/react/context.d.ts:185:5 - (ae-forgotten-export) The symbol "VideoSessionSnapshot" needs to be exported by the entry point react.d.ts
-// temp/types/react/context.d.ts:194:5 - (ae-forgotten-export) The symbol "VideoOutput" needs to be exported by the entry point react.d.ts
-// temp/types/react/context.d.ts:195:5 - (ae-forgotten-export) The symbol "VideoOutputSnapshot" needs to be exported by the entry point react.d.ts
+// temp/types/react/context.d.ts:199:5 - (ae-forgotten-export) The symbol "VideoSession" needs to be exported by the entry point react.d.ts
+// temp/types/react/context.d.ts:200:5 - (ae-forgotten-export) The symbol "VideoSessionSnapshot" needs to be exported by the entry point react.d.ts
+// temp/types/react/context.d.ts:209:5 - (ae-forgotten-export) The symbol "VideoOutput" needs to be exported by the entry point react.d.ts
+// temp/types/react/context.d.ts:210:5 - (ae-forgotten-export) The symbol "VideoOutputSnapshot" needs to be exported by the entry point react.d.ts
 
 ```

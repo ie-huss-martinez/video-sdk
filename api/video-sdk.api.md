@@ -524,6 +524,18 @@ export const videoMessages: {
     readonly "transport.nextFrame": "Next frame";
     readonly "transport.time": "{position} of {length}";
     readonly "transport.audioBlocked": "Sound is off: press play to turn it on.";
+    readonly "timeline.label": "Timeline";
+    readonly "timeline.tools": "Timeline tools";
+    readonly "timeline.clips": "Clips";
+    readonly "timeline.playhead": "Playhead";
+    readonly "timeline.clip": "Clip {index, number} of {count, number}, {start} to {end}";
+    readonly "timeline.clipMuted": "Clip {index, number} of {count, number}, {start} to {end}, muted";
+    readonly "timeline.trimStart": "Trim the clip's start to the playhead";
+    readonly "timeline.trimEnd": "Trim the clip's end to the playhead";
+    readonly "timeline.zoomIn": "Zoom in";
+    readonly "timeline.zoomOut": "Zoom out";
+    readonly "timeline.zoomFit": "Fit the whole video";
+    readonly "timeline.snap": "Snap to clip edges and the playhead";
     readonly "errors.INVALID_VIDEO": "This file isn't a valid video, or it's too damaged to open.";
     readonly "errors.UNSUPPORTED_FORMAT": "This video format isn't supported. Try converting the file to MP4 or WebM, then open it again.";
     readonly "errors.UNSUPPORTED_CODEC": "This browser can't play or save this kind of video. Try another browser, or convert the file to MP4.";

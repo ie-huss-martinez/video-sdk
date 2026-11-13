@@ -186,8 +186,8 @@ catalogs:
       specifier: ^0.4.0
       version: 0.4.0
     '@hussmartinez/ui':
-      specifier: ^0.3.0
-      version: 0.3.0
+      specifier: ^0.4.0
+      version: 0.4.0
     '@microsoft/api-extractor':
       specifier: ^7.60.1
       version: 7.60.1
@@ -264,7 +264,7 @@ importers:
         version: 0.4.0
       '@hussmartinez/ui':
         specifier: 'catalog:'
-        version: 0.3.0(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
+        version: 0.4.0(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
     devDependencies:
       '@arethetypeswrong/cli':
         specifier: 'catalog:'
@@ -710,8 +710,8 @@ packages:
   '@hussmartinez/sdk-core@0.4.0':
     resolution: {integrity: sha512-uZaSFaRwFZcEaJ+A80GGm7b0+ICxslAsyyKxu0dc1mxVr+V84FiCDVe4bSNIU8ooM5g+uglcv7lm4NFQlVi3sg==}
 
-  '@hussmartinez/ui@0.3.0':
-    resolution: {integrity: sha512-h2yd9dNMWlB2aa0aZJdq4cf2XtaFjtOmZ/KYACjwlyBYQrMfohWR1ywAVD/1UmlcOeQvEe/wIhStiJOfPDlAjA==}
+  '@hussmartinez/ui@0.4.0':
+    resolution: {integrity: sha512-OrEG/t6ddXrvpJ4a0iJu/q5z236mn5sX5HNQoH1Gp3t49dSudB6Ya7Ge2MJx64bgyij7rGgdOl4itYtdff3LGA==}
     peerDependencies:
       react: '>=18.3'
       react-dom: '>=18.3'
@@ -2631,7 +2631,7 @@ snapshots:
 
   '@hussmartinez/sdk-core@0.4.0': {}
 
-  '@hussmartinez/ui@0.3.0(react-dom@19.3.1(react@19.3.1))(react@19.3.1)':
+  '@hussmartinez/ui@0.4.0(react-dom@19.3.1(react@19.3.1))(react@19.3.1)':
     dependencies:
       '@hussmartinez/sdk-core': 0.3.0
     optionalDependencies:

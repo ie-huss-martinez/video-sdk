@@ -28,5 +28,7 @@ export type { VideoEditorHandle, VideoEditorProps } from "./react/VideoEditor.js
 export { VideoEditor } from "./react/VideoEditor.js";
 export type { VideoStageProps } from "./react/VideoStage.js";
 export { VideoStage } from "./react/VideoStage.js";
+export type { VideoTimelineProps } from "./react/VideoTimeline.js";
+export { VideoTimeline } from "./react/VideoTimeline.js";
 export type { VideoTransportProps } from "./react/VideoTransport.js";
 export { VideoTransport } from "./react/VideoTransport.js";
