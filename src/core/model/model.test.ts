@@ -211,13 +211,20 @@ describe("the timeline helpers from sdk-core (ADR 0042)", () => {
         expect(clipOffsets(plan)).toEqual(before.clipOffsets(plan));
         expect(clipStarts(plan)).toEqual(before.clipStarts(plan));
         const total = planFrames(plan);
-        for (const frame of [
+        // Every clip's boundary and the frames either side, where locating
+        // can go wrong, the plan's ends, and every seventh frame between:
+        // checking all of up to 7,200 frames per plan took over 5 seconds.
+        const boundaries = clipOffsets(plan).flatMap((at) => [at - 1, at, at + 1]);
+        const sample = Array.from({ length: Math.ceil(total / 7) }, (_, i) => i * 7);
+        for (const frame of new Set([
           -1,
           0.5,
+          total - 1,
           total,
           total + 1,
-          ...Array.from({ length: total }, (_, i) => i),
-        ]) {
+          ...boundaries,
+          ...sample,
+        ])) {
           expect(locateFrame(plan, frame)).toEqual(before.locateFrame(plan, frame));
         }
       }),
