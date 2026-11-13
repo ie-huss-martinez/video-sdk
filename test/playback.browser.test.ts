@@ -313,6 +313,14 @@ async function audioOutputExists(): Promise<boolean> {
   return running;
 }
 
+/**
+ * Milliseconds allowed on top of the one-frame tolerance for the test
+ * runner's own timing (docs/adr/0006): the flash's draw time and the
+ * tone's output timestamp are read by a busy browser in CI, a few hundred
+ * microseconds apart at best. Not part of the design tolerance.
+ */
+const RUNNER_JITTER = 2;
+
 /** When each tone starts on the timeline, in samples, from the windows scheduled. */
 function toneOnsets(
   windows: readonly ScheduledWindow[],
@@ -425,7 +433,7 @@ describe("audio as the clock", () => {
       expect(
         Math.abs(apart),
         `flash ${flash}: ${apart.toFixed(1)} ms from its tone`,
-      ).toBeLessThanOrEqual(1_000 / 30);
+      ).toBeLessThanOrEqual(1_000 / 30 + RUNNER_JITTER);
     }
     await noFramesOpen();
     expect(audioLedger.scheduled).toBe(0);
