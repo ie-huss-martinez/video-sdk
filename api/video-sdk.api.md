@@ -845,6 +845,7 @@ export interface VideoSession {
     // (undocumented)
     getSnapshot(): VideoSessionSnapshot;
     insert(file: Blob, options?: VideoInsertOptions): Promise<VideoSourceInfo>;
+    newClipKey(): string;
     redo(): boolean;
     select(range: VideoTimelineRange | null): void;
     subscribe(listener: () => void): () => void;

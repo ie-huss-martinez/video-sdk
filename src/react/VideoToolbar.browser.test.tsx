@@ -125,6 +125,8 @@ describe("the editor's tools", () => {
     await eventually(() => expect(names(view)).toHaveLength(2));
     await eventually(() => expect(document.activeElement).toBe(clipsIn(view)[1]));
     expect(names(view)[1]).toBe("Clip 2 of 2, 0:01.50 to 0:02.00");
+    // The second part's key comes from the session, as its own keys do.
+    expect(clipsIn(view)[1]?.dataset["hmKey"]).toMatch(/^clip-\d+$/);
     await userEvent.keyboard("m");
     await eventually(() => expect(names(view)[1]).toBe("Clip 2 of 2, 0:01.50 to 0:02.00, muted"));
     expect(tool(view, "video.mute")?.getAttribute("aria-pressed")).toBe("true");

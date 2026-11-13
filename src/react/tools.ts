@@ -24,13 +24,6 @@ export interface VideoTools {
   labelWithKeys(id: string): string;
 }
 
-/** A unique clip key for a split's second part: the session's keys are `clip-<n>`. */
-let splits = 0;
-const newClipKey = () => {
-  splits += 1;
-  return `split-${Date.now().toString(36)}-${splits}`;
-};
-
 /**
  * The editor's tools, bound to its session, output and view (docs/adr/0007).
  * The playhead is read on animation frames, but the flags are only replaced
@@ -163,6 +156,6 @@ function contextOf(
     step: (delta) => output?.step(delta),
     setZoom,
     chooseFiles: () => fileChooser.current?.(),
-    newClipKey,
+    newClipKey: () => session.newClipKey(),
   };
 }
