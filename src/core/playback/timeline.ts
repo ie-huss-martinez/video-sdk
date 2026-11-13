@@ -1,3 +1,4 @@
+import { sequenceOffsets } from "@hussmartinez/sdk-core";
 import { clipFrames, planFrames, type VideoPlan } from "../model/plan.js";
 import { frameTime } from "../model/time.js";
 
@@ -44,14 +45,12 @@ export function sameAnchor(a: PlaybackAnchor | null, b: PlaybackAnchor | null): 
  * @internal
  */
 export function clipStarts(plan: VideoPlan): readonly number[] {
-  const starts: number[] = [];
-  let frames = 0;
-  for (const clip of plan.clips) {
-    starts.push(frameTime(frames, plan.output.frameRate));
-    frames += clipFrames(clip, plan.output.frameRate);
-  }
-  starts.push(frameTime(frames, plan.output.frameRate));
-  return starts;
+  const rate = plan.output.frameRate;
+  // Boundaries in whole frames (sdk-core ADR 0042), each converted once, so
+  // no rounding builds up along the timeline.
+  return sequenceOffsets(plan.clips.map((clip) => clipFrames(clip, rate))).map((frames) =>
+    frameTime(frames, rate),
+  );
 }
 
 /**

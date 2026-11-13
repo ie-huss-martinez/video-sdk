@@ -1,9 +1,12 @@
+import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import { isVideoError } from "../errors/video-error.js";
 import { videoLimits } from "../errors/video-limits.js";
+import { clipStarts } from "../playback/timeline.js";
 import { dbToGain, gainAt } from "./envelope.js";
 import {
   clipEnd,
+  clipFrames,
   clipOffsets,
   createPlan,
   IDENTITY_TRANSFORM,
@@ -13,6 +16,7 @@ import {
   planFrames,
   snapFrameRate,
   type VideoClip,
+  type VideoPlan,
 } from "./plan.js";
 import { checkProbe, decodingBound } from "./probe-limits.js";
 import { addRotations, rotateSize, sourceInfo, type VideoProbe } from "./source.js";
@@ -141,6 +145,84 @@ describe("the plan's timeline", () => {
     });
     expect(locateFrame(plan, 30)).toBeUndefined();
     expect(locateFrame(plan, -1)).toBeUndefined();
+  });
+});
+
+describe("the timeline helpers from sdk-core (ADR 0042)", () => {
+  // The implementations before sdk-core's helpers replaced them, kept here to
+  // show that nothing changed.
+  const before = {
+    clipOffsets(plan: VideoPlan): number[] {
+      const offsets: number[] = [];
+      let at = 0;
+      for (const each of plan.clips) {
+        offsets.push(at);
+        at += clipFrames(each, plan.output.frameRate);
+      }
+      return offsets;
+    },
+    locateFrame(plan: VideoPlan, frame: number) {
+      if (!Number.isSafeInteger(frame) || frame < 0) return undefined;
+      const rate = plan.output.frameRate;
+      let at = 0;
+      for (const [index, each] of plan.clips.entries()) {
+        const frames = clipFrames(each, rate);
+        if (frame < at + frames) {
+          const within = frame - at;
+          return { index, frame: within, sourceTime: each.start + frameTime(within, rate) };
+        }
+        at += frames;
+      }
+      return undefined;
+    },
+    clipStarts(plan: VideoPlan): number[] {
+      const starts: number[] = [];
+      let frames = 0;
+      for (const each of plan.clips) {
+        starts.push(frameTime(frames, plan.output.frameRate));
+        frames += clipFrames(each, plan.output.frameRate);
+      }
+      starts.push(frameTime(frames, plan.output.frameRate));
+      return starts;
+    },
+  };
+
+  const rates = fc.constantFrom(
+    NTSC,
+    { num: 24, den: 1 },
+    { num: 25, den: 1 },
+    { num: 60_000, den: 1_001 },
+  );
+  const plans = fc
+    .tuple(
+      rates,
+      fc.array(fc.tuple(fc.integer({ min: 1, max: 600 }), fc.nat(10_000_000)), { maxLength: 12 }),
+    )
+    .map(([rate, lengths]) => ({
+      ...createPlan({ ...outputFromSource(sourceInfo("a", probe())), frameRate: rate }),
+      clips: lengths.map(([frames, start], index) =>
+        clip(`c${index}`, frames, { start, end: clipEnd(start, frames, rate) }),
+      ),
+    }));
+
+  it("gives the same offsets, locations and clip starts as before, for any plan", () => {
+    fc.assert(
+      fc.property(plans, (plan) => {
+        expect(clipOffsets(plan)).toEqual(before.clipOffsets(plan));
+        expect(clipStarts(plan)).toEqual(before.clipStarts(plan));
+        const total = planFrames(plan);
+        for (const frame of [
+          -1,
+          0.5,
+          total,
+          total + 1,
+          ...Array.from({ length: total }, (_, i) => i),
+        ]) {
+          expect(locateFrame(plan, frame)).toEqual(before.locateFrame(plan, frame));
+        }
+      }),
+      { numRuns: 200 },
+    );
   });
 });
 
