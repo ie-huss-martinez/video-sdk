@@ -428,7 +428,10 @@ describe("audio as the clock", () => {
         onset.window.at + (onset.sample - onset.window.from) / rate,
       );
       const drawnAt = drawn.find((record) => record.clock !== null && record.number === flash);
-      expect(drawnAt, `flash ${flash} drawn`).toBeDefined();
+      expect(
+        drawnAt,
+        `flash ${flash} drawn; ${output?.getSnapshot().droppedFrames} frames dropped`,
+      ).toBeDefined();
       const apart = (drawnAt?.wall as number) - heard;
       expect(
         Math.abs(apart),

@@ -7,8 +7,14 @@ export const LEAD_WINDOWS = 2;
 export const HIDDEN_LEAD_WINDOWS = 8;
 /** How far ahead playback starts once its first windows are ready, in seconds, so they're scheduled in time. */
 export const START_LEAD = 0.05;
-/** How far an output timestamp's performance time may be from now, in milliseconds, to be believed. */
+/** How far an output timestamp's performance time may be before now, in milliseconds, to be believed. */
 export const PLAUSIBLE_STAMP = 200;
+/**
+ * How far an output timestamp's performance time may be after now, in
+ * milliseconds, to be believed. It's when the device played `contextTime`,
+ * which can't be in the future: this allows only for rounding.
+ */
+export const FUTURE_STAMP = 5;
 /** How far ahead an edit takes over from the windows already scheduled, in seconds, so the new ones are ready by then. */
 export const SWITCH_LEAD = 0.2;
 
@@ -265,12 +271,16 @@ export function createPlaybackAudio(environment: AudioEnvironment): PlaybackAudi
       // the context's current time is what's being rendered, which is heard
       // the output latency later.
       // WebKit on Linux gives a performance time on another timeline, which
-      // runs about twice as fast: a stamp more than 200 ms from now isn't used.
+      // runs about twice as fast: it's ahead of now by the context's age. A
+      // stamp in the future, or more than 200 ms old, isn't used, so a young
+      // context's stamp can't set the clock up to 200 ms late, to jump at
+      // the next anchor (docs/adr/0006).
       const stamp = context.getOutputTimestamp?.();
-      const stamped =
-        Boolean(stamp?.contextTime) &&
-        stamp?.performanceTime !== undefined &&
-        Math.abs(environment.performanceNow() - stamp.performanceTime) <= PLAUSIBLE_STAMP;
+      const age =
+        stamp?.performanceTime === undefined
+          ? Number.NaN
+          : environment.performanceNow() - stamp.performanceTime;
+      const stamped = Boolean(stamp?.contextTime) && age >= -FUTURE_STAMP && age <= PLAUSIBLE_STAMP;
       const contextTime = stamped ? (stamp?.contextTime as number) : context.currentTime;
       const performanceTime = stamped
         ? (stamp?.performanceTime as number)
