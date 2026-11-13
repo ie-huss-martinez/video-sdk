@@ -7,3 +7,6 @@ declare module "*?worker&inline" {
   const InlineWorker: new (options?: { readonly name?: string }) => Worker;
   export default InlineWorker;
 }
+
+/** The package's version, replaced at build time (sdk-core ADR 0038). */
+declare const __VIDEO_SDK_VERSION__: string;

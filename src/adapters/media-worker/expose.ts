@@ -1,4 +1,5 @@
 import { type ExposeWorkerOptions, exposeWorker } from "@hussmartinez/sdk-core";
+import { PACKAGE_VERSION } from "../../version.js";
 import type { MediaWorkerContract } from "./contract.js";
 import { mediaWorkerHandlers } from "./handlers.js";
 
@@ -8,5 +9,8 @@ import { mediaWorkerHandlers } from "./handlers.js";
  * itself at once.
  */
 export function exposeMediaWorker(options?: ExposeWorkerOptions): void {
-  exposeWorker<MediaWorkerContract>(mediaWorkerHandlers(), options);
+  exposeWorker<MediaWorkerContract>(mediaWorkerHandlers(), {
+    ...options,
+    packageVersion: PACKAGE_VERSION,
+  });
 }

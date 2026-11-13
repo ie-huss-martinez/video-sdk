@@ -19,6 +19,7 @@ import type {
   VideoOutputSnapshot,
   VideoOutputState,
 } from "../core/ports/video-output.js";
+import { PACKAGE_VERSION } from "../version.js";
 import { createLazyPlaybackAudio } from "./lazy-playback-audio.js";
 import type { MediaWorkerContract, PlaybackSource } from "./media-worker/contract.js";
 import type { AudioEnvironment } from "./playback-audio.js";
@@ -132,6 +133,8 @@ export function createVideoOutput(options: VideoOutputOptions): VideoOutput {
         client = createWorkerClient<MediaWorkerContract>({
           createWorker: start,
           errorClasses: { VideoError },
+          packageVersion: PACKAGE_VERSION,
+          ...(internals.workerAsset === undefined ? {} : { workerAsset: internals.workerAsset }),
           // The worker holds the canvas: it lives as long as the output.
           idleTimeout: 0,
         });

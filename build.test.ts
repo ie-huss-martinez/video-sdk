@@ -215,6 +215,47 @@ describe("the export worker (docs/adr/0002, docs/adr/0005)", () => {
   });
 });
 
+describe("the self-hosted workers (sdk-core ADR 0038)", () => {
+  const asset = (fileName: string): string => {
+    const found = files.find((file) => file.fileName === fileName);
+    if (found?.type !== "asset") throw new Error(`${fileName} wasn't built`);
+    return typeof found.source === "string" ? found.source : new TextDecoder().decode(found.source);
+  };
+
+  it.each(["assets/video/media.worker.js", "assets/video/export.worker.js"])(
+    "writes %s: one minified file, announcing the package's version, with mediabunny's notice",
+    async (fileName) => {
+      const code = asset(fileName);
+      const { version } = JSON.parse(
+        await readFile(new URL("package.json", import.meta.url), "utf8"),
+      ) as { version: string };
+      // As a string literal, in whichever quotes the minifier chose.
+      expect(code).toMatch(new RegExp(`["'\`]${version.replaceAll(".", "\\.")}["'\`]`));
+      expect(code).toMatch(
+        /\/\*![\s\S]*?Vanilagy and contributors[\s\S]*?Mozilla Public[\s\S]*?\*\//,
+      );
+      // Minified: a self-hosted worker is served as it is.
+      expect(code.split("\n").length).toBeLessThan(code.length / 1_000);
+      expect(code).not.toMatch(/^import /m);
+      expect(code).not.toMatch(
+        /(?<![\w$.])fetch\s*\(|fetchFn|XMLHttpRequest|importScripts|WebSocket|WebTransport|EventSource/,
+      );
+      expect(code).not.toMatch(/new\s+Worker\s*\(|createObjectURL/);
+      expect(code).not.toMatch(CODE_GENERATION);
+      expect(code).not.toMatch(/sourceMappingURL=/);
+    },
+  );
+
+  it("writes no other assets", () => {
+    expect(
+      files
+        .filter((file) => file.type === "asset" && file.fileName.startsWith("assets/"))
+        .map((file) => file.fileName)
+        .sort(),
+    ).toEqual(["assets/video/export.worker.js", "assets/video/media.worker.js"]);
+  });
+});
+
 describe("mediabunny's licence (docs/adr/0001)", () => {
   it("keeps mediabunny's MPL-2.0 notice with its code in the worker", () => {
     expect(workerCode()).toMatch(

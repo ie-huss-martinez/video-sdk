@@ -1,4 +1,4 @@
-import type { WorkerLike } from "@hussmartinez/sdk-core";
+import { resolveAssetsBase, type WorkerLike } from "@hussmartinez/sdk-core";
 import { throwIfAborted } from "../core/errors/error-helpers.js";
 import { VideoError } from "../core/errors/video-error.js";
 import { type VideoFilePolicy, videoLimits } from "../core/errors/video-limits.js";
@@ -6,7 +6,7 @@ import type { VideoEngine } from "../core/ports/video-engine.js";
 import type { VideoProcessor } from "../core/ports/video-processor.js";
 import type { ExportRunner } from "./export-worker/runner.js";
 import type { PlaybackSource } from "./media-worker/contract.js";
-import { engineInternals } from "./video-engine.js";
+import { engineInternals, selfHostedWorker } from "./video-engine.js";
 
 /**
  * Options for {@link createVideoProcessor}.
@@ -23,7 +23,16 @@ export interface VideoProcessorOptions {
    * defaults of `videoLimits` when omitted.
    */
   readonly filePolicy?: VideoFilePolicy;
+  /**
+   * Where the application serves the package's `dist/assets/` directory, to
+   * start the export worker from `video/export.worker.js` under it rather
+   * than inlined (sdk-core ADR 0038), as for `createVideoEngine`.
+   */
+  readonly assetsUrl?: string | URL;
 }
+
+/** The self-hosted export worker, under `assetsUrl` (docs/adr/0002). */
+const EXPORT_WORKER_ASSET = "video/export.worker.js";
 
 /**
  * What the processor needs from its environment, replaceable in tests.
@@ -63,14 +72,20 @@ export function createVideoProcessor(options: VideoProcessorOptions): VideoProce
       "createVideoProcessor reads sources from an engine made by createVideoEngine.",
     );
   }
+  // Resolved now, so a mistake fails when the processor is created.
+  const base = options.assetsUrl === undefined ? undefined : resolveAssetsBase(options.assetsUrl);
   return createProcessor({
     source: internals.source,
     policy: options.filePolicy ?? videoLimits.resolve(),
     async loadRunner() {
-      const [{ createExportRunner }, { createInlineExportWorker }] = await Promise.all([
-        import("./export-worker/runner.js"),
-        import("./export-worker/export-inline-worker.js"),
-      ]);
+      const { createExportRunner } = await import("./export-worker/runner.js");
+      if (base) {
+        return createExportRunner(
+          selfHostedWorker(base, EXPORT_WORKER_ASSET, "hm-video-export"),
+          EXPORT_WORKER_ASSET,
+        );
+      }
+      const { createInlineExportWorker } = await import("./export-worker/export-inline-worker.js");
       return createExportRunner(createInlineExportWorker as () => WorkerLike);
     },
   });

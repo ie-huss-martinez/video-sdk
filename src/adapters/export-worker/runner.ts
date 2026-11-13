@@ -3,6 +3,7 @@ import { asVideoError } from "../../core/errors/error-helpers.js";
 import { VideoError } from "../../core/errors/video-error.js";
 import type { VideoFilePolicy } from "../../core/errors/video-limits.js";
 import type { VideoExportOptions } from "../../core/ports/video-processor.js";
+import { PACKAGE_VERSION } from "../../version.js";
 import type { ExportWorkerContract } from "./contract.js";
 import type { ExportRequest } from "./export-plan.js";
 
@@ -63,13 +64,18 @@ function stallSignal(policy: VideoFilePolicy, signal: AbortSignal | undefined) {
  *
  * @internal
  */
-export function createExportRunner(startWorker: () => WorkerLike): ExportRunner {
+export function createExportRunner(
+  startWorker: () => WorkerLike,
+  workerAsset?: string,
+): ExportRunner {
   let client: WorkerClient<ExportWorkerContract> | undefined;
   return {
     async run(request, policy, options) {
       client ??= createWorkerClient<ExportWorkerContract>({
         createWorker: startWorker,
         errorClasses: { VideoError },
+        packageVersion: PACKAGE_VERSION,
+        ...(workerAsset === undefined ? {} : { workerAsset }),
       });
       const stall = stallSignal(policy, options.signal);
       try {
