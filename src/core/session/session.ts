@@ -153,7 +153,7 @@ function referencedSources(commands: readonly VideoCommand[], into: Set<string>)
     if (command.type === "video.insertClips") command.clips.forEach(add);
     else if (command.type === "video.restoreClips")
       for (const entry of command.entries) add(entry.clip);
-    else if (command.type === "video.setOutput") command.clips?.forEach(add);
+    else if (command.type === "video.restoreOutput") command.clips.forEach(add);
   }
 }
 
@@ -329,7 +329,9 @@ export function createVideoSession(options: VideoSessionOptions): VideoSession {
         const total = planFrames(base);
         const at = insertOptions.at ?? total;
         if (!isWhole(at)) {
-          throw new VideoError("INVALID_COMMAND", "An insert position must be a whole frame.");
+          throw new VideoError("INVALID_COMMAND", "An insert position must be a whole frame.", {
+            details: { reason: "malformed-command" },
+          });
         }
         const frame = Math.min(at, total);
         const commands: VideoCommand[] = [];
@@ -394,6 +396,7 @@ export function createVideoSession(options: VideoSessionOptions): VideoSession {
           throw new VideoError(
             "INVALID_COMMAND",
             "There's nothing to edit before a file is inserted.",
+            { details: { reason: "no-plan" } },
           );
         }
         const result = attempt(plan, commands);
@@ -419,15 +422,21 @@ export function createVideoSession(options: VideoSessionOptions): VideoSession {
       assertAlive();
       if (range !== null) {
         const total = plan ? planFrames(plan) : 0;
-        if (
-          !isWhole(range.start) ||
-          !isWhole(range.end) ||
-          range.start >= range.end ||
-          range.end > total
-        ) {
+        const reason =
+          !isWhole(range.start) || !isWhole(range.end)
+            ? "malformed-command"
+            : range.start >= range.end
+              ? "empty-range"
+              : range.end > total
+                ? "frame-outside-plan"
+                : undefined;
+        if (reason !== undefined) {
           throw new VideoError(
             "INVALID_COMMAND",
             "A selection must be whole frames within the plan.",
+            {
+              details: { reason },
+            },
           );
         }
       }

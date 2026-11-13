@@ -42,7 +42,9 @@ const entry = (name, file, limit) => ({
 });
 
 export default [
-  entry("Server-safe core (.)", "index.js", "15 kB"),
+  // 20 kB since the portable plan format (sdk-core ADR 0045): its strict
+  // readers and document reader and writer took the core from 13.7 to 17.5 kB.
+  entry("Server-safe core (.)", "index.js", "20 kB"),
   entry("React entry (./react)", "react.js", "40 kB"),
   entry("Element entry (./element)", "element.js", "40 kB"),
   {

@@ -5,18 +5,34 @@ import {
   clipFrames,
   clipOffsets,
   clipProblem,
-  MAX_METADATA_LENGTH,
-  outputProblem,
+  PROBLEM_MESSAGES,
   planFrames,
   type VideoClip,
   type VideoFadeCurve,
   type VideoMetadata,
   type VideoPlan,
   type VideoPlanOutput,
+  type VideoSourceBounds,
   type VideoTransform,
 } from "../model/plan.js";
-import type { VideoSourceInfo } from "../model/source.js";
-import { type FrameRate, framesIn, frameTime, isWhole } from "../model/time.js";
+import { type FrameRate, framesIn, frameTime } from "../model/time.js";
+import {
+  checkClip,
+  Invalid,
+  isKey,
+  isMetadataField,
+  isRecord,
+  keyList,
+  malformed,
+  metadataValue,
+  onlyFields,
+  readClip,
+  readFade,
+  readOutput,
+  readTransform,
+  reject,
+  whole,
+} from "./read.js";
 
 /**
  * A clip and the index it has, or had, in the plan's clip list.
@@ -166,15 +182,26 @@ export interface SetTransformCommand {
  * Sets the output. Every clip keeps its start; when the frame rate changes,
  * its end moves to the nearest frame of the new grid that fits its source,
  * and its fades are shortened to fit. A clip too near its source's end for
- * even one new frame moves its start back by what it needs. `clips`, which
- * undo uses, puts clips back exactly as they were instead.
+ * even one new frame moves its start back by what it needs.
  *
  * @public
  */
 export interface SetOutputCommand {
   readonly type: "video.setOutput";
   readonly output: VideoPlanOutput;
-  readonly clips?: readonly VideoClip[];
+}
+
+/**
+ * Puts the output and every clip back exactly as they were: the inverse of
+ * {@link SetOutputCommand}. Like {@link RestoreClipsCommand}, it's undo's,
+ * and isn't part of the portable command format.
+ *
+ * @public
+ */
+export interface RestoreOutputCommand {
+  readonly type: "video.restoreOutput";
+  readonly output: VideoPlanOutput;
+  readonly clips: readonly VideoClip[];
 }
 
 /**
@@ -207,19 +234,70 @@ export type VideoCommand =
   | SetFadeCommand
   | SetTransformCommand
   | SetOutputCommand
+  | RestoreOutputCommand
   | SetMetadataCommand;
 
-const METADATA_FIELDS: ReadonlySet<string> = new Set([
-  "title",
-  "description",
-  "artist",
-  "date",
-  "comment",
-]);
+/**
+ * The fields each command may have. Anything else is refused as
+ * `malformed-command`, as the format's JSON Schema refuses it, so that the
+ * reducer accepts exactly what the schema does (sdk-core ADR 0045). A field
+ * whose value is `undefined` counts as absent.
+ */
+const COMMAND_FIELDS: Readonly<Record<VideoCommand["type"], readonly string[]>> = {
+  "video.insertClips": ["at", "clips"],
+  "video.removeClips": ["keys"],
+  "video.restoreClips": ["entries", "remove"],
+  "video.deleteRange": ["start", "end", "keys"],
+  "video.trimClip": ["key", "start", "end"],
+  "video.splitClip": ["key", "at", "newKey"],
+  "video.moveClips": ["keys", "to"],
+  "video.setVolume": ["keys", "volumeDb"],
+  "video.setMuted": ["keys", "muted"],
+  "video.setFade": ["key", "edge", "duration", "curve"],
+  "video.setTransform": ["keys", "transform"],
+  "video.setOutput": ["output"],
+  "video.restoreOutput": ["output", "clips"],
+  "video.setMetadata": ["field", "value"],
+};
+const ENTRY_FIELDS = ["index", "clip"];
 
-function invalid(message: string): VideoError {
-  return new VideoError("INVALID_COMMAND", message);
-}
+/** A valid clip, to check a change's values on before the clips it changes. */
+const SAMPLE_CLIP: VideoClip = {
+  key: "sample",
+  source: "sample",
+  start: 0,
+  end: 1_000_000,
+  volumeDb: 0,
+  muted: false,
+  fadeIn: { duration: 0, curve: "linear" },
+  fadeOut: { duration: 0, curve: "linear" },
+  transform: { rotation: 0, crop: null, fit: "contain" },
+};
+
+/** A command's fields before they're checked: every field any command has. */
+type RawCommand = {
+  readonly [Field in
+    | "type"
+    | "at"
+    | "clips"
+    | "keys"
+    | "entries"
+    | "remove"
+    | "start"
+    | "end"
+    | "key"
+    | "newKey"
+    | "to"
+    | "volumeDb"
+    | "muted"
+    | "edge"
+    | "duration"
+    | "curve"
+    | "transform"
+    | "output"
+    | "field"
+    | "value"]?: unknown;
+};
 
 /** The frames on the timeline where a clip starts or ends. */
 function boundaries(plan: VideoPlan): ReadonlySet<number> {
@@ -251,79 +329,104 @@ function entriesOf(plan: VideoPlan, keys: ReadonlySet<string>): VideoClipEntry[]
 /**
  * Creates the reducer for {@link VideoCommand}s: a pure function that
  * applies one command and returns the command that undoes it (ADR 0003,
- * ADR 0029). It needs each source's summary, to check ranges and crops.
+ * ADR 0029). It needs each source's bounds, to check ranges and crops.
  * Every clip in a plan it returns covers a whole number of output frames.
- * An invalid command throws `VideoError` with `INVALID_COMMAND`; the reducer
- * never silently corrects one.
+ *
+ * It reads commands strictly, as data that may have been stored or sent: an
+ * unknown field is refused, never dropped (sdk-core ADR 0045). An invalid
+ * command throws `VideoError` with `INVALID_COMMAND` and a
+ * {@link VideoCommandRejection} as `details.reason`; the reducer never
+ * silently corrects one.
  *
  * @public
  */
 export function createVideoReducer(
-  sourceInfo: (id: string) => VideoSourceInfo | undefined,
+  sourceInfo: (id: string) => VideoSourceBounds | undefined,
 ): Reducer<VideoPlan, VideoCommand> {
-  const checkClip = (clip: VideoClip, rate: FrameRate) => {
-    const problem = clipProblem(clip, rate, sourceInfo(clip.source));
-    if (problem !== undefined) throw invalid(problem);
+  const sources = (id: string) => sourceInfo(id);
+  const clipsOf = (value: unknown, rate: FrameRate) => {
+    if (!Array.isArray(value)) malformed("clips must be a list");
+    return value.map((clip) => readClip(clip, rate, sources));
   };
-  const checkKeys = (plan: VideoPlan, keys: readonly string[]) => {
+  /** The given keys as a set, failing on none, repeated or unknown ones. */
+  const checkKeys = (plan: VideoPlan, value: unknown, name = "keys") => {
+    const keys = keyList(value, name);
+    if (keys.length === 0) reject("no-clips", "It needs at least one clip.");
+    if (new Set(keys).size !== keys.length) reject("duplicate-key", "It names a clip twice.");
     const present = new Set(plan.clips.map((clip) => clip.key));
-    if (new Set(keys).size !== keys.length) throw invalid("A command names a clip twice.");
     for (const key of keys) {
-      if (!present.has(key)) throw invalid(`Unknown clip "${key}".`);
+      if (!present.has(key)) reject("unknown-clip", `Unknown clip "${key}".`);
     }
     return new Set(keys);
   };
-  const indexOf = (plan: VideoPlan, key: string) => {
+  const indexOf = (plan: VideoPlan, key: unknown) => {
+    if (!isKey(key)) malformed("key must be a non-empty string");
     const index = plan.clips.findIndex((clip) => clip.key === key);
-    if (index < 0) throw invalid(`Unknown clip "${key}".`);
+    if (index < 0) reject("unknown-clip", `Unknown clip "${key}".`);
     return index;
   };
-  const freshKey = (plan: VideoPlan, key: string) => {
-    if (typeof key !== "string" || key === "") throw invalid("A new clip needs a key.");
+  const freshKey = (plan: VideoPlan, key: unknown): string => {
+    if (!isKey(key)) malformed("A new clip's key must be a non-empty string.");
     if (plan.clips.some((clip) => clip.key === key)) {
-      throw invalid(`A clip with the key "${key}" already exists.`);
+      reject("key-taken", `A clip with the key "${key}" already exists.`);
     }
+    return key;
   };
 
   /** Replaces clips by key with new versions, inverting with their old ones. */
   const updateClips = (
     plan: VideoPlan,
-    keys: readonly string[],
+    keys: unknown,
     update: (clip: VideoClip) => VideoClip,
-  ) => {
-    const selected = checkKeys(plan, keys);
+  ): ReturnType<Reducer<VideoPlan, VideoCommand>> => {
     const rate = plan.output.frameRate;
+    // The new values' own problems first, before the keys, as a schema sees
+    // them: without a source, a valid change is only missing its source.
+    const shape = clipProblem(update(SAMPLE_CLIP), rate, undefined);
+    if (shape !== undefined && shape !== "unknown-source") {
+      reject(shape, PROBLEM_MESSAGES[shape]);
+    }
+    const selected = checkKeys(plan, keys);
     const clips = plan.clips.map((clip) => {
       if (!selected.has(clip.key)) return clip;
       const next = update(clip);
-      checkClip(next, rate);
+      checkClip(next, rate, sources);
       return next;
     });
     return {
       state: { ...plan, clips },
-      inverse: { type: "video.restoreClips", entries: entriesOf(plan, selected) } as const,
+      inverse: { type: "video.restoreClips", entries: entriesOf(plan, selected) },
     };
   };
 
-  const restore = (plan: VideoPlan, command: RestoreClipsCommand) => {
+  const restore = (plan: VideoPlan, command: RawCommand) => {
     const rate = plan.output.frameRate;
-    const remove = command.remove ?? [];
-    checkKeys(plan, remove);
+    const remove = command.remove === undefined ? [] : keyList(command.remove, "remove");
+    if (!Array.isArray(command.entries)) malformed("entries must be a list");
+    const entries = command.entries.map((entry: unknown) => {
+      if (!isRecord<VideoClipEntry>(entry)) malformed("an entry is an object");
+      onlyFields(entry, ENTRY_FIELDS, "an entry");
+      return { index: entry.index, clip: readClip(entry.clip, rate, sources) };
+    });
+    if (remove.length > 0) checkKeys(plan, remove, "remove");
     const present = new Set(plan.clips.map((clip) => clip.key));
-    const entryKeys = command.entries.map((entry) => entry.clip.key);
+    const entryKeys = entries.map((entry) => entry.clip.key);
     if (new Set([...entryKeys, ...remove]).size !== entryKeys.length + remove.length) {
-      throw invalid("A command names a clip twice.");
+      reject("duplicate-key", "It names a clip twice.");
     }
     const removed = new Set([...remove, ...entryKeys.filter((key) => present.has(key))]);
     const clips = plan.clips.filter((clip) => !removed.has(clip.key));
     let previous = -1;
-    for (const entry of command.entries) {
-      if (!isWhole(entry.index) || entry.index <= previous || entry.index > clips.length) {
-        throw invalid("Restored clips need ascending indexes within the plan.");
+    for (const entry of entries) {
+      const { index } = entry;
+      if (!Number.isSafeInteger(index) || (index as number) <= previous) {
+        reject("invalid-index", "Restored clips need ascending indexes within the plan.");
       }
-      checkClip(entry.clip, rate);
-      clips.splice(entry.index, 0, entry.clip);
-      previous = entry.index;
+      if ((index as number) > clips.length) {
+        reject("invalid-index", "Restored clips need ascending indexes within the plan.");
+      }
+      clips.splice(index as number, 0, entry.clip);
+      previous = index as number;
     }
     return {
       state: { ...plan, clips },
@@ -359,31 +462,40 @@ export function createVideoReducer(
   const keepStart = (clip: VideoClip, frames: number, rate: FrameRate): VideoClip =>
     fitFades({ ...clip, end: clipEnd(clip.start, frames, rate) });
 
-  return (plan, command): ReturnType<Reducer<VideoPlan, VideoCommand>> => {
+  const apply = (
+    plan: VideoPlan,
+    input: VideoCommand,
+  ): ReturnType<Reducer<VideoPlan, VideoCommand>> => {
+    if (!isRecord<VideoCommand>(input)) malformed("a command is an object");
+    const type = input.type;
+    const fields =
+      typeof type === "string" && Object.hasOwn(COMMAND_FIELDS, type)
+        ? COMMAND_FIELDS[type as VideoCommand["type"]]
+        : undefined;
+    if (!fields) reject("unknown-command", `Unknown command "${String(type)}".`);
+    onlyFields(input, ["type", ...fields], type as string);
+    const command = input as RawCommand;
     const rate = plan.output.frameRate;
-    switch (command.type) {
+    switch (type as VideoCommand["type"]) {
       case "video.insertClips": {
-        if (!boundaries(plan).has(command.at)) {
-          throw invalid("Clips can only be inserted where a clip starts or ends.");
+        const at = whole(command.at, "at");
+        const clips = clipsOf(command.clips, rate);
+        if (clips.length === 0) reject("no-clips", "Insert at least one clip.");
+        const keys = clips.map((clip) => clip.key);
+        if (new Set(keys).size !== keys.length) reject("duplicate-key", "It names a clip twice.");
+        for (const key of keys) freshKey(plan, key);
+        if (!boundaries(plan).has(at)) {
+          reject("not-a-boundary", "Clips can only be inserted where a clip starts or ends.");
         }
-        if (command.clips.length === 0) throw invalid("Insert at least one clip.");
-        const keys = command.clips.map((clip) => clip.key);
-        if (new Set(keys).size !== keys.length) throw invalid("A command names a clip twice.");
-        for (const clip of command.clips) {
-          freshKey(plan, clip.key);
-          checkClip(clip, rate);
-        }
-        const index = clipOffsets(plan).indexOf(command.at);
-        const at = index < 0 ? plan.clips.length : index;
-        const clips = [...plan.clips];
-        clips.splice(at, 0, ...command.clips);
+        const index = clipOffsets(plan).indexOf(at);
+        const next = [...plan.clips];
+        next.splice(index < 0 ? plan.clips.length : index, 0, ...clips);
         return {
-          state: { ...plan, clips },
+          state: { ...plan, clips: next },
           inverse: { type: "video.removeClips", keys },
         };
       }
       case "video.removeClips": {
-        if (command.keys.length === 0) throw invalid("Remove at least one clip.");
         const selected = checkKeys(plan, command.keys);
         return {
           state: { ...plan, clips: plan.clips.filter((clip) => !selected.has(clip.key)) },
@@ -394,10 +506,11 @@ export function createVideoReducer(
         return restore(plan, command);
       case "video.deleteRange": {
         const total = planFrames(plan);
-        const { start, end } = command;
-        if (!isWhole(start) || !isWhole(end) || start >= end || end > total) {
-          throw invalid("A range must be whole frames within the plan, at least one long.");
-        }
+        const start = whole(command.start, "start");
+        const end = whole(command.end, "end");
+        const keys = keyList(command.keys, "keys");
+        if (start >= end) reject("empty-range", "A range must be at least one frame long.");
+        if (end > total) reject("frame-outside-plan", "A range must be within the plan.");
         const offsets = clipOffsets(plan);
         const affected = new Set<string>();
         const clips: VideoClip[] = [];
@@ -412,11 +525,13 @@ export function createVideoReducer(
           }
           affected.add(clip.key);
           if (from < start && to > end) {
-            if (command.keys.length !== 1) {
-              throw invalid("Deleting inside a clip needs one key for its second half.");
+            if (keys.length !== 1) {
+              reject(
+                "new-key-required",
+                "Deleting inside a clip needs one key for its second half.",
+              );
             }
-            const newKey = command.keys[0] as string;
-            freshKey(plan, newKey);
+            const newKey = freshKey(plan, keys[0]);
             clips.push(
               fitFades({
                 ...clip,
@@ -437,10 +552,10 @@ export function createVideoReducer(
             clips.push(dropStart(clip, end - from, rate));
           }
         }
-        if (added === undefined && command.keys.length !== 0) {
-          throw invalid("Only a range inside one clip needs a key.");
+        if (added === undefined && keys.length !== 0) {
+          reject("unexpected-key", "Only a range inside one clip needs a key.");
         }
-        for (const clip of clips) checkClip(clip, rate);
+        for (const clip of clips) checkClip(clip, rate, sources);
         return {
           state: { ...plan, clips },
           inverse: {
@@ -451,13 +566,13 @@ export function createVideoReducer(
         };
       }
       case "video.trimClip": {
+        const start = whole(command.start, "start");
+        const end = whole(command.end, "end");
         const index = indexOf(plan, command.key);
         const clip = plan.clips[index] as VideoClip;
-        if (!isWhole(command.start) || !isWhole(command.end) || command.end <= command.start) {
-          throw invalid("A trim must be whole microseconds, at least one frame long.");
-        }
-        const next = fitFades({ ...clip, start: command.start, end: command.end });
-        checkClip(next, rate);
+        if (end <= start) reject("empty-range", "A trim must be at least one frame long.");
+        const next = fitFades({ ...clip, start, end });
+        checkClip(next, rate, sources);
         const clips = [...plan.clips];
         clips[index] = next;
         return {
@@ -466,38 +581,36 @@ export function createVideoReducer(
         };
       }
       case "video.splitClip": {
+        const at = whole(command.at, "at");
+        if (!isKey(command.newKey)) malformed("newKey must be a non-empty string");
         const index = indexOf(plan, command.key);
         const clip = plan.clips[index] as VideoClip;
-        freshKey(plan, command.newKey);
-        const within = command.at - (clipOffsets(plan)[index] ?? 0);
-        if (!isWhole(command.at) || within <= 0 || within >= clipFrames(clip, rate)) {
-          throw invalid("A clip can only be split at a frame strictly inside it.");
+        const newKey = freshKey(plan, command.newKey);
+        const within = at - (clipOffsets(plan)[index] ?? 0);
+        if (within <= 0 || within >= clipFrames(clip, rate)) {
+          reject("not-inside-clip", "A clip can only be split at a frame strictly inside it.");
         }
-        const parts = split(clip, within, command.newKey, rate);
-        for (const part of parts) checkClip(part, rate);
+        const parts = split(clip, within, newKey, rate);
+        for (const part of parts) checkClip(part, rate, sources);
         const clips = [...plan.clips];
         clips.splice(index, 1, ...parts);
         return {
           state: { ...plan, clips },
-          inverse: {
-            type: "video.restoreClips",
-            entries: [{ index, clip }],
-            remove: [command.newKey],
-          },
+          inverse: { type: "video.restoreClips", entries: [{ index, clip }], remove: [newKey] },
         };
       }
       case "video.moveClips": {
-        if (command.keys.length === 0) throw invalid("Move at least one clip.");
+        const to = whole(command.to, "to");
         const selected = checkKeys(plan, command.keys);
         const moving = plan.clips.filter((clip) => selected.has(clip.key));
         const rest: VideoPlan = {
           ...plan,
           clips: plan.clips.filter((clip) => !selected.has(clip.key)),
         };
-        if (!boundaries(rest).has(command.to)) {
-          throw invalid("Clips can only be moved to where a clip starts or ends.");
+        if (!boundaries(rest).has(to)) {
+          reject("not-a-boundary", "Clips can only be moved to where a clip starts or ends.");
         }
-        const index = clipOffsets(rest).indexOf(command.to);
+        const index = clipOffsets(rest).indexOf(to);
         const clips = [...rest.clips];
         clips.splice(index < 0 ? clips.length : index, 0, ...moving);
         return {
@@ -505,78 +618,89 @@ export function createVideoReducer(
           inverse: { type: "video.restoreClips", entries: entriesOf(plan, selected) },
         };
       }
-      case "video.setVolume":
-        return updateClips(plan, command.keys, (clip) => ({ ...clip, volumeDb: command.volumeDb }));
-      case "video.setMuted":
-        return updateClips(plan, command.keys, (clip) => ({ ...clip, muted: command.muted }));
-      case "video.setTransform":
-        return updateClips(plan, command.keys, (clip) => ({
-          ...clip,
-          transform: command.transform,
-        }));
+      case "video.setVolume": {
+        const volumeDb = command.volumeDb as number;
+        return updateClips(plan, command.keys, (clip) => ({ ...clip, volumeDb }));
+      }
+      case "video.setMuted": {
+        const muted = command.muted as boolean;
+        return updateClips(plan, command.keys, (clip) => ({ ...clip, muted }));
+      }
+      case "video.setTransform": {
+        const transform = readTransform(command.transform);
+        return updateClips(plan, command.keys, (clip) => ({ ...clip, transform }));
+      }
       case "video.setFade": {
         if (command.edge !== "in" && command.edge !== "out") {
-          throw invalid("A fade's edge is in or out.");
+          reject("invalid-edge", "A fade's edge is in or out.");
         }
+        const fade = readFade({ duration: command.duration, curve: command.curve }, "the fade");
         const field = command.edge === "in" ? "fadeIn" : "fadeOut";
-        return updateClips(plan, [command.key], (clip) => ({
-          ...clip,
-          [field]: { duration: command.duration, curve: command.curve },
-        }));
+        return updateClips(plan, [command.key], (clip) => ({ ...clip, [field]: fade }));
       }
       case "video.setOutput": {
-        const problem = outputProblem(command.output);
-        if (problem !== undefined) throw invalid(problem);
-        const next = command.output.frameRate;
-        let clips: readonly VideoClip[];
-        if (command.clips !== undefined) {
-          const before = plan.clips.map((clip) => clip.key);
-          const after = command.clips.map((clip) => clip.key);
-          if (before.length !== after.length || before.some((key, i) => key !== after[i])) {
-            throw invalid("Restored clips must be the plan's clips, in the same order.");
+        const output = readOutput(command.output);
+        const next = output.frameRate;
+        const clips = plan.clips.map((clip) => {
+          const source = sourceInfo(clip.source);
+          if (source === undefined) reject("unknown-source", `Unknown source "${clip.source}".`);
+          let start = clip.start;
+          let frames = Math.max(1, framesIn(clip.end - clip.start, next));
+          while (frames > 1 && clipEnd(start, frames, next) > source.duration) frames -= 1;
+          // Even one frame of the new grid would pass the source's end: move
+          // the start back so that it ends there. Only a source shorter than
+          // one frame can't fit, and the check below refuses it.
+          if (clipEnd(start, frames, next) > source.duration) {
+            start = Math.max(0, source.duration - frameTime(frames, next));
           }
-          clips = command.clips;
-        } else {
-          clips = plan.clips.map((clip) => {
-            const source = sourceInfo(clip.source);
-            if (source === undefined) throw invalid(`Unknown source "${clip.source}".`);
-            let start = clip.start;
-            let frames = Math.max(1, framesIn(clip.end - clip.start, next));
-            while (frames > 1 && clipEnd(start, frames, next) > source.duration) frames -= 1;
-            // Even one frame of the new grid would pass the source's end: move
-            // the start back so that it ends there. Only a source shorter than
-            // one frame can't fit, and the check below refuses it.
-            if (clipEnd(start, frames, next) > source.duration) {
-              start = Math.max(0, source.duration - frameTime(frames, next));
-            }
-            return fitFades({ ...clip, start, end: start + frameTime(frames, next) });
-          });
-        }
-        for (const clip of clips) checkClip(clip, next);
+          return fitFades({ ...clip, start, end: start + frameTime(frames, next) });
+        });
+        for (const clip of clips) checkClip(clip, next, sources);
         return {
-          state: { ...plan, output: command.output, clips },
-          inverse: { type: "video.setOutput", output: plan.output, clips: plan.clips },
+          state: { ...plan, output, clips },
+          inverse: { type: "video.restoreOutput", output: plan.output, clips: plan.clips },
         };
       }
-      case "video.setMetadata":
-        if (!METADATA_FIELDS.has(command.field)) {
-          throw invalid("Only title, description, artist, date and comment can be set.");
-        }
-        if (typeof command.value !== "string" || command.value.length > MAX_METADATA_LENGTH) {
-          throw invalid(
-            `A metadata value must be text of at most ${MAX_METADATA_LENGTH} characters.`,
-          );
+      case "video.restoreOutput": {
+        const output = readOutput(command.output);
+        const clips = clipsOf(command.clips, output.frameRate);
+        const before = plan.clips.map((clip) => clip.key);
+        const after = clips.map((clip) => clip.key);
+        if (before.length !== after.length || before.some((key, i) => key !== after[i])) {
+          reject("invalid-order", "Restored clips must be the plan's clips, in the same order.");
         }
         return {
-          state: { ...plan, metadata: { ...plan.metadata, [command.field]: command.value } },
-          inverse: {
-            type: "video.setMetadata",
-            field: command.field,
-            value: plan.metadata[command.field],
-          },
+          state: { ...plan, output, clips },
+          inverse: { type: "video.restoreOutput", output: plan.output, clips: plan.clips },
         };
-      default:
-        throw invalid(`Unknown command "${(command as { type?: unknown }).type}".`);
+      }
+      case "video.setMetadata": {
+        const { field } = command;
+        if (!isMetadataField(field)) {
+          reject(
+            "unknown-metadata-field",
+            "Only title, description, artist, date and comment can be set.",
+          );
+        }
+        const value = metadataValue(command.value, field);
+        return {
+          state: { ...plan, metadata: { ...plan.metadata, [field]: value } },
+          inverse: { type: "video.setMetadata", field, value: plan.metadata[field] },
+        };
+      }
+    }
+  };
+
+  return (plan, command) => {
+    try {
+      return apply(plan, command);
+    } catch (error) {
+      if (!(error instanceof Invalid)) throw error;
+      throw new VideoError("INVALID_COMMAND", error.message, {
+        details: { reason: error.reason },
+      });
     }
   };
 }
+
+export type { VideoCommandRejection } from "./read.js";

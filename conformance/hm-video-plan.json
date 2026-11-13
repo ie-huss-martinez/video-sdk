@@ -1,0 +1,7289 @@
+{
+  "format": "hm-conformance",
+  "version": 1,
+  "subject": "hm-video-plan",
+  "description": "Reading hm-video-plan documents (docs/formats/hm-video-plan.md): input is the document, and expected is the document as a reader writes it back, or the rejection.",
+  "cases": [
+    {
+      "name": "reads a plan",
+      "input": {
+        "format": "hm-video-plan",
+        "version": 1,
+        "output": {
+          "width": 640,
+          "height": 360,
+          "frameRate": {
+            "num": 30000,
+            "den": 1001
+          },
+          "sampleRate": 48000,
+          "channels": 2
+        },
+        "sources": {
+          "s1": {
+            "duration": 10000000,
+            "width": 1920,
+            "height": 1080,
+            "rotation": 0
+          },
+          "s2": {
+            "duration": 7300000,
+            "width": 1280,
+            "height": 720,
+            "rotation": 90
+          }
+        },
+        "clips": [
+          {
+            "key": "a",
+            "source": "s1",
+            "start": 0,
+            "end": 1001000,
+            "volumeDb": 0,
+            "muted": false,
+            "fadeIn": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "fadeOut": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": null,
+              "fit": "contain"
+            }
+          },
+          {
+            "key": "b",
+            "source": "s2",
+            "start": 1001000,
+            "end": 3003000,
+            "volumeDb": -3.5,
+            "muted": false,
+            "fadeIn": {
+              "duration": 200000,
+              "curve": "equalPower"
+            },
+            "fadeOut": {
+              "duration": 300000,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 90,
+              "crop": {
+                "x": 0,
+                "y": 0,
+                "width": 640,
+                "height": 360
+              },
+              "fit": "cover"
+            }
+          }
+        ],
+        "metadata": {
+          "title": "Take 1",
+          "description": "",
+          "artist": "",
+          "date": "",
+          "comment": ""
+        }
+      },
+      "expected": {
+        "format": "hm-video-plan",
+        "version": 1,
+        "output": {
+          "width": 640,
+          "height": 360,
+          "frameRate": {
+            "num": 30000,
+            "den": 1001
+          },
+          "sampleRate": 48000,
+          "channels": 2
+        },
+        "sources": {
+          "s1": {
+            "duration": 10000000,
+            "width": 1920,
+            "height": 1080,
+            "rotation": 0
+          },
+          "s2": {
+            "duration": 7300000,
+            "width": 1280,
+            "height": 720,
+            "rotation": 90
+          }
+        },
+        "clips": [
+          {
+            "key": "a",
+            "source": "s1",
+            "start": 0,
+            "end": 1001000,
+            "volumeDb": 0,
+            "muted": false,
+            "fadeIn": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "fadeOut": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": null,
+              "fit": "contain"
+            }
+          },
+          {
+            "key": "b",
+            "source": "s2",
+            "start": 1001000,
+            "end": 3003000,
+            "volumeDb": -3.5,
+            "muted": false,
+            "fadeIn": {
+              "duration": 200000,
+              "curve": "equalPower"
+            },
+            "fadeOut": {
+              "duration": 300000,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 90,
+              "crop": {
+                "x": 0,
+                "y": 0,
+                "width": 640,
+                "height": 360
+              },
+              "fit": "cover"
+            }
+          }
+        ],
+        "metadata": {
+          "title": "Take 1",
+          "description": "",
+          "artist": "",
+          "date": "",
+          "comment": ""
+        }
+      }
+    },
+    {
+      "name": "reads an empty plan",
+      "input": {
+        "format": "hm-video-plan",
+        "version": 1,
+        "output": {
+          "width": 640,
+          "height": 360,
+          "frameRate": {
+            "num": 30000,
+            "den": 1001
+          },
+          "sampleRate": 48000,
+          "channels": 2
+        },
+        "sources": {},
+        "clips": [],
+        "metadata": {
+          "title": "Take 1",
+          "description": "",
+          "artist": "",
+          "date": "",
+          "comment": ""
+        }
+      },
+      "expected": {
+        "format": "hm-video-plan",
+        "version": 1,
+        "output": {
+          "width": 640,
+          "height": 360,
+          "frameRate": {
+            "num": 30000,
+            "den": 1001
+          },
+          "sampleRate": 48000,
+          "channels": 2
+        },
+        "sources": {},
+        "clips": [],
+        "metadata": {
+          "title": "Take 1",
+          "description": "",
+          "artist": "",
+          "date": "",
+          "comment": ""
+        }
+      }
+    },
+    {
+      "name": "reads a source with its asset",
+      "input": {
+        "format": "hm-video-plan",
+        "version": 1,
+        "output": {
+          "width": 640,
+          "height": 360,
+          "frameRate": {
+            "num": 30000,
+            "den": 1001
+          },
+          "sampleRate": 48000,
+          "channels": 2
+        },
+        "sources": {
+          "s1": {
+            "duration": 10000000,
+            "width": 1920,
+            "height": 1080,
+            "rotation": 0,
+            "asset": {
+              "asset": "sha256:0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a",
+              "mediaType": "video/mp4",
+              "size": 4044
+            }
+          },
+          "s2": {
+            "duration": 7300000,
+            "width": 1280,
+            "height": 720,
+            "rotation": 90
+          }
+        },
+        "clips": [
+          {
+            "key": "a",
+            "source": "s1",
+            "start": 0,
+            "end": 1001000,
+            "volumeDb": 0,
+            "muted": false,
+            "fadeIn": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "fadeOut": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": null,
+              "fit": "contain"
+            }
+          },
+          {
+            "key": "b",
+            "source": "s2",
+            "start": 1001000,
+            "end": 3003000,
+            "volumeDb": -3.5,
+            "muted": false,
+            "fadeIn": {
+              "duration": 200000,
+              "curve": "equalPower"
+            },
+            "fadeOut": {
+              "duration": 300000,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 90,
+              "crop": {
+                "x": 0,
+                "y": 0,
+                "width": 640,
+                "height": 360
+              },
+              "fit": "cover"
+            }
+          }
+        ],
+        "metadata": {
+          "title": "Take 1",
+          "description": "",
+          "artist": "",
+          "date": "",
+          "comment": ""
+        }
+      },
+      "expected": {
+        "format": "hm-video-plan",
+        "version": 1,
+        "output": {
+          "width": 640,
+          "height": 360,
+          "frameRate": {
+            "num": 30000,
+            "den": 1001
+          },
+          "sampleRate": 48000,
+          "channels": 2
+        },
+        "sources": {
+          "s1": {
+            "duration": 10000000,
+            "width": 1920,
+            "height": 1080,
+            "rotation": 0,
+            "asset": {
+              "asset": "sha256:0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a",
+              "mediaType": "video/mp4",
+              "size": 4044
+            }
+          },
+          "s2": {
+            "duration": 7300000,
+            "width": 1280,
+            "height": 720,
+            "rotation": 90
+          }
+        },
+        "clips": [
+          {
+            "key": "a",
+            "source": "s1",
+            "start": 0,
+            "end": 1001000,
+            "volumeDb": 0,
+            "muted": false,
+            "fadeIn": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "fadeOut": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": null,
+              "fit": "contain"
+            }
+          },
+          {
+            "key": "b",
+            "source": "s2",
+            "start": 1001000,
+            "end": 3003000,
+            "volumeDb": -3.5,
+            "muted": false,
+            "fadeIn": {
+              "duration": 200000,
+              "curve": "equalPower"
+            },
+            "fadeOut": {
+              "duration": 300000,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 90,
+              "crop": {
+                "x": 0,
+                "y": 0,
+                "width": 640,
+                "height": 360
+              },
+              "fit": "cover"
+            }
+          }
+        ],
+        "metadata": {
+          "title": "Take 1",
+          "description": "",
+          "artist": "",
+          "date": "",
+          "comment": ""
+        }
+      }
+    },
+    {
+      "name": "treats __proto__, constructor and toString as ordinary source ids and clip keys",
+      "input": {
+        "format": "hm-video-plan",
+        "version": 1,
+        "output": {
+          "width": 640,
+          "height": 360,
+          "frameRate": {
+            "num": 30000,
+            "den": 1001
+          },
+          "sampleRate": 48000,
+          "channels": 2
+        },
+        "sources": {
+          "__proto__": {
+            "duration": 2000000,
+            "width": 640,
+            "height": 360,
+            "rotation": 0
+          },
+          "constructor": {
+            "duration": 2000000,
+            "width": 640,
+            "height": 360,
+            "rotation": 0
+          },
+          "toString": {
+            "duration": 2000000,
+            "width": 640,
+            "height": 360,
+            "rotation": 0
+          }
+        },
+        "clips": [
+          {
+            "key": "__proto__",
+            "source": "__proto__",
+            "start": 0,
+            "end": 333667,
+            "volumeDb": 0,
+            "muted": false,
+            "fadeIn": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "fadeOut": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": null,
+              "fit": "contain"
+            }
+          },
+          {
+            "key": "constructor",
+            "source": "constructor",
+            "start": 0,
+            "end": 333667,
+            "volumeDb": 0,
+            "muted": false,
+            "fadeIn": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "fadeOut": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": null,
+              "fit": "contain"
+            }
+          },
+          {
+            "key": "toString",
+            "source": "toString",
+            "start": 0,
+            "end": 333667,
+            "volumeDb": 0,
+            "muted": false,
+            "fadeIn": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "fadeOut": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": null,
+              "fit": "contain"
+            }
+          }
+        ],
+        "metadata": {
+          "title": "Take 1",
+          "description": "",
+          "artist": "",
+          "date": "",
+          "comment": ""
+        }
+      },
+      "expected": {
+        "format": "hm-video-plan",
+        "version": 1,
+        "output": {
+          "width": 640,
+          "height": 360,
+          "frameRate": {
+            "num": 30000,
+            "den": 1001
+          },
+          "sampleRate": 48000,
+          "channels": 2
+        },
+        "sources": {
+          "__proto__": {
+            "duration": 2000000,
+            "width": 640,
+            "height": 360,
+            "rotation": 0
+          },
+          "constructor": {
+            "duration": 2000000,
+            "width": 640,
+            "height": 360,
+            "rotation": 0
+          },
+          "toString": {
+            "duration": 2000000,
+            "width": 640,
+            "height": 360,
+            "rotation": 0
+          }
+        },
+        "clips": [
+          {
+            "key": "__proto__",
+            "source": "__proto__",
+            "start": 0,
+            "end": 333667,
+            "volumeDb": 0,
+            "muted": false,
+            "fadeIn": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "fadeOut": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": null,
+              "fit": "contain"
+            }
+          },
+          {
+            "key": "constructor",
+            "source": "constructor",
+            "start": 0,
+            "end": 333667,
+            "volumeDb": 0,
+            "muted": false,
+            "fadeIn": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "fadeOut": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": null,
+              "fit": "contain"
+            }
+          },
+          {
+            "key": "toString",
+            "source": "toString",
+            "start": 0,
+            "end": 333667,
+            "volumeDb": 0,
+            "muted": false,
+            "fadeIn": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "fadeOut": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": null,
+              "fit": "contain"
+            }
+          }
+        ],
+        "metadata": {
+          "title": "Take 1",
+          "description": "",
+          "artist": "",
+          "date": "",
+          "comment": ""
+        }
+      }
+    },
+    {
+      "name": "refuses another format",
+      "input": {
+        "format": "hm-audio-plan",
+        "version": 1,
+        "output": {
+          "width": 640,
+          "height": 360,
+          "frameRate": {
+            "num": 30000,
+            "den": 1001
+          },
+          "sampleRate": 48000,
+          "channels": 2
+        },
+        "sources": {
+          "s1": {
+            "duration": 10000000,
+            "width": 1920,
+            "height": 1080,
+            "rotation": 0
+          },
+          "s2": {
+            "duration": 7300000,
+            "width": 1280,
+            "height": 720,
+            "rotation": 90
+          }
+        },
+        "clips": [
+          {
+            "key": "a",
+            "source": "s1",
+            "start": 0,
+            "end": 1001000,
+            "volumeDb": 0,
+            "muted": false,
+            "fadeIn": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "fadeOut": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": null,
+              "fit": "contain"
+            }
+          },
+          {
+            "key": "b",
+            "source": "s2",
+            "start": 1001000,
+            "end": 3003000,
+            "volumeDb": -3.5,
+            "muted": false,
+            "fadeIn": {
+              "duration": 200000,
+              "curve": "equalPower"
+            },
+            "fadeOut": {
+              "duration": 300000,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 90,
+              "crop": {
+                "x": 0,
+                "y": 0,
+                "width": 640,
+                "height": 360
+              },
+              "fit": "cover"
+            }
+          }
+        ],
+        "metadata": {
+          "title": "Take 1",
+          "description": "",
+          "artist": "",
+          "date": "",
+          "comment": ""
+        }
+      },
+      "expected": {
+        "error": {
+          "code": "UNSUPPORTED_FORMAT",
+          "reason": "unknown-format"
+        }
+      }
+    },
+    {
+      "name": "refuses a later version",
+      "input": {
+        "format": "hm-video-plan",
+        "version": 2,
+        "output": {
+          "width": 640,
+          "height": 360,
+          "frameRate": {
+            "num": 30000,
+            "den": 1001
+          },
+          "sampleRate": 48000,
+          "channels": 2
+        },
+        "sources": {
+          "s1": {
+            "duration": 10000000,
+            "width": 1920,
+            "height": 1080,
+            "rotation": 0
+          },
+          "s2": {
+            "duration": 7300000,
+            "width": 1280,
+            "height": 720,
+            "rotation": 90
+          }
+        },
+        "clips": [
+          {
+            "key": "a",
+            "source": "s1",
+            "start": 0,
+            "end": 1001000,
+            "volumeDb": 0,
+            "muted": false,
+            "fadeIn": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "fadeOut": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": null,
+              "fit": "contain"
+            }
+          },
+          {
+            "key": "b",
+            "source": "s2",
+            "start": 1001000,
+            "end": 3003000,
+            "volumeDb": -3.5,
+            "muted": false,
+            "fadeIn": {
+              "duration": 200000,
+              "curve": "equalPower"
+            },
+            "fadeOut": {
+              "duration": 300000,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 90,
+              "crop": {
+                "x": 0,
+                "y": 0,
+                "width": 640,
+                "height": 360
+              },
+              "fit": "cover"
+            }
+          }
+        ],
+        "metadata": {
+          "title": "Take 1",
+          "description": "",
+          "artist": "",
+          "date": "",
+          "comment": ""
+        }
+      },
+      "expected": {
+        "error": {
+          "code": "UNSUPPORTED_FORMAT",
+          "reason": "unknown-format-version"
+        }
+      }
+    },
+    {
+      "name": "refuses a list",
+      "input": [
+        {
+          "format": "hm-video-plan",
+          "version": 1,
+          "output": {
+            "width": 640,
+            "height": 360,
+            "frameRate": {
+              "num": 30000,
+              "den": 1001
+            },
+            "sampleRate": 48000,
+            "channels": 2
+          },
+          "sources": {
+            "s1": {
+              "duration": 10000000,
+              "width": 1920,
+              "height": 1080,
+              "rotation": 0
+            },
+            "s2": {
+              "duration": 7300000,
+              "width": 1280,
+              "height": 720,
+              "rotation": 90
+            }
+          },
+          "clips": [
+            {
+              "key": "a",
+              "source": "s1",
+              "start": 0,
+              "end": 1001000,
+              "volumeDb": 0,
+              "muted": false,
+              "fadeIn": {
+                "duration": 0,
+                "curve": "linear"
+              },
+              "fadeOut": {
+                "duration": 0,
+                "curve": "linear"
+              },
+              "transform": {
+                "rotation": 0,
+                "crop": null,
+                "fit": "contain"
+              }
+            },
+            {
+              "key": "b",
+              "source": "s2",
+              "start": 1001000,
+              "end": 3003000,
+              "volumeDb": -3.5,
+              "muted": false,
+              "fadeIn": {
+                "duration": 200000,
+                "curve": "equalPower"
+              },
+              "fadeOut": {
+                "duration": 300000,
+                "curve": "linear"
+              },
+              "transform": {
+                "rotation": 90,
+                "crop": {
+                  "x": 0,
+                  "y": 0,
+                  "width": 640,
+                  "height": 360
+                },
+                "fit": "cover"
+              }
+            }
+          ],
+          "metadata": {
+            "title": "Take 1",
+            "description": "",
+            "artist": "",
+            "date": "",
+            "comment": ""
+          }
+        }
+      ],
+      "expected": {
+        "error": {
+          "code": "INVALID_DOCUMENT",
+          "reason": "malformed-document"
+        }
+      }
+    },
+    {
+      "name": "refuses a version that isn't a number",
+      "input": {
+        "format": "hm-video-plan",
+        "version": "1",
+        "output": {
+          "width": 640,
+          "height": 360,
+          "frameRate": {
+            "num": 30000,
+            "den": 1001
+          },
+          "sampleRate": 48000,
+          "channels": 2
+        },
+        "sources": {
+          "s1": {
+            "duration": 10000000,
+            "width": 1920,
+            "height": 1080,
+            "rotation": 0
+          },
+          "s2": {
+            "duration": 7300000,
+            "width": 1280,
+            "height": 720,
+            "rotation": 90
+          }
+        },
+        "clips": [
+          {
+            "key": "a",
+            "source": "s1",
+            "start": 0,
+            "end": 1001000,
+            "volumeDb": 0,
+            "muted": false,
+            "fadeIn": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "fadeOut": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": null,
+              "fit": "contain"
+            }
+          },
+          {
+            "key": "b",
+            "source": "s2",
+            "start": 1001000,
+            "end": 3003000,
+            "volumeDb": -3.5,
+            "muted": false,
+            "fadeIn": {
+              "duration": 200000,
+              "curve": "equalPower"
+            },
+            "fadeOut": {
+              "duration": 300000,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 90,
+              "crop": {
+                "x": 0,
+                "y": 0,
+                "width": 640,
+                "height": 360
+              },
+              "fit": "cover"
+            }
+          }
+        ],
+        "metadata": {
+          "title": "Take 1",
+          "description": "",
+          "artist": "",
+          "date": "",
+          "comment": ""
+        }
+      },
+      "expected": {
+        "error": {
+          "code": "INVALID_DOCUMENT",
+          "reason": "malformed-document"
+        }
+      }
+    },
+    {
+      "name": "refuses an unknown field",
+      "input": {
+        "format": "hm-video-plan",
+        "version": 1,
+        "output": {
+          "width": 640,
+          "height": 360,
+          "frameRate": {
+            "num": 30000,
+            "den": 1001
+          },
+          "sampleRate": 48000,
+          "channels": 2
+        },
+        "sources": {
+          "s1": {
+            "duration": 10000000,
+            "width": 1920,
+            "height": 1080,
+            "rotation": 0
+          },
+          "s2": {
+            "duration": 7300000,
+            "width": 1280,
+            "height": 720,
+            "rotation": 90
+          }
+        },
+        "clips": [
+          {
+            "key": "a",
+            "source": "s1",
+            "start": 0,
+            "end": 1001000,
+            "volumeDb": 0,
+            "muted": false,
+            "fadeIn": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "fadeOut": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": null,
+              "fit": "contain"
+            }
+          },
+          {
+            "key": "b",
+            "source": "s2",
+            "start": 1001000,
+            "end": 3003000,
+            "volumeDb": -3.5,
+            "muted": false,
+            "fadeIn": {
+              "duration": 200000,
+              "curve": "equalPower"
+            },
+            "fadeOut": {
+              "duration": 300000,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 90,
+              "crop": {
+                "x": 0,
+                "y": 0,
+                "width": 640,
+                "height": 360
+              },
+              "fit": "cover"
+            }
+          }
+        ],
+        "metadata": {
+          "title": "Take 1",
+          "description": "",
+          "artist": "",
+          "date": "",
+          "comment": ""
+        },
+        "tracks": 2
+      },
+      "expected": {
+        "error": {
+          "code": "INVALID_DOCUMENT",
+          "reason": "malformed-document"
+        }
+      }
+    },
+    {
+      "name": "refuses a missing field",
+      "input": {
+        "format": "hm-video-plan",
+        "version": 1,
+        "output": {
+          "width": 640,
+          "height": 360,
+          "frameRate": {
+            "num": 30000,
+            "den": 1001
+          },
+          "sampleRate": 48000,
+          "channels": 2
+        },
+        "sources": {
+          "s1": {
+            "duration": 10000000,
+            "width": 1920,
+            "height": 1080,
+            "rotation": 0
+          },
+          "s2": {
+            "duration": 7300000,
+            "width": 1280,
+            "height": 720,
+            "rotation": 90
+          }
+        },
+        "clips": [
+          {
+            "key": "a",
+            "source": "s1",
+            "start": 0,
+            "end": 1001000,
+            "volumeDb": 0,
+            "muted": false,
+            "fadeIn": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "fadeOut": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": null,
+              "fit": "contain"
+            }
+          },
+          {
+            "key": "b",
+            "source": "s2",
+            "start": 1001000,
+            "end": 3003000,
+            "volumeDb": -3.5,
+            "muted": false,
+            "fadeIn": {
+              "duration": 200000,
+              "curve": "equalPower"
+            },
+            "fadeOut": {
+              "duration": 300000,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 90,
+              "crop": {
+                "x": 0,
+                "y": 0,
+                "width": 640,
+                "height": 360
+              },
+              "fit": "cover"
+            }
+          }
+        ]
+      },
+      "expected": {
+        "error": {
+          "code": "INVALID_DOCUMENT",
+          "reason": "malformed-document"
+        }
+      }
+    },
+    {
+      "name": "refuses a source of no duration",
+      "input": {
+        "format": "hm-video-plan",
+        "version": 1,
+        "output": {
+          "width": 640,
+          "height": 360,
+          "frameRate": {
+            "num": 30000,
+            "den": 1001
+          },
+          "sampleRate": 48000,
+          "channels": 2
+        },
+        "sources": {
+          "s1": {
+            "duration": 0,
+            "width": 1920,
+            "height": 1080,
+            "rotation": 0
+          },
+          "s2": {
+            "duration": 7300000,
+            "width": 1280,
+            "height": 720,
+            "rotation": 90
+          }
+        },
+        "clips": [
+          {
+            "key": "a",
+            "source": "s1",
+            "start": 0,
+            "end": 1001000,
+            "volumeDb": 0,
+            "muted": false,
+            "fadeIn": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "fadeOut": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": null,
+              "fit": "contain"
+            }
+          },
+          {
+            "key": "b",
+            "source": "s2",
+            "start": 1001000,
+            "end": 3003000,
+            "volumeDb": -3.5,
+            "muted": false,
+            "fadeIn": {
+              "duration": 200000,
+              "curve": "equalPower"
+            },
+            "fadeOut": {
+              "duration": 300000,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 90,
+              "crop": {
+                "x": 0,
+                "y": 0,
+                "width": 640,
+                "height": 360
+              },
+              "fit": "cover"
+            }
+          }
+        ],
+        "metadata": {
+          "title": "Take 1",
+          "description": "",
+          "artist": "",
+          "date": "",
+          "comment": ""
+        }
+      },
+      "expected": {
+        "error": {
+          "code": "INVALID_DOCUMENT",
+          "reason": "malformed-document"
+        }
+      }
+    },
+    {
+      "name": "refuses a source rotation that isn't a quarter turn",
+      "input": {
+        "format": "hm-video-plan",
+        "version": 1,
+        "output": {
+          "width": 640,
+          "height": 360,
+          "frameRate": {
+            "num": 30000,
+            "den": 1001
+          },
+          "sampleRate": 48000,
+          "channels": 2
+        },
+        "sources": {
+          "s1": {
+            "duration": 10000000,
+            "width": 1920,
+            "height": 1080,
+            "rotation": 45
+          },
+          "s2": {
+            "duration": 7300000,
+            "width": 1280,
+            "height": 720,
+            "rotation": 90
+          }
+        },
+        "clips": [
+          {
+            "key": "a",
+            "source": "s1",
+            "start": 0,
+            "end": 1001000,
+            "volumeDb": 0,
+            "muted": false,
+            "fadeIn": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "fadeOut": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": null,
+              "fit": "contain"
+            }
+          },
+          {
+            "key": "b",
+            "source": "s2",
+            "start": 1001000,
+            "end": 3003000,
+            "volumeDb": -3.5,
+            "muted": false,
+            "fadeIn": {
+              "duration": 200000,
+              "curve": "equalPower"
+            },
+            "fadeOut": {
+              "duration": 300000,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 90,
+              "crop": {
+                "x": 0,
+                "y": 0,
+                "width": 640,
+                "height": 360
+              },
+              "fit": "cover"
+            }
+          }
+        ],
+        "metadata": {
+          "title": "Take 1",
+          "description": "",
+          "artist": "",
+          "date": "",
+          "comment": ""
+        }
+      },
+      "expected": {
+        "error": {
+          "code": "INVALID_DOCUMENT",
+          "reason": "malformed-document"
+        }
+      }
+    },
+    {
+      "name": "refuses an asset that isn't a SHA-256",
+      "input": {
+        "format": "hm-video-plan",
+        "version": 1,
+        "output": {
+          "width": 640,
+          "height": 360,
+          "frameRate": {
+            "num": 30000,
+            "den": 1001
+          },
+          "sampleRate": 48000,
+          "channels": 2
+        },
+        "sources": {
+          "s1": {
+            "duration": 10000000,
+            "width": 1920,
+            "height": 1080,
+            "rotation": 0,
+            "asset": {
+              "asset": "md5:00",
+              "mediaType": "video/mp4",
+              "size": 1
+            }
+          },
+          "s2": {
+            "duration": 7300000,
+            "width": 1280,
+            "height": 720,
+            "rotation": 90
+          }
+        },
+        "clips": [
+          {
+            "key": "a",
+            "source": "s1",
+            "start": 0,
+            "end": 1001000,
+            "volumeDb": 0,
+            "muted": false,
+            "fadeIn": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "fadeOut": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": null,
+              "fit": "contain"
+            }
+          },
+          {
+            "key": "b",
+            "source": "s2",
+            "start": 1001000,
+            "end": 3003000,
+            "volumeDb": -3.5,
+            "muted": false,
+            "fadeIn": {
+              "duration": 200000,
+              "curve": "equalPower"
+            },
+            "fadeOut": {
+              "duration": 300000,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 90,
+              "crop": {
+                "x": 0,
+                "y": 0,
+                "width": 640,
+                "height": 360
+              },
+              "fit": "cover"
+            }
+          }
+        ],
+        "metadata": {
+          "title": "Take 1",
+          "description": "",
+          "artist": "",
+          "date": "",
+          "comment": ""
+        }
+      },
+      "expected": {
+        "error": {
+          "code": "INVALID_DOCUMENT",
+          "reason": "malformed-document"
+        }
+      }
+    },
+    {
+      "name": "refuses a media type in capitals",
+      "input": {
+        "format": "hm-video-plan",
+        "version": 1,
+        "output": {
+          "width": 640,
+          "height": 360,
+          "frameRate": {
+            "num": 30000,
+            "den": 1001
+          },
+          "sampleRate": 48000,
+          "channels": 2
+        },
+        "sources": {
+          "s1": {
+            "duration": 10000000,
+            "width": 1920,
+            "height": 1080,
+            "rotation": 0,
+            "asset": {
+              "asset": "sha256:0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a",
+              "mediaType": "Video/MP4",
+              "size": 1
+            }
+          },
+          "s2": {
+            "duration": 7300000,
+            "width": 1280,
+            "height": 720,
+            "rotation": 90
+          }
+        },
+        "clips": [
+          {
+            "key": "a",
+            "source": "s1",
+            "start": 0,
+            "end": 1001000,
+            "volumeDb": 0,
+            "muted": false,
+            "fadeIn": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "fadeOut": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": null,
+              "fit": "contain"
+            }
+          },
+          {
+            "key": "b",
+            "source": "s2",
+            "start": 1001000,
+            "end": 3003000,
+            "volumeDb": -3.5,
+            "muted": false,
+            "fadeIn": {
+              "duration": 200000,
+              "curve": "equalPower"
+            },
+            "fadeOut": {
+              "duration": 300000,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 90,
+              "crop": {
+                "x": 0,
+                "y": 0,
+                "width": 640,
+                "height": 360
+              },
+              "fit": "cover"
+            }
+          }
+        ],
+        "metadata": {
+          "title": "Take 1",
+          "description": "",
+          "artist": "",
+          "date": "",
+          "comment": ""
+        }
+      },
+      "expected": {
+        "error": {
+          "code": "INVALID_DOCUMENT",
+          "reason": "malformed-document"
+        }
+      }
+    },
+    {
+      "name": "refuses an unknown clip field",
+      "input": {
+        "format": "hm-video-plan",
+        "version": 1,
+        "output": {
+          "width": 640,
+          "height": 360,
+          "frameRate": {
+            "num": 30000,
+            "den": 1001
+          },
+          "sampleRate": 48000,
+          "channels": 2
+        },
+        "sources": {
+          "s1": {
+            "duration": 10000000,
+            "width": 1920,
+            "height": 1080,
+            "rotation": 0
+          },
+          "s2": {
+            "duration": 7300000,
+            "width": 1280,
+            "height": 720,
+            "rotation": 90
+          }
+        },
+        "clips": [
+          {
+            "key": "a",
+            "source": "s1",
+            "start": 0,
+            "end": 1001000,
+            "volumeDb": 0,
+            "muted": false,
+            "fadeIn": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "fadeOut": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": null,
+              "fit": "contain"
+            },
+            "speed": 2
+          },
+          {
+            "key": "b",
+            "source": "s2",
+            "start": 1001000,
+            "end": 3003000,
+            "volumeDb": -3.5,
+            "muted": false,
+            "fadeIn": {
+              "duration": 200000,
+              "curve": "equalPower"
+            },
+            "fadeOut": {
+              "duration": 300000,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 90,
+              "crop": {
+                "x": 0,
+                "y": 0,
+                "width": 640,
+                "height": 360
+              },
+              "fit": "cover"
+            }
+          }
+        ],
+        "metadata": {
+          "title": "Take 1",
+          "description": "",
+          "artist": "",
+          "date": "",
+          "comment": ""
+        }
+      },
+      "expected": {
+        "error": {
+          "code": "INVALID_DOCUMENT",
+          "reason": "malformed-document"
+        }
+      }
+    },
+    {
+      "name": "refuses an unknown metadata field",
+      "input": {
+        "format": "hm-video-plan",
+        "version": 1,
+        "output": {
+          "width": 640,
+          "height": 360,
+          "frameRate": {
+            "num": 30000,
+            "den": 1001
+          },
+          "sampleRate": 48000,
+          "channels": 2
+        },
+        "sources": {
+          "s1": {
+            "duration": 10000000,
+            "width": 1920,
+            "height": 1080,
+            "rotation": 0
+          },
+          "s2": {
+            "duration": 7300000,
+            "width": 1280,
+            "height": 720,
+            "rotation": 90
+          }
+        },
+        "clips": [
+          {
+            "key": "a",
+            "source": "s1",
+            "start": 0,
+            "end": 1001000,
+            "volumeDb": 0,
+            "muted": false,
+            "fadeIn": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "fadeOut": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": null,
+              "fit": "contain"
+            }
+          },
+          {
+            "key": "b",
+            "source": "s2",
+            "start": 1001000,
+            "end": 3003000,
+            "volumeDb": -3.5,
+            "muted": false,
+            "fadeIn": {
+              "duration": 200000,
+              "curve": "equalPower"
+            },
+            "fadeOut": {
+              "duration": 300000,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 90,
+              "crop": {
+                "x": 0,
+                "y": 0,
+                "width": 640,
+                "height": 360
+              },
+              "fit": "cover"
+            }
+          }
+        ],
+        "metadata": {
+          "title": "Take 1",
+          "description": "",
+          "artist": "",
+          "date": "",
+          "comment": "",
+          "genre": ""
+        }
+      },
+      "expected": {
+        "error": {
+          "code": "INVALID_DOCUMENT",
+          "reason": "malformed-document"
+        }
+      }
+    },
+    {
+      "name": "refuses an odd output height",
+      "input": {
+        "format": "hm-video-plan",
+        "version": 1,
+        "output": {
+          "width": 640,
+          "height": 361,
+          "frameRate": {
+            "num": 30000,
+            "den": 1001
+          },
+          "sampleRate": 48000,
+          "channels": 2
+        },
+        "sources": {
+          "s1": {
+            "duration": 10000000,
+            "width": 1920,
+            "height": 1080,
+            "rotation": 0
+          },
+          "s2": {
+            "duration": 7300000,
+            "width": 1280,
+            "height": 720,
+            "rotation": 90
+          }
+        },
+        "clips": [
+          {
+            "key": "a",
+            "source": "s1",
+            "start": 0,
+            "end": 1001000,
+            "volumeDb": 0,
+            "muted": false,
+            "fadeIn": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "fadeOut": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": null,
+              "fit": "contain"
+            }
+          },
+          {
+            "key": "b",
+            "source": "s2",
+            "start": 1001000,
+            "end": 3003000,
+            "volumeDb": -3.5,
+            "muted": false,
+            "fadeIn": {
+              "duration": 200000,
+              "curve": "equalPower"
+            },
+            "fadeOut": {
+              "duration": 300000,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 90,
+              "crop": {
+                "x": 0,
+                "y": 0,
+                "width": 640,
+                "height": 360
+              },
+              "fit": "cover"
+            }
+          }
+        ],
+        "metadata": {
+          "title": "Take 1",
+          "description": "",
+          "artist": "",
+          "date": "",
+          "comment": ""
+        }
+      },
+      "expected": {
+        "error": {
+          "code": "INVALID_DOCUMENT",
+          "reason": "invalid-output-size"
+        }
+      }
+    },
+    {
+      "name": "refuses a frame rate of 0",
+      "input": {
+        "format": "hm-video-plan",
+        "version": 1,
+        "output": {
+          "width": 640,
+          "height": 360,
+          "frameRate": {
+            "num": 0,
+            "den": 1
+          },
+          "sampleRate": 48000,
+          "channels": 2
+        },
+        "sources": {
+          "s1": {
+            "duration": 10000000,
+            "width": 1920,
+            "height": 1080,
+            "rotation": 0
+          },
+          "s2": {
+            "duration": 7300000,
+            "width": 1280,
+            "height": 720,
+            "rotation": 90
+          }
+        },
+        "clips": [
+          {
+            "key": "a",
+            "source": "s1",
+            "start": 0,
+            "end": 1001000,
+            "volumeDb": 0,
+            "muted": false,
+            "fadeIn": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "fadeOut": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": null,
+              "fit": "contain"
+            }
+          },
+          {
+            "key": "b",
+            "source": "s2",
+            "start": 1001000,
+            "end": 3003000,
+            "volumeDb": -3.5,
+            "muted": false,
+            "fadeIn": {
+              "duration": 200000,
+              "curve": "equalPower"
+            },
+            "fadeOut": {
+              "duration": 300000,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 90,
+              "crop": {
+                "x": 0,
+                "y": 0,
+                "width": 640,
+                "height": 360
+              },
+              "fit": "cover"
+            }
+          }
+        ],
+        "metadata": {
+          "title": "Take 1",
+          "description": "",
+          "artist": "",
+          "date": "",
+          "comment": ""
+        }
+      },
+      "expected": {
+        "error": {
+          "code": "INVALID_DOCUMENT",
+          "reason": "invalid-frame-rate"
+        }
+      }
+    },
+    {
+      "name": "refuses a clip of a source it doesn't list",
+      "input": {
+        "format": "hm-video-plan",
+        "version": 1,
+        "output": {
+          "width": 640,
+          "height": 360,
+          "frameRate": {
+            "num": 30000,
+            "den": 1001
+          },
+          "sampleRate": 48000,
+          "channels": 2
+        },
+        "sources": {
+          "s1": {
+            "duration": 10000000,
+            "width": 1920,
+            "height": 1080,
+            "rotation": 0
+          },
+          "s2": {
+            "duration": 7300000,
+            "width": 1280,
+            "height": 720,
+            "rotation": 90
+          }
+        },
+        "clips": [
+          {
+            "key": "a",
+            "source": "s9",
+            "start": 0,
+            "end": 1001000,
+            "volumeDb": 0,
+            "muted": false,
+            "fadeIn": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "fadeOut": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": null,
+              "fit": "contain"
+            }
+          },
+          {
+            "key": "b",
+            "source": "s2",
+            "start": 1001000,
+            "end": 3003000,
+            "volumeDb": -3.5,
+            "muted": false,
+            "fadeIn": {
+              "duration": 200000,
+              "curve": "equalPower"
+            },
+            "fadeOut": {
+              "duration": 300000,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 90,
+              "crop": {
+                "x": 0,
+                "y": 0,
+                "width": 640,
+                "height": 360
+              },
+              "fit": "cover"
+            }
+          }
+        ],
+        "metadata": {
+          "title": "Take 1",
+          "description": "",
+          "artist": "",
+          "date": "",
+          "comment": ""
+        }
+      },
+      "expected": {
+        "error": {
+          "code": "INVALID_DOCUMENT",
+          "reason": "unknown-source"
+        }
+      }
+    },
+    {
+      "name": "refuses two clips with one key",
+      "input": {
+        "format": "hm-video-plan",
+        "version": 1,
+        "output": {
+          "width": 640,
+          "height": 360,
+          "frameRate": {
+            "num": 30000,
+            "den": 1001
+          },
+          "sampleRate": 48000,
+          "channels": 2
+        },
+        "sources": {
+          "s1": {
+            "duration": 10000000,
+            "width": 1920,
+            "height": 1080,
+            "rotation": 0
+          },
+          "s2": {
+            "duration": 7300000,
+            "width": 1280,
+            "height": 720,
+            "rotation": 90
+          }
+        },
+        "clips": [
+          {
+            "key": "a",
+            "source": "s1",
+            "start": 0,
+            "end": 1001000,
+            "volumeDb": 0,
+            "muted": false,
+            "fadeIn": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "fadeOut": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": null,
+              "fit": "contain"
+            }
+          },
+          {
+            "key": "a",
+            "source": "s2",
+            "start": 1001000,
+            "end": 3003000,
+            "volumeDb": -3.5,
+            "muted": false,
+            "fadeIn": {
+              "duration": 200000,
+              "curve": "equalPower"
+            },
+            "fadeOut": {
+              "duration": 300000,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 90,
+              "crop": {
+                "x": 0,
+                "y": 0,
+                "width": 640,
+                "height": 360
+              },
+              "fit": "cover"
+            }
+          }
+        ],
+        "metadata": {
+          "title": "Take 1",
+          "description": "",
+          "artist": "",
+          "date": "",
+          "comment": ""
+        }
+      },
+      "expected": {
+        "error": {
+          "code": "INVALID_DOCUMENT",
+          "reason": "duplicate-key"
+        }
+      }
+    },
+    {
+      "name": "refuses an unknown fade curve",
+      "input": {
+        "format": "hm-video-plan",
+        "version": 1,
+        "output": {
+          "width": 640,
+          "height": 360,
+          "frameRate": {
+            "num": 30000,
+            "den": 1001
+          },
+          "sampleRate": 48000,
+          "channels": 2
+        },
+        "sources": {
+          "s1": {
+            "duration": 10000000,
+            "width": 1920,
+            "height": 1080,
+            "rotation": 0
+          },
+          "s2": {
+            "duration": 7300000,
+            "width": 1280,
+            "height": 720,
+            "rotation": 90
+          }
+        },
+        "clips": [
+          {
+            "key": "a",
+            "source": "s1",
+            "start": 0,
+            "end": 1001000,
+            "volumeDb": 0,
+            "muted": false,
+            "fadeIn": {
+              "duration": 0,
+              "curve": "cubic"
+            },
+            "fadeOut": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": null,
+              "fit": "contain"
+            }
+          },
+          {
+            "key": "b",
+            "source": "s2",
+            "start": 1001000,
+            "end": 3003000,
+            "volumeDb": -3.5,
+            "muted": false,
+            "fadeIn": {
+              "duration": 200000,
+              "curve": "equalPower"
+            },
+            "fadeOut": {
+              "duration": 300000,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 90,
+              "crop": {
+                "x": 0,
+                "y": 0,
+                "width": 640,
+                "height": 360
+              },
+              "fit": "cover"
+            }
+          }
+        ],
+        "metadata": {
+          "title": "Take 1",
+          "description": "",
+          "artist": "",
+          "date": "",
+          "comment": ""
+        }
+      },
+      "expected": {
+        "error": {
+          "code": "INVALID_DOCUMENT",
+          "reason": "invalid-fade-curve"
+        }
+      }
+    },
+    {
+      "name": "refuses metadata over 1,000 characters",
+      "input": {
+        "format": "hm-video-plan",
+        "version": 1,
+        "output": {
+          "width": 640,
+          "height": 360,
+          "frameRate": {
+            "num": 30000,
+            "den": 1001
+          },
+          "sampleRate": 48000,
+          "channels": 2
+        },
+        "sources": {
+          "s1": {
+            "duration": 10000000,
+            "width": 1920,
+            "height": 1080,
+            "rotation": 0
+          },
+          "s2": {
+            "duration": 7300000,
+            "width": 1280,
+            "height": 720,
+            "rotation": 90
+          }
+        },
+        "clips": [
+          {
+            "key": "a",
+            "source": "s1",
+            "start": 0,
+            "end": 1001000,
+            "volumeDb": 0,
+            "muted": false,
+            "fadeIn": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "fadeOut": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": null,
+              "fit": "contain"
+            }
+          },
+          {
+            "key": "b",
+            "source": "s2",
+            "start": 1001000,
+            "end": 3003000,
+            "volumeDb": -3.5,
+            "muted": false,
+            "fadeIn": {
+              "duration": 200000,
+              "curve": "equalPower"
+            },
+            "fadeOut": {
+              "duration": 300000,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 90,
+              "crop": {
+                "x": 0,
+                "y": 0,
+                "width": 640,
+                "height": 360
+              },
+              "fit": "cover"
+            }
+          }
+        ],
+        "metadata": {
+          "title": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+          "description": "",
+          "artist": "",
+          "date": "",
+          "comment": ""
+        }
+      },
+      "expected": {
+        "error": {
+          "code": "INVALID_DOCUMENT",
+          "reason": "metadata-too-long"
+        }
+      }
+    },
+    {
+      "name": "refuses a clip off the output's frame grid",
+      "input": {
+        "format": "hm-video-plan",
+        "version": 1,
+        "output": {
+          "width": 640,
+          "height": 360,
+          "frameRate": {
+            "num": 30000,
+            "den": 1001
+          },
+          "sampleRate": 48000,
+          "channels": 2
+        },
+        "sources": {
+          "s1": {
+            "duration": 10000000,
+            "width": 1920,
+            "height": 1080,
+            "rotation": 0
+          },
+          "s2": {
+            "duration": 7300000,
+            "width": 1280,
+            "height": 720,
+            "rotation": 90
+          }
+        },
+        "clips": [
+          {
+            "key": "a",
+            "source": "s1",
+            "start": 0,
+            "end": 1000000,
+            "volumeDb": 0,
+            "muted": false,
+            "fadeIn": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "fadeOut": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": null,
+              "fit": "contain"
+            }
+          },
+          {
+            "key": "b",
+            "source": "s2",
+            "start": 1001000,
+            "end": 3003000,
+            "volumeDb": -3.5,
+            "muted": false,
+            "fadeIn": {
+              "duration": 200000,
+              "curve": "equalPower"
+            },
+            "fadeOut": {
+              "duration": 300000,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 90,
+              "crop": {
+                "x": 0,
+                "y": 0,
+                "width": 640,
+                "height": 360
+              },
+              "fit": "cover"
+            }
+          }
+        ],
+        "metadata": {
+          "title": "Take 1",
+          "description": "",
+          "artist": "",
+          "date": "",
+          "comment": ""
+        }
+      },
+      "expected": {
+        "error": {
+          "code": "INVALID_DOCUMENT",
+          "reason": "off-grid"
+        }
+      }
+    },
+    {
+      "name": "refuses a clip past its source",
+      "input": {
+        "format": "hm-video-plan",
+        "version": 1,
+        "output": {
+          "width": 640,
+          "height": 360,
+          "frameRate": {
+            "num": 30000,
+            "den": 1001
+          },
+          "sampleRate": 48000,
+          "channels": 2
+        },
+        "sources": {
+          "s1": {
+            "duration": 10000000,
+            "width": 1920,
+            "height": 1080,
+            "rotation": 0
+          },
+          "s2": {
+            "duration": 7300000,
+            "width": 1280,
+            "height": 720,
+            "rotation": 90
+          }
+        },
+        "clips": [
+          {
+            "key": "a",
+            "source": "s1",
+            "start": 9000000,
+            "end": 11002000,
+            "volumeDb": 0,
+            "muted": false,
+            "fadeIn": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "fadeOut": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": null,
+              "fit": "contain"
+            }
+          },
+          {
+            "key": "b",
+            "source": "s2",
+            "start": 1001000,
+            "end": 3003000,
+            "volumeDb": -3.5,
+            "muted": false,
+            "fadeIn": {
+              "duration": 200000,
+              "curve": "equalPower"
+            },
+            "fadeOut": {
+              "duration": 300000,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 90,
+              "crop": {
+                "x": 0,
+                "y": 0,
+                "width": 640,
+                "height": 360
+              },
+              "fit": "cover"
+            }
+          }
+        ],
+        "metadata": {
+          "title": "Take 1",
+          "description": "",
+          "artist": "",
+          "date": "",
+          "comment": ""
+        }
+      },
+      "expected": {
+        "error": {
+          "code": "INVALID_DOCUMENT",
+          "reason": "clip-outside-source"
+        }
+      }
+    },
+    {
+      "name": "refuses a negative microsecond",
+      "input": {
+        "format": "hm-video-plan",
+        "version": 1,
+        "output": {
+          "width": 640,
+          "height": 360,
+          "frameRate": {
+            "num": 30000,
+            "den": 1001
+          },
+          "sampleRate": 48000,
+          "channels": 2
+        },
+        "sources": {
+          "s1": {
+            "duration": 10000000,
+            "width": 1920,
+            "height": 1080,
+            "rotation": 0
+          },
+          "s2": {
+            "duration": 7300000,
+            "width": 1280,
+            "height": 720,
+            "rotation": 90
+          }
+        },
+        "clips": [
+          {
+            "key": "a",
+            "source": "s1",
+            "start": -1,
+            "end": 1001000,
+            "volumeDb": 0,
+            "muted": false,
+            "fadeIn": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "fadeOut": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": null,
+              "fit": "contain"
+            }
+          },
+          {
+            "key": "b",
+            "source": "s2",
+            "start": 1001000,
+            "end": 3003000,
+            "volumeDb": -3.5,
+            "muted": false,
+            "fadeIn": {
+              "duration": 200000,
+              "curve": "equalPower"
+            },
+            "fadeOut": {
+              "duration": 300000,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 90,
+              "crop": {
+                "x": 0,
+                "y": 0,
+                "width": 640,
+                "height": 360
+              },
+              "fit": "cover"
+            }
+          }
+        ],
+        "metadata": {
+          "title": "Take 1",
+          "description": "",
+          "artist": "",
+          "date": "",
+          "comment": ""
+        }
+      },
+      "expected": {
+        "error": {
+          "code": "INVALID_DOCUMENT",
+          "reason": "invalid-range"
+        }
+      }
+    },
+    {
+      "name": "refuses a volume under -96 dB",
+      "input": {
+        "format": "hm-video-plan",
+        "version": 1,
+        "output": {
+          "width": 640,
+          "height": 360,
+          "frameRate": {
+            "num": 30000,
+            "den": 1001
+          },
+          "sampleRate": 48000,
+          "channels": 2
+        },
+        "sources": {
+          "s1": {
+            "duration": 10000000,
+            "width": 1920,
+            "height": 1080,
+            "rotation": 0
+          },
+          "s2": {
+            "duration": 7300000,
+            "width": 1280,
+            "height": 720,
+            "rotation": 90
+          }
+        },
+        "clips": [
+          {
+            "key": "a",
+            "source": "s1",
+            "start": 0,
+            "end": 1001000,
+            "volumeDb": -97,
+            "muted": false,
+            "fadeIn": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "fadeOut": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": null,
+              "fit": "contain"
+            }
+          },
+          {
+            "key": "b",
+            "source": "s2",
+            "start": 1001000,
+            "end": 3003000,
+            "volumeDb": -3.5,
+            "muted": false,
+            "fadeIn": {
+              "duration": 200000,
+              "curve": "equalPower"
+            },
+            "fadeOut": {
+              "duration": 300000,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 90,
+              "crop": {
+                "x": 0,
+                "y": 0,
+                "width": 640,
+                "height": 360
+              },
+              "fit": "cover"
+            }
+          }
+        ],
+        "metadata": {
+          "title": "Take 1",
+          "description": "",
+          "artist": "",
+          "date": "",
+          "comment": ""
+        }
+      },
+      "expected": {
+        "error": {
+          "code": "INVALID_DOCUMENT",
+          "reason": "volume-out-of-range"
+        }
+      }
+    },
+    {
+      "name": "refuses fades that don't fit their clip",
+      "input": {
+        "format": "hm-video-plan",
+        "version": 1,
+        "output": {
+          "width": 640,
+          "height": 360,
+          "frameRate": {
+            "num": 30000,
+            "den": 1001
+          },
+          "sampleRate": 48000,
+          "channels": 2
+        },
+        "sources": {
+          "s1": {
+            "duration": 10000000,
+            "width": 1920,
+            "height": 1080,
+            "rotation": 0
+          },
+          "s2": {
+            "duration": 7300000,
+            "width": 1280,
+            "height": 720,
+            "rotation": 90
+          }
+        },
+        "clips": [
+          {
+            "key": "a",
+            "source": "s1",
+            "start": 0,
+            "end": 1001000,
+            "volumeDb": 0,
+            "muted": false,
+            "fadeIn": {
+              "duration": 600000,
+              "curve": "linear"
+            },
+            "fadeOut": {
+              "duration": 500000,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": null,
+              "fit": "contain"
+            }
+          },
+          {
+            "key": "b",
+            "source": "s2",
+            "start": 1001000,
+            "end": 3003000,
+            "volumeDb": -3.5,
+            "muted": false,
+            "fadeIn": {
+              "duration": 200000,
+              "curve": "equalPower"
+            },
+            "fadeOut": {
+              "duration": 300000,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 90,
+              "crop": {
+                "x": 0,
+                "y": 0,
+                "width": 640,
+                "height": 360
+              },
+              "fit": "cover"
+            }
+          }
+        ],
+        "metadata": {
+          "title": "Take 1",
+          "description": "",
+          "artist": "",
+          "date": "",
+          "comment": ""
+        }
+      },
+      "expected": {
+        "error": {
+          "code": "INVALID_DOCUMENT",
+          "reason": "fades-too-long"
+        }
+      }
+    },
+    {
+      "name": "refuses a crop outside its source as it's shown",
+      "input": {
+        "format": "hm-video-plan",
+        "version": 1,
+        "output": {
+          "width": 640,
+          "height": 360,
+          "frameRate": {
+            "num": 30000,
+            "den": 1001
+          },
+          "sampleRate": 48000,
+          "channels": 2
+        },
+        "sources": {
+          "s1": {
+            "duration": 10000000,
+            "width": 1920,
+            "height": 1080,
+            "rotation": 0
+          },
+          "s2": {
+            "duration": 7300000,
+            "width": 1280,
+            "height": 720,
+            "rotation": 90
+          }
+        },
+        "clips": [
+          {
+            "key": "a",
+            "source": "s1",
+            "start": 0,
+            "end": 1001000,
+            "volumeDb": 0,
+            "muted": false,
+            "fadeIn": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "fadeOut": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 90,
+              "crop": {
+                "x": 0,
+                "y": 0,
+                "width": 1920,
+                "height": 100
+              },
+              "fit": "contain"
+            }
+          },
+          {
+            "key": "b",
+            "source": "s2",
+            "start": 1001000,
+            "end": 3003000,
+            "volumeDb": -3.5,
+            "muted": false,
+            "fadeIn": {
+              "duration": 200000,
+              "curve": "equalPower"
+            },
+            "fadeOut": {
+              "duration": 300000,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 90,
+              "crop": {
+                "x": 0,
+                "y": 0,
+                "width": 640,
+                "height": 360
+              },
+              "fit": "cover"
+            }
+          }
+        ],
+        "metadata": {
+          "title": "Take 1",
+          "description": "",
+          "artist": "",
+          "date": "",
+          "comment": ""
+        }
+      },
+      "expected": {
+        "error": {
+          "code": "INVALID_DOCUMENT",
+          "reason": "crop-outside-source"
+        }
+      }
+    },
+    {
+      "name": "generated 1: 3 clips",
+      "input": {
+        "format": "hm-video-plan",
+        "version": 1,
+        "output": {
+          "width": 1920,
+          "height": 1080,
+          "frameRate": {
+            "num": 30000,
+            "den": 1001
+          },
+          "sampleRate": 48000,
+          "channels": 2
+        },
+        "sources": {
+          "a": {
+            "duration": 10000000,
+            "width": 1920,
+            "height": 1080,
+            "rotation": 0
+          },
+          "b": {
+            "duration": 7300000,
+            "width": 1280,
+            "height": 720,
+            "rotation": 90
+          },
+          "c": {
+            "duration": 500000,
+            "width": 640,
+            "height": 480,
+            "rotation": 0
+          }
+        },
+        "clips": [
+          {
+            "key": "x",
+            "source": "a",
+            "start": 0,
+            "end": 1001000,
+            "volumeDb": 0,
+            "muted": false,
+            "fadeIn": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "fadeOut": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": null,
+              "fit": "contain"
+            }
+          },
+          {
+            "key": "y",
+            "source": "b",
+            "start": 1000000,
+            "end": 3002000,
+            "volumeDb": 0,
+            "muted": false,
+            "fadeIn": {
+              "duration": 601520,
+              "curve": "equalPower"
+            },
+            "fadeOut": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": null,
+              "fit": "contain"
+            }
+          },
+          {
+            "key": "z",
+            "source": "c",
+            "start": 0,
+            "end": 333667,
+            "volumeDb": 0,
+            "muted": false,
+            "fadeIn": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "fadeOut": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": null,
+              "fit": "contain"
+            }
+          }
+        ],
+        "metadata": {
+          "title": "",
+          "description": "",
+          "artist": "",
+          "date": "",
+          "comment": ""
+        }
+      },
+      "expected": {
+        "format": "hm-video-plan",
+        "version": 1,
+        "output": {
+          "width": 1920,
+          "height": 1080,
+          "frameRate": {
+            "num": 30000,
+            "den": 1001
+          },
+          "sampleRate": 48000,
+          "channels": 2
+        },
+        "sources": {
+          "a": {
+            "duration": 10000000,
+            "width": 1920,
+            "height": 1080,
+            "rotation": 0
+          },
+          "b": {
+            "duration": 7300000,
+            "width": 1280,
+            "height": 720,
+            "rotation": 90
+          },
+          "c": {
+            "duration": 500000,
+            "width": 640,
+            "height": 480,
+            "rotation": 0
+          }
+        },
+        "clips": [
+          {
+            "key": "x",
+            "source": "a",
+            "start": 0,
+            "end": 1001000,
+            "volumeDb": 0,
+            "muted": false,
+            "fadeIn": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "fadeOut": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": null,
+              "fit": "contain"
+            }
+          },
+          {
+            "key": "y",
+            "source": "b",
+            "start": 1000000,
+            "end": 3002000,
+            "volumeDb": 0,
+            "muted": false,
+            "fadeIn": {
+              "duration": 601520,
+              "curve": "equalPower"
+            },
+            "fadeOut": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": null,
+              "fit": "contain"
+            }
+          },
+          {
+            "key": "z",
+            "source": "c",
+            "start": 0,
+            "end": 333667,
+            "volumeDb": 0,
+            "muted": false,
+            "fadeIn": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "fadeOut": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": null,
+              "fit": "contain"
+            }
+          }
+        ],
+        "metadata": {
+          "title": "",
+          "description": "",
+          "artist": "",
+          "date": "",
+          "comment": ""
+        }
+      }
+    },
+    {
+      "name": "generated 2: 3 clips",
+      "input": {
+        "format": "hm-video-plan",
+        "version": 1,
+        "output": {
+          "width": 1920,
+          "height": 1080,
+          "frameRate": {
+            "num": 30000,
+            "den": 1001
+          },
+          "sampleRate": 48000,
+          "channels": 2
+        },
+        "sources": {
+          "a": {
+            "duration": 10000000,
+            "width": 1920,
+            "height": 1080,
+            "rotation": 0
+          },
+          "b": {
+            "duration": 7300000,
+            "width": 1280,
+            "height": 720,
+            "rotation": 90
+          },
+          "c": {
+            "duration": 500000,
+            "width": 640,
+            "height": 480,
+            "rotation": 0
+          }
+        },
+        "clips": [
+          {
+            "key": "x",
+            "source": "a",
+            "start": 0,
+            "end": 1001000,
+            "volumeDb": 0,
+            "muted": false,
+            "fadeIn": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "fadeOut": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": null,
+              "fit": "contain"
+            }
+          },
+          {
+            "key": "y",
+            "source": "b",
+            "start": 1000000,
+            "end": 3002000,
+            "volumeDb": 0,
+            "muted": false,
+            "fadeIn": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "fadeOut": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": null,
+              "fit": "contain"
+            }
+          },
+          {
+            "key": "z",
+            "source": "c",
+            "start": 0,
+            "end": 333667,
+            "volumeDb": 0,
+            "muted": false,
+            "fadeIn": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "fadeOut": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": null,
+              "fit": "contain"
+            }
+          }
+        ],
+        "metadata": {
+          "title": "",
+          "description": "",
+          "artist": "",
+          "date": "",
+          "comment": ""
+        }
+      },
+      "expected": {
+        "format": "hm-video-plan",
+        "version": 1,
+        "output": {
+          "width": 1920,
+          "height": 1080,
+          "frameRate": {
+            "num": 30000,
+            "den": 1001
+          },
+          "sampleRate": 48000,
+          "channels": 2
+        },
+        "sources": {
+          "a": {
+            "duration": 10000000,
+            "width": 1920,
+            "height": 1080,
+            "rotation": 0
+          },
+          "b": {
+            "duration": 7300000,
+            "width": 1280,
+            "height": 720,
+            "rotation": 90
+          },
+          "c": {
+            "duration": 500000,
+            "width": 640,
+            "height": 480,
+            "rotation": 0
+          }
+        },
+        "clips": [
+          {
+            "key": "x",
+            "source": "a",
+            "start": 0,
+            "end": 1001000,
+            "volumeDb": 0,
+            "muted": false,
+            "fadeIn": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "fadeOut": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": null,
+              "fit": "contain"
+            }
+          },
+          {
+            "key": "y",
+            "source": "b",
+            "start": 1000000,
+            "end": 3002000,
+            "volumeDb": 0,
+            "muted": false,
+            "fadeIn": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "fadeOut": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": null,
+              "fit": "contain"
+            }
+          },
+          {
+            "key": "z",
+            "source": "c",
+            "start": 0,
+            "end": 333667,
+            "volumeDb": 0,
+            "muted": false,
+            "fadeIn": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "fadeOut": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": null,
+              "fit": "contain"
+            }
+          }
+        ],
+        "metadata": {
+          "title": "",
+          "description": "",
+          "artist": "",
+          "date": "",
+          "comment": ""
+        }
+      }
+    },
+    {
+      "name": "generated 3: 2 clips",
+      "input": {
+        "format": "hm-video-plan",
+        "version": 1,
+        "output": {
+          "width": 1920,
+          "height": 1080,
+          "frameRate": {
+            "num": 30000,
+            "den": 1001
+          },
+          "sampleRate": 48000,
+          "channels": 2
+        },
+        "sources": {
+          "a": {
+            "duration": 10000000,
+            "width": 1920,
+            "height": 1080,
+            "rotation": 0
+          },
+          "b": {
+            "duration": 7300000,
+            "width": 1280,
+            "height": 720,
+            "rotation": 90
+          },
+          "c": {
+            "duration": 500000,
+            "width": 640,
+            "height": 480,
+            "rotation": 0
+          }
+        },
+        "clips": [
+          {
+            "key": "x",
+            "source": "a",
+            "start": 0,
+            "end": 1001000,
+            "volumeDb": 0,
+            "muted": true,
+            "fadeIn": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "fadeOut": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": null,
+              "fit": "contain"
+            }
+          },
+          {
+            "key": "k4",
+            "source": "b",
+            "start": 2768434,
+            "end": 3002000,
+            "volumeDb": 0,
+            "muted": false,
+            "fadeIn": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "fadeOut": {
+              "duration": 71516,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": null,
+              "fit": "contain"
+            }
+          }
+        ],
+        "metadata": {
+          "title": "",
+          "description": "",
+          "artist": "",
+          "date": "",
+          "comment": ""
+        }
+      },
+      "expected": {
+        "format": "hm-video-plan",
+        "version": 1,
+        "output": {
+          "width": 1920,
+          "height": 1080,
+          "frameRate": {
+            "num": 30000,
+            "den": 1001
+          },
+          "sampleRate": 48000,
+          "channels": 2
+        },
+        "sources": {
+          "a": {
+            "duration": 10000000,
+            "width": 1920,
+            "height": 1080,
+            "rotation": 0
+          },
+          "b": {
+            "duration": 7300000,
+            "width": 1280,
+            "height": 720,
+            "rotation": 90
+          },
+          "c": {
+            "duration": 500000,
+            "width": 640,
+            "height": 480,
+            "rotation": 0
+          }
+        },
+        "clips": [
+          {
+            "key": "x",
+            "source": "a",
+            "start": 0,
+            "end": 1001000,
+            "volumeDb": 0,
+            "muted": true,
+            "fadeIn": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "fadeOut": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": null,
+              "fit": "contain"
+            }
+          },
+          {
+            "key": "k4",
+            "source": "b",
+            "start": 2768434,
+            "end": 3002000,
+            "volumeDb": 0,
+            "muted": false,
+            "fadeIn": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "fadeOut": {
+              "duration": 71516,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": null,
+              "fit": "contain"
+            }
+          }
+        ],
+        "metadata": {
+          "title": "",
+          "description": "",
+          "artist": "",
+          "date": "",
+          "comment": ""
+        }
+      }
+    },
+    {
+      "name": "generated 4: 2 clips",
+      "input": {
+        "format": "hm-video-plan",
+        "version": 1,
+        "output": {
+          "width": 1920,
+          "height": 1080,
+          "frameRate": {
+            "num": 30000,
+            "den": 1001
+          },
+          "sampleRate": 48000,
+          "channels": 2
+        },
+        "sources": {
+          "a": {
+            "duration": 10000000,
+            "width": 1920,
+            "height": 1080,
+            "rotation": 0
+          },
+          "b": {
+            "duration": 7300000,
+            "width": 1280,
+            "height": 720,
+            "rotation": 90
+          },
+          "c": {
+            "duration": 500000,
+            "width": 640,
+            "height": 480,
+            "rotation": 0
+          }
+        },
+        "clips": [
+          {
+            "key": "x",
+            "source": "a",
+            "start": 0,
+            "end": 1001000,
+            "volumeDb": 0,
+            "muted": false,
+            "fadeIn": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "fadeOut": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 180,
+              "crop": {
+                "x": 26,
+                "y": 73,
+                "width": 1205,
+                "height": 856
+              },
+              "fit": "contain"
+            }
+          },
+          {
+            "key": "y",
+            "source": "b",
+            "start": 1000000,
+            "end": 3002000,
+            "volumeDb": 0,
+            "muted": false,
+            "fadeIn": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "fadeOut": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": null,
+              "fit": "contain"
+            }
+          }
+        ],
+        "metadata": {
+          "title": "",
+          "description": "",
+          "artist": "",
+          "date": "",
+          "comment": ""
+        }
+      },
+      "expected": {
+        "format": "hm-video-plan",
+        "version": 1,
+        "output": {
+          "width": 1920,
+          "height": 1080,
+          "frameRate": {
+            "num": 30000,
+            "den": 1001
+          },
+          "sampleRate": 48000,
+          "channels": 2
+        },
+        "sources": {
+          "a": {
+            "duration": 10000000,
+            "width": 1920,
+            "height": 1080,
+            "rotation": 0
+          },
+          "b": {
+            "duration": 7300000,
+            "width": 1280,
+            "height": 720,
+            "rotation": 90
+          },
+          "c": {
+            "duration": 500000,
+            "width": 640,
+            "height": 480,
+            "rotation": 0
+          }
+        },
+        "clips": [
+          {
+            "key": "x",
+            "source": "a",
+            "start": 0,
+            "end": 1001000,
+            "volumeDb": 0,
+            "muted": false,
+            "fadeIn": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "fadeOut": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 180,
+              "crop": {
+                "x": 26,
+                "y": 73,
+                "width": 1205,
+                "height": 856
+              },
+              "fit": "contain"
+            }
+          },
+          {
+            "key": "y",
+            "source": "b",
+            "start": 1000000,
+            "end": 3002000,
+            "volumeDb": 0,
+            "muted": false,
+            "fadeIn": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "fadeOut": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": null,
+              "fit": "contain"
+            }
+          }
+        ],
+        "metadata": {
+          "title": "",
+          "description": "",
+          "artist": "",
+          "date": "",
+          "comment": ""
+        }
+      }
+    },
+    {
+      "name": "generated 5: 4 clips",
+      "input": {
+        "format": "hm-video-plan",
+        "version": 1,
+        "output": {
+          "width": 1900,
+          "height": 4044,
+          "frameRate": {
+            "num": 25,
+            "den": 1
+          },
+          "sampleRate": 48000,
+          "channels": 6
+        },
+        "sources": {
+          "a": {
+            "duration": 10000000,
+            "width": 1920,
+            "height": 1080,
+            "rotation": 0
+          },
+          "b": {
+            "duration": 7300000,
+            "width": 1280,
+            "height": 720,
+            "rotation": 90
+          },
+          "c": {
+            "duration": 500000,
+            "width": 640,
+            "height": 480,
+            "rotation": 0
+          }
+        },
+        "clips": [
+          {
+            "key": "z",
+            "source": "c",
+            "start": 0,
+            "end": 40000,
+            "volumeDb": 0,
+            "muted": false,
+            "fadeIn": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "fadeOut": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": {
+                "x": 300,
+                "y": 14,
+                "width": 300,
+                "height": 350
+              },
+              "fit": "contain"
+            }
+          },
+          {
+            "key": "k3",
+            "source": "c",
+            "start": 80000,
+            "end": 200000,
+            "volumeDb": 0,
+            "muted": false,
+            "fadeIn": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "fadeOut": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": {
+                "x": 300,
+                "y": 14,
+                "width": 300,
+                "height": 350
+              },
+              "fit": "contain"
+            }
+          },
+          {
+            "key": "k2",
+            "source": "c",
+            "start": 200000,
+            "end": 240000,
+            "volumeDb": 0,
+            "muted": false,
+            "fadeIn": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "fadeOut": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": {
+                "x": 300,
+                "y": 14,
+                "width": 300,
+                "height": 350
+              },
+              "fit": "contain"
+            }
+          },
+          {
+            "key": "k4",
+            "source": "c",
+            "start": 240000,
+            "end": 320000,
+            "volumeDb": 0,
+            "muted": false,
+            "fadeIn": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "fadeOut": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": {
+                "x": 300,
+                "y": 14,
+                "width": 300,
+                "height": 350
+              },
+              "fit": "contain"
+            }
+          }
+        ],
+        "metadata": {
+          "title": "",
+          "description": "",
+          "artist": "",
+          "date": "",
+          "comment": "xxxxxxxxxxxxxxxxxxxxxxxxxxx"
+        }
+      },
+      "expected": {
+        "format": "hm-video-plan",
+        "version": 1,
+        "output": {
+          "width": 1900,
+          "height": 4044,
+          "frameRate": {
+            "num": 25,
+            "den": 1
+          },
+          "sampleRate": 48000,
+          "channels": 6
+        },
+        "sources": {
+          "a": {
+            "duration": 10000000,
+            "width": 1920,
+            "height": 1080,
+            "rotation": 0
+          },
+          "b": {
+            "duration": 7300000,
+            "width": 1280,
+            "height": 720,
+            "rotation": 90
+          },
+          "c": {
+            "duration": 500000,
+            "width": 640,
+            "height": 480,
+            "rotation": 0
+          }
+        },
+        "clips": [
+          {
+            "key": "z",
+            "source": "c",
+            "start": 0,
+            "end": 40000,
+            "volumeDb": 0,
+            "muted": false,
+            "fadeIn": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "fadeOut": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": {
+                "x": 300,
+                "y": 14,
+                "width": 300,
+                "height": 350
+              },
+              "fit": "contain"
+            }
+          },
+          {
+            "key": "k3",
+            "source": "c",
+            "start": 80000,
+            "end": 200000,
+            "volumeDb": 0,
+            "muted": false,
+            "fadeIn": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "fadeOut": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": {
+                "x": 300,
+                "y": 14,
+                "width": 300,
+                "height": 350
+              },
+              "fit": "contain"
+            }
+          },
+          {
+            "key": "k2",
+            "source": "c",
+            "start": 200000,
+            "end": 240000,
+            "volumeDb": 0,
+            "muted": false,
+            "fadeIn": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "fadeOut": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": {
+                "x": 300,
+                "y": 14,
+                "width": 300,
+                "height": 350
+              },
+              "fit": "contain"
+            }
+          },
+          {
+            "key": "k4",
+            "source": "c",
+            "start": 240000,
+            "end": 320000,
+            "volumeDb": 0,
+            "muted": false,
+            "fadeIn": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "fadeOut": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": {
+                "x": 300,
+                "y": 14,
+                "width": 300,
+                "height": 350
+              },
+              "fit": "contain"
+            }
+          }
+        ],
+        "metadata": {
+          "title": "",
+          "description": "",
+          "artist": "",
+          "date": "",
+          "comment": "xxxxxxxxxxxxxxxxxxxxxxxxxxx"
+        }
+      }
+    },
+    {
+      "name": "generated 6: 4 clips",
+      "input": {
+        "format": "hm-video-plan",
+        "version": 1,
+        "output": {
+          "width": 1920,
+          "height": 1080,
+          "frameRate": {
+            "num": 30000,
+            "den": 1001
+          },
+          "sampleRate": 48000,
+          "channels": 2
+        },
+        "sources": {
+          "a": {
+            "duration": 10000000,
+            "width": 1920,
+            "height": 1080,
+            "rotation": 0
+          },
+          "b": {
+            "duration": 7300000,
+            "width": 1280,
+            "height": 720,
+            "rotation": 90
+          },
+          "c": {
+            "duration": 500000,
+            "width": 640,
+            "height": 480,
+            "rotation": 0
+          }
+        },
+        "clips": [
+          {
+            "key": "k4",
+            "source": "b",
+            "start": 4898248,
+            "end": 6733415,
+            "volumeDb": -67,
+            "muted": false,
+            "fadeIn": {
+              "duration": 688187,
+              "curve": "equalPower"
+            },
+            "fadeOut": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": null,
+              "fit": "contain"
+            }
+          },
+          {
+            "key": "x",
+            "source": "a",
+            "start": 0,
+            "end": 233567,
+            "volumeDb": -86.4,
+            "muted": false,
+            "fadeIn": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "fadeOut": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": null,
+              "fit": "contain"
+            }
+          },
+          {
+            "key": "y",
+            "source": "b",
+            "start": 948652,
+            "end": 3818185,
+            "volumeDb": 0,
+            "muted": false,
+            "fadeIn": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "fadeOut": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": null,
+              "fit": "contain"
+            }
+          },
+          {
+            "key": "k3",
+            "source": "a",
+            "start": 233567,
+            "end": 1001000,
+            "volumeDb": -86.4,
+            "muted": false,
+            "fadeIn": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "fadeOut": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": null,
+              "fit": "contain"
+            }
+          }
+        ],
+        "metadata": {
+          "title": "",
+          "description": "",
+          "artist": "",
+          "date": "",
+          "comment": ""
+        }
+      },
+      "expected": {
+        "format": "hm-video-plan",
+        "version": 1,
+        "output": {
+          "width": 1920,
+          "height": 1080,
+          "frameRate": {
+            "num": 30000,
+            "den": 1001
+          },
+          "sampleRate": 48000,
+          "channels": 2
+        },
+        "sources": {
+          "a": {
+            "duration": 10000000,
+            "width": 1920,
+            "height": 1080,
+            "rotation": 0
+          },
+          "b": {
+            "duration": 7300000,
+            "width": 1280,
+            "height": 720,
+            "rotation": 90
+          },
+          "c": {
+            "duration": 500000,
+            "width": 640,
+            "height": 480,
+            "rotation": 0
+          }
+        },
+        "clips": [
+          {
+            "key": "k4",
+            "source": "b",
+            "start": 4898248,
+            "end": 6733415,
+            "volumeDb": -67,
+            "muted": false,
+            "fadeIn": {
+              "duration": 688187,
+              "curve": "equalPower"
+            },
+            "fadeOut": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": null,
+              "fit": "contain"
+            }
+          },
+          {
+            "key": "x",
+            "source": "a",
+            "start": 0,
+            "end": 233567,
+            "volumeDb": -86.4,
+            "muted": false,
+            "fadeIn": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "fadeOut": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": null,
+              "fit": "contain"
+            }
+          },
+          {
+            "key": "y",
+            "source": "b",
+            "start": 948652,
+            "end": 3818185,
+            "volumeDb": 0,
+            "muted": false,
+            "fadeIn": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "fadeOut": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": null,
+              "fit": "contain"
+            }
+          },
+          {
+            "key": "k3",
+            "source": "a",
+            "start": 233567,
+            "end": 1001000,
+            "volumeDb": -86.4,
+            "muted": false,
+            "fadeIn": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "fadeOut": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": null,
+              "fit": "contain"
+            }
+          }
+        ],
+        "metadata": {
+          "title": "",
+          "description": "",
+          "artist": "",
+          "date": "",
+          "comment": ""
+        }
+      }
+    },
+    {
+      "name": "generated 7: 3 clips",
+      "input": {
+        "format": "hm-video-plan",
+        "version": 1,
+        "output": {
+          "width": 1920,
+          "height": 1080,
+          "frameRate": {
+            "num": 30000,
+            "den": 1001
+          },
+          "sampleRate": 48000,
+          "channels": 2
+        },
+        "sources": {
+          "a": {
+            "duration": 10000000,
+            "width": 1920,
+            "height": 1080,
+            "rotation": 0
+          },
+          "b": {
+            "duration": 7300000,
+            "width": 1280,
+            "height": 720,
+            "rotation": 90
+          },
+          "c": {
+            "duration": 500000,
+            "width": 640,
+            "height": 480,
+            "rotation": 0
+          }
+        },
+        "clips": [
+          {
+            "key": "x",
+            "source": "a",
+            "start": 0,
+            "end": 1001000,
+            "volumeDb": 0,
+            "muted": false,
+            "fadeIn": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "fadeOut": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": null,
+              "fit": "contain"
+            }
+          },
+          {
+            "key": "y",
+            "source": "b",
+            "start": 1000000,
+            "end": 1467133,
+            "volumeDb": 0,
+            "muted": false,
+            "fadeIn": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "fadeOut": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": null,
+              "fit": "contain"
+            }
+          },
+          {
+            "key": "z",
+            "source": "c",
+            "start": 0,
+            "end": 333667,
+            "volumeDb": 0,
+            "muted": false,
+            "fadeIn": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "fadeOut": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": null,
+              "fit": "contain"
+            }
+          }
+        ],
+        "metadata": {
+          "title": "",
+          "description": "",
+          "artist": "",
+          "date": "",
+          "comment": ""
+        }
+      },
+      "expected": {
+        "format": "hm-video-plan",
+        "version": 1,
+        "output": {
+          "width": 1920,
+          "height": 1080,
+          "frameRate": {
+            "num": 30000,
+            "den": 1001
+          },
+          "sampleRate": 48000,
+          "channels": 2
+        },
+        "sources": {
+          "a": {
+            "duration": 10000000,
+            "width": 1920,
+            "height": 1080,
+            "rotation": 0
+          },
+          "b": {
+            "duration": 7300000,
+            "width": 1280,
+            "height": 720,
+            "rotation": 90
+          },
+          "c": {
+            "duration": 500000,
+            "width": 640,
+            "height": 480,
+            "rotation": 0
+          }
+        },
+        "clips": [
+          {
+            "key": "x",
+            "source": "a",
+            "start": 0,
+            "end": 1001000,
+            "volumeDb": 0,
+            "muted": false,
+            "fadeIn": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "fadeOut": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": null,
+              "fit": "contain"
+            }
+          },
+          {
+            "key": "y",
+            "source": "b",
+            "start": 1000000,
+            "end": 1467133,
+            "volumeDb": 0,
+            "muted": false,
+            "fadeIn": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "fadeOut": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": null,
+              "fit": "contain"
+            }
+          },
+          {
+            "key": "z",
+            "source": "c",
+            "start": 0,
+            "end": 333667,
+            "volumeDb": 0,
+            "muted": false,
+            "fadeIn": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "fadeOut": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": null,
+              "fit": "contain"
+            }
+          }
+        ],
+        "metadata": {
+          "title": "",
+          "description": "",
+          "artist": "",
+          "date": "",
+          "comment": ""
+        }
+      }
+    },
+    {
+      "name": "generated 8: 5 clips",
+      "input": {
+        "format": "hm-video-plan",
+        "version": 1,
+        "output": {
+          "width": 3336,
+          "height": 1144,
+          "frameRate": {
+            "num": 30000,
+            "den": 1001
+          },
+          "sampleRate": 96000,
+          "channels": 4
+        },
+        "sources": {
+          "a": {
+            "duration": 10000000,
+            "width": 1920,
+            "height": 1080,
+            "rotation": 0
+          },
+          "b": {
+            "duration": 7300000,
+            "width": 1280,
+            "height": 720,
+            "rotation": 90
+          },
+          "c": {
+            "duration": 500000,
+            "width": 640,
+            "height": 480,
+            "rotation": 0
+          }
+        },
+        "clips": [
+          {
+            "key": "x",
+            "source": "a",
+            "start": 0,
+            "end": 600600,
+            "volumeDb": 0,
+            "muted": false,
+            "fadeIn": {
+              "duration": 600600,
+              "curve": "linear"
+            },
+            "fadeOut": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": null,
+              "fit": "contain"
+            }
+          },
+          {
+            "key": "k4",
+            "source": "a",
+            "start": 600600,
+            "end": 700700,
+            "volumeDb": 0,
+            "muted": false,
+            "fadeIn": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "fadeOut": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": null,
+              "fit": "contain"
+            }
+          },
+          {
+            "key": "k5",
+            "source": "a",
+            "start": 700700,
+            "end": 1001000,
+            "volumeDb": 0,
+            "muted": false,
+            "fadeIn": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "fadeOut": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": null,
+              "fit": "contain"
+            }
+          },
+          {
+            "key": "y",
+            "source": "b",
+            "start": 1000000,
+            "end": 1500500,
+            "volumeDb": 0,
+            "muted": false,
+            "fadeIn": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "fadeOut": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": null,
+              "fit": "contain"
+            }
+          },
+          {
+            "key": "z",
+            "source": "c",
+            "start": 133467,
+            "end": 333667,
+            "volumeDb": 0,
+            "muted": false,
+            "fadeIn": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "fadeOut": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 90,
+              "crop": {
+                "x": 199,
+                "y": 214,
+                "width": 158,
+                "height": 382
+              },
+              "fit": "cover"
+            }
+          }
+        ],
+        "metadata": {
+          "title": "xxxxxxxxxxxxxxxxxxxxxxxxx",
+          "description": "",
+          "artist": "",
+          "date": "xxxxxxx",
+          "comment": ""
+        }
+      },
+      "expected": {
+        "format": "hm-video-plan",
+        "version": 1,
+        "output": {
+          "width": 3336,
+          "height": 1144,
+          "frameRate": {
+            "num": 30000,
+            "den": 1001
+          },
+          "sampleRate": 96000,
+          "channels": 4
+        },
+        "sources": {
+          "a": {
+            "duration": 10000000,
+            "width": 1920,
+            "height": 1080,
+            "rotation": 0
+          },
+          "b": {
+            "duration": 7300000,
+            "width": 1280,
+            "height": 720,
+            "rotation": 90
+          },
+          "c": {
+            "duration": 500000,
+            "width": 640,
+            "height": 480,
+            "rotation": 0
+          }
+        },
+        "clips": [
+          {
+            "key": "x",
+            "source": "a",
+            "start": 0,
+            "end": 600600,
+            "volumeDb": 0,
+            "muted": false,
+            "fadeIn": {
+              "duration": 600600,
+              "curve": "linear"
+            },
+            "fadeOut": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": null,
+              "fit": "contain"
+            }
+          },
+          {
+            "key": "k4",
+            "source": "a",
+            "start": 600600,
+            "end": 700700,
+            "volumeDb": 0,
+            "muted": false,
+            "fadeIn": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "fadeOut": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": null,
+              "fit": "contain"
+            }
+          },
+          {
+            "key": "k5",
+            "source": "a",
+            "start": 700700,
+            "end": 1001000,
+            "volumeDb": 0,
+            "muted": false,
+            "fadeIn": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "fadeOut": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": null,
+              "fit": "contain"
+            }
+          },
+          {
+            "key": "y",
+            "source": "b",
+            "start": 1000000,
+            "end": 1500500,
+            "volumeDb": 0,
+            "muted": false,
+            "fadeIn": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "fadeOut": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": null,
+              "fit": "contain"
+            }
+          },
+          {
+            "key": "z",
+            "source": "c",
+            "start": 133467,
+            "end": 333667,
+            "volumeDb": 0,
+            "muted": false,
+            "fadeIn": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "fadeOut": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 90,
+              "crop": {
+                "x": 199,
+                "y": 214,
+                "width": 158,
+                "height": 382
+              },
+              "fit": "cover"
+            }
+          }
+        ],
+        "metadata": {
+          "title": "xxxxxxxxxxxxxxxxxxxxxxxxx",
+          "description": "",
+          "artist": "",
+          "date": "xxxxxxx",
+          "comment": ""
+        }
+      }
+    },
+    {
+      "name": "generated 9: 1 clips",
+      "input": {
+        "format": "hm-video-plan",
+        "version": 1,
+        "output": {
+          "width": 3590,
+          "height": 1982,
+          "frameRate": {
+            "num": 30000,
+            "den": 1001
+          },
+          "sampleRate": 48000,
+          "channels": 7
+        },
+        "sources": {
+          "a": {
+            "duration": 10000000,
+            "width": 1920,
+            "height": 1080,
+            "rotation": 0
+          },
+          "b": {
+            "duration": 7300000,
+            "width": 1280,
+            "height": 720,
+            "rotation": 90
+          },
+          "c": {
+            "duration": 500000,
+            "width": 640,
+            "height": 480,
+            "rotation": 0
+          }
+        },
+        "clips": [
+          {
+            "key": "x",
+            "source": "a",
+            "start": 0,
+            "end": 1001000,
+            "volumeDb": 0,
+            "muted": false,
+            "fadeIn": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "fadeOut": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": null,
+              "fit": "contain"
+            }
+          }
+        ],
+        "metadata": {
+          "title": "",
+          "description": "",
+          "artist": "",
+          "date": "",
+          "comment": ""
+        }
+      },
+      "expected": {
+        "format": "hm-video-plan",
+        "version": 1,
+        "output": {
+          "width": 3590,
+          "height": 1982,
+          "frameRate": {
+            "num": 30000,
+            "den": 1001
+          },
+          "sampleRate": 48000,
+          "channels": 7
+        },
+        "sources": {
+          "a": {
+            "duration": 10000000,
+            "width": 1920,
+            "height": 1080,
+            "rotation": 0
+          },
+          "b": {
+            "duration": 7300000,
+            "width": 1280,
+            "height": 720,
+            "rotation": 90
+          },
+          "c": {
+            "duration": 500000,
+            "width": 640,
+            "height": 480,
+            "rotation": 0
+          }
+        },
+        "clips": [
+          {
+            "key": "x",
+            "source": "a",
+            "start": 0,
+            "end": 1001000,
+            "volumeDb": 0,
+            "muted": false,
+            "fadeIn": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "fadeOut": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": null,
+              "fit": "contain"
+            }
+          }
+        ],
+        "metadata": {
+          "title": "",
+          "description": "",
+          "artist": "",
+          "date": "",
+          "comment": ""
+        }
+      }
+    },
+    {
+      "name": "generated 10: 3 clips",
+      "input": {
+        "format": "hm-video-plan",
+        "version": 1,
+        "output": {
+          "width": 3050,
+          "height": 2384,
+          "frameRate": {
+            "num": 25,
+            "den": 1
+          },
+          "sampleRate": 44100,
+          "channels": 8
+        },
+        "sources": {
+          "a": {
+            "duration": 10000000,
+            "width": 1920,
+            "height": 1080,
+            "rotation": 0
+          },
+          "b": {
+            "duration": 7300000,
+            "width": 1280,
+            "height": 720,
+            "rotation": 90
+          },
+          "c": {
+            "duration": 500000,
+            "width": 640,
+            "height": 480,
+            "rotation": 0
+          }
+        },
+        "clips": [
+          {
+            "key": "x",
+            "source": "a",
+            "start": 0,
+            "end": 1000000,
+            "volumeDb": -11.599999999999994,
+            "muted": false,
+            "fadeIn": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "fadeOut": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": null,
+              "fit": "contain"
+            }
+          },
+          {
+            "key": "y",
+            "source": "b",
+            "start": 1000000,
+            "end": 3000000,
+            "volumeDb": -11.599999999999994,
+            "muted": false,
+            "fadeIn": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "fadeOut": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": null,
+              "fit": "contain"
+            }
+          },
+          {
+            "key": "z",
+            "source": "c",
+            "start": 98420,
+            "end": 138420,
+            "volumeDb": 0,
+            "muted": false,
+            "fadeIn": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "fadeOut": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": null,
+              "fit": "contain"
+            }
+          }
+        ],
+        "metadata": {
+          "title": "",
+          "description": "",
+          "artist": "",
+          "date": "",
+          "comment": ""
+        }
+      },
+      "expected": {
+        "format": "hm-video-plan",
+        "version": 1,
+        "output": {
+          "width": 3050,
+          "height": 2384,
+          "frameRate": {
+            "num": 25,
+            "den": 1
+          },
+          "sampleRate": 44100,
+          "channels": 8
+        },
+        "sources": {
+          "a": {
+            "duration": 10000000,
+            "width": 1920,
+            "height": 1080,
+            "rotation": 0
+          },
+          "b": {
+            "duration": 7300000,
+            "width": 1280,
+            "height": 720,
+            "rotation": 90
+          },
+          "c": {
+            "duration": 500000,
+            "width": 640,
+            "height": 480,
+            "rotation": 0
+          }
+        },
+        "clips": [
+          {
+            "key": "x",
+            "source": "a",
+            "start": 0,
+            "end": 1000000,
+            "volumeDb": -11.599999999999994,
+            "muted": false,
+            "fadeIn": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "fadeOut": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": null,
+              "fit": "contain"
+            }
+          },
+          {
+            "key": "y",
+            "source": "b",
+            "start": 1000000,
+            "end": 3000000,
+            "volumeDb": -11.599999999999994,
+            "muted": false,
+            "fadeIn": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "fadeOut": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": null,
+              "fit": "contain"
+            }
+          },
+          {
+            "key": "z",
+            "source": "c",
+            "start": 98420,
+            "end": 138420,
+            "volumeDb": 0,
+            "muted": false,
+            "fadeIn": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "fadeOut": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": null,
+              "fit": "contain"
+            }
+          }
+        ],
+        "metadata": {
+          "title": "",
+          "description": "",
+          "artist": "",
+          "date": "",
+          "comment": ""
+        }
+      }
+    },
+    {
+      "name": "generated 11: 3 clips",
+      "input": {
+        "format": "hm-video-plan",
+        "version": 1,
+        "output": {
+          "width": 1920,
+          "height": 1080,
+          "frameRate": {
+            "num": 30000,
+            "den": 1001
+          },
+          "sampleRate": 48000,
+          "channels": 2
+        },
+        "sources": {
+          "a": {
+            "duration": 10000000,
+            "width": 1920,
+            "height": 1080,
+            "rotation": 0
+          },
+          "b": {
+            "duration": 7300000,
+            "width": 1280,
+            "height": 720,
+            "rotation": 90
+          },
+          "c": {
+            "duration": 500000,
+            "width": 640,
+            "height": 480,
+            "rotation": 0
+          }
+        },
+        "clips": [
+          {
+            "key": "x",
+            "source": "a",
+            "start": 0,
+            "end": 1001000,
+            "volumeDb": 0,
+            "muted": false,
+            "fadeIn": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "fadeOut": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": null,
+              "fit": "contain"
+            }
+          },
+          {
+            "key": "y",
+            "source": "b",
+            "start": 1000000,
+            "end": 3002000,
+            "volumeDb": 0,
+            "muted": false,
+            "fadeIn": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "fadeOut": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": null,
+              "fit": "contain"
+            }
+          },
+          {
+            "key": "z",
+            "source": "c",
+            "start": 0,
+            "end": 333667,
+            "volumeDb": 0,
+            "muted": false,
+            "fadeIn": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "fadeOut": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": null,
+              "fit": "contain"
+            }
+          }
+        ],
+        "metadata": {
+          "title": "",
+          "description": "",
+          "artist": "",
+          "date": "",
+          "comment": ""
+        }
+      },
+      "expected": {
+        "format": "hm-video-plan",
+        "version": 1,
+        "output": {
+          "width": 1920,
+          "height": 1080,
+          "frameRate": {
+            "num": 30000,
+            "den": 1001
+          },
+          "sampleRate": 48000,
+          "channels": 2
+        },
+        "sources": {
+          "a": {
+            "duration": 10000000,
+            "width": 1920,
+            "height": 1080,
+            "rotation": 0
+          },
+          "b": {
+            "duration": 7300000,
+            "width": 1280,
+            "height": 720,
+            "rotation": 90
+          },
+          "c": {
+            "duration": 500000,
+            "width": 640,
+            "height": 480,
+            "rotation": 0
+          }
+        },
+        "clips": [
+          {
+            "key": "x",
+            "source": "a",
+            "start": 0,
+            "end": 1001000,
+            "volumeDb": 0,
+            "muted": false,
+            "fadeIn": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "fadeOut": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": null,
+              "fit": "contain"
+            }
+          },
+          {
+            "key": "y",
+            "source": "b",
+            "start": 1000000,
+            "end": 3002000,
+            "volumeDb": 0,
+            "muted": false,
+            "fadeIn": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "fadeOut": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": null,
+              "fit": "contain"
+            }
+          },
+          {
+            "key": "z",
+            "source": "c",
+            "start": 0,
+            "end": 333667,
+            "volumeDb": 0,
+            "muted": false,
+            "fadeIn": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "fadeOut": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": null,
+              "fit": "contain"
+            }
+          }
+        ],
+        "metadata": {
+          "title": "",
+          "description": "",
+          "artist": "",
+          "date": "",
+          "comment": ""
+        }
+      }
+    },
+    {
+      "name": "generated 12: 1 clips",
+      "input": {
+        "format": "hm-video-plan",
+        "version": 1,
+        "output": {
+          "width": 142,
+          "height": 2794,
+          "frameRate": {
+            "num": 24000,
+            "den": 1001
+          },
+          "sampleRate": 48000,
+          "channels": 5
+        },
+        "sources": {
+          "a": {
+            "duration": 10000000,
+            "width": 1920,
+            "height": 1080,
+            "rotation": 0
+          },
+          "b": {
+            "duration": 7300000,
+            "width": 1280,
+            "height": 720,
+            "rotation": 90
+          },
+          "c": {
+            "duration": 500000,
+            "width": 640,
+            "height": 480,
+            "rotation": 0
+          }
+        },
+        "clips": [
+          {
+            "key": "k4",
+            "source": "b",
+            "start": 6039767,
+            "end": 7291017,
+            "volumeDb": -29,
+            "muted": false,
+            "fadeIn": {
+              "duration": 462962,
+              "curve": "equalPower"
+            },
+            "fadeOut": {
+              "duration": 154320,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": null,
+              "fit": "contain"
+            }
+          }
+        ],
+        "metadata": {
+          "title": "",
+          "description": "",
+          "artist": "xxxxxxxxxxx",
+          "date": "",
+          "comment": ""
+        }
+      },
+      "expected": {
+        "format": "hm-video-plan",
+        "version": 1,
+        "output": {
+          "width": 142,
+          "height": 2794,
+          "frameRate": {
+            "num": 24000,
+            "den": 1001
+          },
+          "sampleRate": 48000,
+          "channels": 5
+        },
+        "sources": {
+          "a": {
+            "duration": 10000000,
+            "width": 1920,
+            "height": 1080,
+            "rotation": 0
+          },
+          "b": {
+            "duration": 7300000,
+            "width": 1280,
+            "height": 720,
+            "rotation": 90
+          },
+          "c": {
+            "duration": 500000,
+            "width": 640,
+            "height": 480,
+            "rotation": 0
+          }
+        },
+        "clips": [
+          {
+            "key": "k4",
+            "source": "b",
+            "start": 6039767,
+            "end": 7291017,
+            "volumeDb": -29,
+            "muted": false,
+            "fadeIn": {
+              "duration": 462962,
+              "curve": "equalPower"
+            },
+            "fadeOut": {
+              "duration": 154320,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": null,
+              "fit": "contain"
+            }
+          }
+        ],
+        "metadata": {
+          "title": "",
+          "description": "",
+          "artist": "xxxxxxxxxxx",
+          "date": "",
+          "comment": ""
+        }
+      }
+    },
+    {
+      "name": "generated 13: 4 clips",
+      "input": {
+        "format": "hm-video-plan",
+        "version": 1,
+        "output": {
+          "width": 1920,
+          "height": 1080,
+          "frameRate": {
+            "num": 30000,
+            "den": 1001
+          },
+          "sampleRate": 48000,
+          "channels": 2
+        },
+        "sources": {
+          "a": {
+            "duration": 10000000,
+            "width": 1920,
+            "height": 1080,
+            "rotation": 0
+          },
+          "b": {
+            "duration": 7300000,
+            "width": 1280,
+            "height": 720,
+            "rotation": 90
+          },
+          "c": {
+            "duration": 500000,
+            "width": 640,
+            "height": 480,
+            "rotation": 0
+          }
+        },
+        "clips": [
+          {
+            "key": "x",
+            "source": "a",
+            "start": 0,
+            "end": 1001000,
+            "volumeDb": 0,
+            "muted": false,
+            "fadeIn": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "fadeOut": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": null,
+              "fit": "contain"
+            }
+          },
+          {
+            "key": "k4",
+            "source": "a",
+            "start": 6412727,
+            "end": 9048694,
+            "volumeDb": -21,
+            "muted": false,
+            "fadeIn": {
+              "duration": 0,
+              "curve": "equalPower"
+            },
+            "fadeOut": {
+              "duration": 329495,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": null,
+              "fit": "contain"
+            }
+          },
+          {
+            "key": "y",
+            "source": "b",
+            "start": 1000000,
+            "end": 3002000,
+            "volumeDb": 0,
+            "muted": false,
+            "fadeIn": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "fadeOut": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": null,
+              "fit": "contain"
+            }
+          },
+          {
+            "key": "z",
+            "source": "c",
+            "start": 0,
+            "end": 333667,
+            "volumeDb": 0,
+            "muted": false,
+            "fadeIn": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "fadeOut": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": null,
+              "fit": "contain"
+            }
+          }
+        ],
+        "metadata": {
+          "title": "",
+          "description": "",
+          "artist": "",
+          "date": "",
+          "comment": ""
+        }
+      },
+      "expected": {
+        "format": "hm-video-plan",
+        "version": 1,
+        "output": {
+          "width": 1920,
+          "height": 1080,
+          "frameRate": {
+            "num": 30000,
+            "den": 1001
+          },
+          "sampleRate": 48000,
+          "channels": 2
+        },
+        "sources": {
+          "a": {
+            "duration": 10000000,
+            "width": 1920,
+            "height": 1080,
+            "rotation": 0
+          },
+          "b": {
+            "duration": 7300000,
+            "width": 1280,
+            "height": 720,
+            "rotation": 90
+          },
+          "c": {
+            "duration": 500000,
+            "width": 640,
+            "height": 480,
+            "rotation": 0
+          }
+        },
+        "clips": [
+          {
+            "key": "x",
+            "source": "a",
+            "start": 0,
+            "end": 1001000,
+            "volumeDb": 0,
+            "muted": false,
+            "fadeIn": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "fadeOut": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": null,
+              "fit": "contain"
+            }
+          },
+          {
+            "key": "k4",
+            "source": "a",
+            "start": 6412727,
+            "end": 9048694,
+            "volumeDb": -21,
+            "muted": false,
+            "fadeIn": {
+              "duration": 0,
+              "curve": "equalPower"
+            },
+            "fadeOut": {
+              "duration": 329495,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": null,
+              "fit": "contain"
+            }
+          },
+          {
+            "key": "y",
+            "source": "b",
+            "start": 1000000,
+            "end": 3002000,
+            "volumeDb": 0,
+            "muted": false,
+            "fadeIn": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "fadeOut": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": null,
+              "fit": "contain"
+            }
+          },
+          {
+            "key": "z",
+            "source": "c",
+            "start": 0,
+            "end": 333667,
+            "volumeDb": 0,
+            "muted": false,
+            "fadeIn": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "fadeOut": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": null,
+              "fit": "contain"
+            }
+          }
+        ],
+        "metadata": {
+          "title": "",
+          "description": "",
+          "artist": "",
+          "date": "",
+          "comment": ""
+        }
+      }
+    },
+    {
+      "name": "generated 14: 4 clips",
+      "input": {
+        "format": "hm-video-plan",
+        "version": 1,
+        "output": {
+          "width": 1920,
+          "height": 1080,
+          "frameRate": {
+            "num": 30000,
+            "den": 1001
+          },
+          "sampleRate": 48000,
+          "channels": 2
+        },
+        "sources": {
+          "a": {
+            "duration": 10000000,
+            "width": 1920,
+            "height": 1080,
+            "rotation": 0
+          },
+          "b": {
+            "duration": 7300000,
+            "width": 1280,
+            "height": 720,
+            "rotation": 90
+          },
+          "c": {
+            "duration": 500000,
+            "width": 640,
+            "height": 480,
+            "rotation": 0
+          }
+        },
+        "clips": [
+          {
+            "key": "x",
+            "source": "a",
+            "start": 0,
+            "end": 1001000,
+            "volumeDb": 0,
+            "muted": false,
+            "fadeIn": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "fadeOut": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": null,
+              "fit": "contain"
+            }
+          },
+          {
+            "key": "y",
+            "source": "b",
+            "start": 1000000,
+            "end": 2234567,
+            "volumeDb": -58,
+            "muted": false,
+            "fadeIn": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "fadeOut": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": null,
+              "fit": "contain"
+            }
+          },
+          {
+            "key": "k4",
+            "source": "b",
+            "start": 2234567,
+            "end": 2901900,
+            "volumeDb": 0,
+            "muted": false,
+            "fadeIn": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "fadeOut": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": null,
+              "fit": "contain"
+            }
+          },
+          {
+            "key": "z",
+            "source": "c",
+            "start": 133467,
+            "end": 333667,
+            "volumeDb": 0,
+            "muted": false,
+            "fadeIn": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "fadeOut": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 90,
+              "crop": {
+                "x": 49,
+                "y": 242,
+                "width": 385,
+                "height": 113
+              },
+              "fit": "contain"
+            }
+          }
+        ],
+        "metadata": {
+          "title": "",
+          "description": "",
+          "artist": "",
+          "date": "xxxxxxxxxx",
+          "comment": ""
+        }
+      },
+      "expected": {
+        "format": "hm-video-plan",
+        "version": 1,
+        "output": {
+          "width": 1920,
+          "height": 1080,
+          "frameRate": {
+            "num": 30000,
+            "den": 1001
+          },
+          "sampleRate": 48000,
+          "channels": 2
+        },
+        "sources": {
+          "a": {
+            "duration": 10000000,
+            "width": 1920,
+            "height": 1080,
+            "rotation": 0
+          },
+          "b": {
+            "duration": 7300000,
+            "width": 1280,
+            "height": 720,
+            "rotation": 90
+          },
+          "c": {
+            "duration": 500000,
+            "width": 640,
+            "height": 480,
+            "rotation": 0
+          }
+        },
+        "clips": [
+          {
+            "key": "x",
+            "source": "a",
+            "start": 0,
+            "end": 1001000,
+            "volumeDb": 0,
+            "muted": false,
+            "fadeIn": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "fadeOut": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": null,
+              "fit": "contain"
+            }
+          },
+          {
+            "key": "y",
+            "source": "b",
+            "start": 1000000,
+            "end": 2234567,
+            "volumeDb": -58,
+            "muted": false,
+            "fadeIn": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "fadeOut": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": null,
+              "fit": "contain"
+            }
+          },
+          {
+            "key": "k4",
+            "source": "b",
+            "start": 2234567,
+            "end": 2901900,
+            "volumeDb": 0,
+            "muted": false,
+            "fadeIn": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "fadeOut": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": null,
+              "fit": "contain"
+            }
+          },
+          {
+            "key": "z",
+            "source": "c",
+            "start": 133467,
+            "end": 333667,
+            "volumeDb": 0,
+            "muted": false,
+            "fadeIn": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "fadeOut": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 90,
+              "crop": {
+                "x": 49,
+                "y": 242,
+                "width": 385,
+                "height": 113
+              },
+              "fit": "contain"
+            }
+          }
+        ],
+        "metadata": {
+          "title": "",
+          "description": "",
+          "artist": "",
+          "date": "xxxxxxxxxx",
+          "comment": ""
+        }
+      }
+    },
+    {
+      "name": "generated 15: 0 clips",
+      "input": {
+        "format": "hm-video-plan",
+        "version": 1,
+        "output": {
+          "width": 434,
+          "height": 1334,
+          "frameRate": {
+            "num": 24000,
+            "den": 1001
+          },
+          "sampleRate": 96000,
+          "channels": 3
+        },
+        "sources": {
+          "a": {
+            "duration": 10000000,
+            "width": 1920,
+            "height": 1080,
+            "rotation": 0
+          },
+          "b": {
+            "duration": 7300000,
+            "width": 1280,
+            "height": 720,
+            "rotation": 90
+          },
+          "c": {
+            "duration": 500000,
+            "width": 640,
+            "height": 480,
+            "rotation": 0
+          }
+        },
+        "clips": [],
+        "metadata": {
+          "title": "",
+          "description": "",
+          "artist": "",
+          "date": "",
+          "comment": ""
+        }
+      },
+      "expected": {
+        "format": "hm-video-plan",
+        "version": 1,
+        "output": {
+          "width": 434,
+          "height": 1334,
+          "frameRate": {
+            "num": 24000,
+            "den": 1001
+          },
+          "sampleRate": 96000,
+          "channels": 3
+        },
+        "sources": {
+          "a": {
+            "duration": 10000000,
+            "width": 1920,
+            "height": 1080,
+            "rotation": 0
+          },
+          "b": {
+            "duration": 7300000,
+            "width": 1280,
+            "height": 720,
+            "rotation": 90
+          },
+          "c": {
+            "duration": 500000,
+            "width": 640,
+            "height": 480,
+            "rotation": 0
+          }
+        },
+        "clips": [],
+        "metadata": {
+          "title": "",
+          "description": "",
+          "artist": "",
+          "date": "",
+          "comment": ""
+        }
+      }
+    },
+    {
+      "name": "generated 16: 3 clips",
+      "input": {
+        "format": "hm-video-plan",
+        "version": 1,
+        "output": {
+          "width": 1920,
+          "height": 1080,
+          "frameRate": {
+            "num": 30000,
+            "den": 1001
+          },
+          "sampleRate": 48000,
+          "channels": 2
+        },
+        "sources": {
+          "a": {
+            "duration": 10000000,
+            "width": 1920,
+            "height": 1080,
+            "rotation": 0
+          },
+          "b": {
+            "duration": 7300000,
+            "width": 1280,
+            "height": 720,
+            "rotation": 90
+          },
+          "c": {
+            "duration": 500000,
+            "width": 640,
+            "height": 480,
+            "rotation": 0
+          }
+        },
+        "clips": [
+          {
+            "key": "x",
+            "source": "a",
+            "start": 4801157,
+            "end": 7603957,
+            "volumeDb": 0,
+            "muted": false,
+            "fadeIn": {
+              "duration": 690803,
+              "curve": "linear"
+            },
+            "fadeOut": {
+              "duration": 1804385,
+              "curve": "equalPower"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": null,
+              "fit": "contain"
+            }
+          },
+          {
+            "key": "y",
+            "source": "b",
+            "start": 1000000,
+            "end": 3002000,
+            "volumeDb": -61.8,
+            "muted": false,
+            "fadeIn": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "fadeOut": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": {
+                "x": 44,
+                "y": 553,
+                "width": 628,
+                "height": 444
+              },
+              "fit": "cover"
+            }
+          },
+          {
+            "key": "z",
+            "source": "c",
+            "start": 0,
+            "end": 333667,
+            "volumeDb": 20.5,
+            "muted": false,
+            "fadeIn": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "fadeOut": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": null,
+              "fit": "contain"
+            }
+          }
+        ],
+        "metadata": {
+          "title": "xxxxxxxxxxxxxx",
+          "description": "",
+          "artist": "",
+          "date": "xxxxx",
+          "comment": ""
+        }
+      },
+      "expected": {
+        "format": "hm-video-plan",
+        "version": 1,
+        "output": {
+          "width": 1920,
+          "height": 1080,
+          "frameRate": {
+            "num": 30000,
+            "den": 1001
+          },
+          "sampleRate": 48000,
+          "channels": 2
+        },
+        "sources": {
+          "a": {
+            "duration": 10000000,
+            "width": 1920,
+            "height": 1080,
+            "rotation": 0
+          },
+          "b": {
+            "duration": 7300000,
+            "width": 1280,
+            "height": 720,
+            "rotation": 90
+          },
+          "c": {
+            "duration": 500000,
+            "width": 640,
+            "height": 480,
+            "rotation": 0
+          }
+        },
+        "clips": [
+          {
+            "key": "x",
+            "source": "a",
+            "start": 4801157,
+            "end": 7603957,
+            "volumeDb": 0,
+            "muted": false,
+            "fadeIn": {
+              "duration": 690803,
+              "curve": "linear"
+            },
+            "fadeOut": {
+              "duration": 1804385,
+              "curve": "equalPower"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": null,
+              "fit": "contain"
+            }
+          },
+          {
+            "key": "y",
+            "source": "b",
+            "start": 1000000,
+            "end": 3002000,
+            "volumeDb": -61.8,
+            "muted": false,
+            "fadeIn": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "fadeOut": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": {
+                "x": 44,
+                "y": 553,
+                "width": 628,
+                "height": 444
+              },
+              "fit": "cover"
+            }
+          },
+          {
+            "key": "z",
+            "source": "c",
+            "start": 0,
+            "end": 333667,
+            "volumeDb": 20.5,
+            "muted": false,
+            "fadeIn": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "fadeOut": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": null,
+              "fit": "contain"
+            }
+          }
+        ],
+        "metadata": {
+          "title": "xxxxxxxxxxxxxx",
+          "description": "",
+          "artist": "",
+          "date": "xxxxx",
+          "comment": ""
+        }
+      }
+    },
+    {
+      "name": "generated 17: 3 clips",
+      "input": {
+        "format": "hm-video-plan",
+        "version": 1,
+        "output": {
+          "width": 1920,
+          "height": 1080,
+          "frameRate": {
+            "num": 30000,
+            "den": 1001
+          },
+          "sampleRate": 48000,
+          "channels": 2
+        },
+        "sources": {
+          "a": {
+            "duration": 10000000,
+            "width": 1920,
+            "height": 1080,
+            "rotation": 0
+          },
+          "b": {
+            "duration": 7300000,
+            "width": 1280,
+            "height": 720,
+            "rotation": 90
+          },
+          "c": {
+            "duration": 500000,
+            "width": 640,
+            "height": 480,
+            "rotation": 0
+          }
+        },
+        "clips": [
+          {
+            "key": "x",
+            "source": "a",
+            "start": 0,
+            "end": 1001000,
+            "volumeDb": 0,
+            "muted": false,
+            "fadeIn": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "fadeOut": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": null,
+              "fit": "contain"
+            }
+          },
+          {
+            "key": "y",
+            "source": "b",
+            "start": 1000000,
+            "end": 3002000,
+            "volumeDb": 0,
+            "muted": false,
+            "fadeIn": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "fadeOut": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": null,
+              "fit": "contain"
+            }
+          },
+          {
+            "key": "z",
+            "source": "c",
+            "start": 0,
+            "end": 333667,
+            "volumeDb": 0,
+            "muted": false,
+            "fadeIn": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "fadeOut": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": null,
+              "fit": "contain"
+            }
+          }
+        ],
+        "metadata": {
+          "title": "",
+          "description": "",
+          "artist": "",
+          "date": "",
+          "comment": ""
+        }
+      },
+      "expected": {
+        "format": "hm-video-plan",
+        "version": 1,
+        "output": {
+          "width": 1920,
+          "height": 1080,
+          "frameRate": {
+            "num": 30000,
+            "den": 1001
+          },
+          "sampleRate": 48000,
+          "channels": 2
+        },
+        "sources": {
+          "a": {
+            "duration": 10000000,
+            "width": 1920,
+            "height": 1080,
+            "rotation": 0
+          },
+          "b": {
+            "duration": 7300000,
+            "width": 1280,
+            "height": 720,
+            "rotation": 90
+          },
+          "c": {
+            "duration": 500000,
+            "width": 640,
+            "height": 480,
+            "rotation": 0
+          }
+        },
+        "clips": [
+          {
+            "key": "x",
+            "source": "a",
+            "start": 0,
+            "end": 1001000,
+            "volumeDb": 0,
+            "muted": false,
+            "fadeIn": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "fadeOut": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": null,
+              "fit": "contain"
+            }
+          },
+          {
+            "key": "y",
+            "source": "b",
+            "start": 1000000,
+            "end": 3002000,
+            "volumeDb": 0,
+            "muted": false,
+            "fadeIn": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "fadeOut": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": null,
+              "fit": "contain"
+            }
+          },
+          {
+            "key": "z",
+            "source": "c",
+            "start": 0,
+            "end": 333667,
+            "volumeDb": 0,
+            "muted": false,
+            "fadeIn": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "fadeOut": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": null,
+              "fit": "contain"
+            }
+          }
+        ],
+        "metadata": {
+          "title": "",
+          "description": "",
+          "artist": "",
+          "date": "",
+          "comment": ""
+        }
+      }
+    },
+    {
+      "name": "generated 18: 4 clips",
+      "input": {
+        "format": "hm-video-plan",
+        "version": 1,
+        "output": {
+          "width": 1920,
+          "height": 1080,
+          "frameRate": {
+            "num": 30000,
+            "den": 1001
+          },
+          "sampleRate": 48000,
+          "channels": 2
+        },
+        "sources": {
+          "a": {
+            "duration": 10000000,
+            "width": 1920,
+            "height": 1080,
+            "rotation": 0
+          },
+          "b": {
+            "duration": 7300000,
+            "width": 1280,
+            "height": 720,
+            "rotation": 90
+          },
+          "c": {
+            "duration": 500000,
+            "width": 640,
+            "height": 480,
+            "rotation": 0
+          }
+        },
+        "clips": [
+          {
+            "key": "x",
+            "source": "a",
+            "start": 0,
+            "end": 1001000,
+            "volumeDb": 0,
+            "muted": false,
+            "fadeIn": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "fadeOut": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": null,
+              "fit": "contain"
+            }
+          },
+          {
+            "key": "y",
+            "source": "b",
+            "start": 1000000,
+            "end": 3002000,
+            "volumeDb": 0,
+            "muted": false,
+            "fadeIn": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "fadeOut": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": null,
+              "fit": "contain"
+            }
+          },
+          {
+            "key": "z",
+            "source": "c",
+            "start": 0,
+            "end": 333667,
+            "volumeDb": 0,
+            "muted": false,
+            "fadeIn": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "fadeOut": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": null,
+              "fit": "contain"
+            }
+          },
+          {
+            "key": "k4",
+            "source": "b",
+            "start": 4459257,
+            "end": 5326790,
+            "volumeDb": 13,
+            "muted": true,
+            "fadeIn": {
+              "duration": 0,
+              "curve": "equalPower"
+            },
+            "fadeOut": {
+              "duration": 325324,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": null,
+              "fit": "contain"
+            }
+          }
+        ],
+        "metadata": {
+          "title": "",
+          "description": "",
+          "artist": "",
+          "date": "",
+          "comment": ""
+        }
+      },
+      "expected": {
+        "format": "hm-video-plan",
+        "version": 1,
+        "output": {
+          "width": 1920,
+          "height": 1080,
+          "frameRate": {
+            "num": 30000,
+            "den": 1001
+          },
+          "sampleRate": 48000,
+          "channels": 2
+        },
+        "sources": {
+          "a": {
+            "duration": 10000000,
+            "width": 1920,
+            "height": 1080,
+            "rotation": 0
+          },
+          "b": {
+            "duration": 7300000,
+            "width": 1280,
+            "height": 720,
+            "rotation": 90
+          },
+          "c": {
+            "duration": 500000,
+            "width": 640,
+            "height": 480,
+            "rotation": 0
+          }
+        },
+        "clips": [
+          {
+            "key": "x",
+            "source": "a",
+            "start": 0,
+            "end": 1001000,
+            "volumeDb": 0,
+            "muted": false,
+            "fadeIn": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "fadeOut": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": null,
+              "fit": "contain"
+            }
+          },
+          {
+            "key": "y",
+            "source": "b",
+            "start": 1000000,
+            "end": 3002000,
+            "volumeDb": 0,
+            "muted": false,
+            "fadeIn": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "fadeOut": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": null,
+              "fit": "contain"
+            }
+          },
+          {
+            "key": "z",
+            "source": "c",
+            "start": 0,
+            "end": 333667,
+            "volumeDb": 0,
+            "muted": false,
+            "fadeIn": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "fadeOut": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": null,
+              "fit": "contain"
+            }
+          },
+          {
+            "key": "k4",
+            "source": "b",
+            "start": 4459257,
+            "end": 5326790,
+            "volumeDb": 13,
+            "muted": true,
+            "fadeIn": {
+              "duration": 0,
+              "curve": "equalPower"
+            },
+            "fadeOut": {
+              "duration": 325324,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": null,
+              "fit": "contain"
+            }
+          }
+        ],
+        "metadata": {
+          "title": "",
+          "description": "",
+          "artist": "",
+          "date": "",
+          "comment": ""
+        }
+      }
+    },
+    {
+      "name": "generated 19: 2 clips",
+      "input": {
+        "format": "hm-video-plan",
+        "version": 1,
+        "output": {
+          "width": 1920,
+          "height": 1080,
+          "frameRate": {
+            "num": 30000,
+            "den": 1001
+          },
+          "sampleRate": 48000,
+          "channels": 2
+        },
+        "sources": {
+          "a": {
+            "duration": 10000000,
+            "width": 1920,
+            "height": 1080,
+            "rotation": 0
+          },
+          "b": {
+            "duration": 7300000,
+            "width": 1280,
+            "height": 720,
+            "rotation": 90
+          },
+          "c": {
+            "duration": 500000,
+            "width": 640,
+            "height": 480,
+            "rotation": 0
+          }
+        },
+        "clips": [
+          {
+            "key": "x",
+            "source": "a",
+            "start": 0,
+            "end": 867533,
+            "volumeDb": 0,
+            "muted": false,
+            "fadeIn": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "fadeOut": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": null,
+              "fit": "cover"
+            }
+          },
+          {
+            "key": "k2",
+            "source": "a",
+            "start": 867533,
+            "end": 1001000,
+            "volumeDb": 0,
+            "muted": false,
+            "fadeIn": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "fadeOut": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": null,
+              "fit": "cover"
+            }
+          }
+        ],
+        "metadata": {
+          "title": "",
+          "description": "",
+          "artist": "",
+          "date": "",
+          "comment": ""
+        }
+      },
+      "expected": {
+        "format": "hm-video-plan",
+        "version": 1,
+        "output": {
+          "width": 1920,
+          "height": 1080,
+          "frameRate": {
+            "num": 30000,
+            "den": 1001
+          },
+          "sampleRate": 48000,
+          "channels": 2
+        },
+        "sources": {
+          "a": {
+            "duration": 10000000,
+            "width": 1920,
+            "height": 1080,
+            "rotation": 0
+          },
+          "b": {
+            "duration": 7300000,
+            "width": 1280,
+            "height": 720,
+            "rotation": 90
+          },
+          "c": {
+            "duration": 500000,
+            "width": 640,
+            "height": 480,
+            "rotation": 0
+          }
+        },
+        "clips": [
+          {
+            "key": "x",
+            "source": "a",
+            "start": 0,
+            "end": 867533,
+            "volumeDb": 0,
+            "muted": false,
+            "fadeIn": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "fadeOut": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": null,
+              "fit": "cover"
+            }
+          },
+          {
+            "key": "k2",
+            "source": "a",
+            "start": 867533,
+            "end": 1001000,
+            "volumeDb": 0,
+            "muted": false,
+            "fadeIn": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "fadeOut": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": null,
+              "fit": "cover"
+            }
+          }
+        ],
+        "metadata": {
+          "title": "",
+          "description": "",
+          "artist": "",
+          "date": "",
+          "comment": ""
+        }
+      }
+    },
+    {
+      "name": "generated 20: 7 clips",
+      "input": {
+        "format": "hm-video-plan",
+        "version": 1,
+        "output": {
+          "width": 1920,
+          "height": 1080,
+          "frameRate": {
+            "num": 30000,
+            "den": 1001
+          },
+          "sampleRate": 48000,
+          "channels": 2
+        },
+        "sources": {
+          "a": {
+            "duration": 10000000,
+            "width": 1920,
+            "height": 1080,
+            "rotation": 0
+          },
+          "b": {
+            "duration": 7300000,
+            "width": 1280,
+            "height": 720,
+            "rotation": 90
+          },
+          "c": {
+            "duration": 500000,
+            "width": 640,
+            "height": 480,
+            "rotation": 0
+          }
+        },
+        "clips": [
+          {
+            "key": "x",
+            "source": "a",
+            "start": 0,
+            "end": 1001000,
+            "volumeDb": -11.200000000000003,
+            "muted": false,
+            "fadeIn": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "fadeOut": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": null,
+              "fit": "contain"
+            }
+          },
+          {
+            "key": "y",
+            "source": "b",
+            "start": 1000000,
+            "end": 3002000,
+            "volumeDb": 0,
+            "muted": false,
+            "fadeIn": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "fadeOut": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": null,
+              "fit": "contain"
+            }
+          },
+          {
+            "key": "k4",
+            "source": "a",
+            "start": 2928312,
+            "end": 5764479,
+            "volumeDb": -28,
+            "muted": false,
+            "fadeIn": {
+              "duration": 0,
+              "curve": "equalPower"
+            },
+            "fadeOut": {
+              "duration": 667333,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": null,
+              "fit": "contain"
+            }
+          },
+          {
+            "key": "k6",
+            "source": "b",
+            "start": 87109,
+            "end": 2856542,
+            "volumeDb": 13,
+            "muted": false,
+            "fadeIn": {
+              "duration": 692358,
+              "curve": "equalPower"
+            },
+            "fadeOut": {
+              "duration": 1038537,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": null,
+              "fit": "contain"
+            }
+          },
+          {
+            "key": "k5",
+            "source": "a",
+            "start": 8432148,
+            "end": 9967015,
+            "volumeDb": -13,
+            "muted": false,
+            "fadeIn": {
+              "duration": 575575,
+              "curve": "equalPower"
+            },
+            "fadeOut": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": null,
+              "fit": "contain"
+            }
+          },
+          {
+            "key": "z",
+            "source": "c",
+            "start": 0,
+            "end": 333667,
+            "volumeDb": 0,
+            "muted": false,
+            "fadeIn": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "fadeOut": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": null,
+              "fit": "contain"
+            }
+          },
+          {
+            "key": "k7",
+            "source": "a",
+            "start": 6114305,
+            "end": 6714905,
+            "volumeDb": -79,
+            "muted": false,
+            "fadeIn": {
+              "duration": 75075,
+              "curve": "equalPower"
+            },
+            "fadeOut": {
+              "duration": 225225,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": null,
+              "fit": "contain"
+            }
+          }
+        ],
+        "metadata": {
+          "title": "",
+          "description": "",
+          "artist": "",
+          "date": "",
+          "comment": ""
+        }
+      },
+      "expected": {
+        "format": "hm-video-plan",
+        "version": 1,
+        "output": {
+          "width": 1920,
+          "height": 1080,
+          "frameRate": {
+            "num": 30000,
+            "den": 1001
+          },
+          "sampleRate": 48000,
+          "channels": 2
+        },
+        "sources": {
+          "a": {
+            "duration": 10000000,
+            "width": 1920,
+            "height": 1080,
+            "rotation": 0
+          },
+          "b": {
+            "duration": 7300000,
+            "width": 1280,
+            "height": 720,
+            "rotation": 90
+          },
+          "c": {
+            "duration": 500000,
+            "width": 640,
+            "height": 480,
+            "rotation": 0
+          }
+        },
+        "clips": [
+          {
+            "key": "x",
+            "source": "a",
+            "start": 0,
+            "end": 1001000,
+            "volumeDb": -11.200000000000003,
+            "muted": false,
+            "fadeIn": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "fadeOut": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": null,
+              "fit": "contain"
+            }
+          },
+          {
+            "key": "y",
+            "source": "b",
+            "start": 1000000,
+            "end": 3002000,
+            "volumeDb": 0,
+            "muted": false,
+            "fadeIn": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "fadeOut": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": null,
+              "fit": "contain"
+            }
+          },
+          {
+            "key": "k4",
+            "source": "a",
+            "start": 2928312,
+            "end": 5764479,
+            "volumeDb": -28,
+            "muted": false,
+            "fadeIn": {
+              "duration": 0,
+              "curve": "equalPower"
+            },
+            "fadeOut": {
+              "duration": 667333,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": null,
+              "fit": "contain"
+            }
+          },
+          {
+            "key": "k6",
+            "source": "b",
+            "start": 87109,
+            "end": 2856542,
+            "volumeDb": 13,
+            "muted": false,
+            "fadeIn": {
+              "duration": 692358,
+              "curve": "equalPower"
+            },
+            "fadeOut": {
+              "duration": 1038537,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": null,
+              "fit": "contain"
+            }
+          },
+          {
+            "key": "k5",
+            "source": "a",
+            "start": 8432148,
+            "end": 9967015,
+            "volumeDb": -13,
+            "muted": false,
+            "fadeIn": {
+              "duration": 575575,
+              "curve": "equalPower"
+            },
+            "fadeOut": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": null,
+              "fit": "contain"
+            }
+          },
+          {
+            "key": "z",
+            "source": "c",
+            "start": 0,
+            "end": 333667,
+            "volumeDb": 0,
+            "muted": false,
+            "fadeIn": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "fadeOut": {
+              "duration": 0,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": null,
+              "fit": "contain"
+            }
+          },
+          {
+            "key": "k7",
+            "source": "a",
+            "start": 6114305,
+            "end": 6714905,
+            "volumeDb": -79,
+            "muted": false,
+            "fadeIn": {
+              "duration": 75075,
+              "curve": "equalPower"
+            },
+            "fadeOut": {
+              "duration": 225225,
+              "curve": "linear"
+            },
+            "transform": {
+              "rotation": 0,
+              "crop": null,
+              "fit": "contain"
+            }
+          }
+        ],
+        "metadata": {
+          "title": "",
+          "description": "",
+          "artist": "",
+          "date": "",
+          "comment": ""
+        }
+      }
+    }
+  ]
+}

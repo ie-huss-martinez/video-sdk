@@ -29,6 +29,7 @@ const ALL_CODES: Record<VideoErrorCode, true> = {
   DECODE_FAILED: true,
   ENCODE_FAILED: true,
   INVALID_COMMAND: true,
+  INVALID_DOCUMENT: true,
   BUSY: true,
   FRAME_TOO_LARGE: true,
   FRAME_RATE_TOO_HIGH: true,

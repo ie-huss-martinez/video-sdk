@@ -25,16 +25,32 @@ export type {
   VideoLimitName,
 } from "./core/errors/video-limits.js";
 export { videoLimitDefinitions, videoLimits } from "./core/errors/video-limits.js";
+export type {
+  VideoAssetReference,
+  VideoDocumentRejection,
+  VideoPlanDocument,
+  VideoPlanDocumentSource,
+} from "./core/format/plan-document.js";
+export {
+  readVideoPlanDocument,
+  toVideoPlanDocument,
+  VIDEO_PLAN_FORMAT,
+  VIDEO_PLAN_VERSION,
+  videoPlanDocumentSource,
+} from "./core/format/plan-document.js";
 export { dbToGain, gainAt } from "./core/model/envelope.js";
 export type {
   VideoClip,
+  VideoClipProblem,
   VideoCrop,
   VideoFade,
   VideoFadeCurve,
   VideoFit,
   VideoMetadata,
+  VideoOutputProblem,
   VideoPlan,
   VideoPlanOutput,
+  VideoSourceBounds,
   VideoTransform,
 } from "./core/model/plan.js";
 export {
@@ -83,6 +99,7 @@ export type {
   MoveClipsCommand,
   RemoveClipsCommand,
   RestoreClipsCommand,
+  RestoreOutputCommand,
   SetFadeCommand,
   SetMetadataCommand,
   SetMutedCommand,
@@ -93,6 +110,7 @@ export type {
   TrimClipCommand,
   VideoClipEntry,
   VideoCommand,
+  VideoCommandRejection,
 } from "./core/operations/commands.js";
 export { createVideoReducer } from "./core/operations/commands.js";
 export type {
