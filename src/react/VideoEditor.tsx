@@ -3,6 +3,7 @@ import { forwardRef, type ReactNode, useEffect, useImperativeHandle, useRef } fr
 import type { VideoSourceInfo } from "../core/model/source.js";
 import { useVideoEditor, VideoEditorProvider, type VideoEditorProviderProps } from "./context.js";
 import { VideoStage } from "./VideoStage.js";
+import { VideoTimeline } from "./VideoTimeline.js";
 import { VideoTransport } from "./VideoTransport.js";
 
 /**
@@ -69,6 +70,7 @@ const Shell = forwardRef<
         >
           <VideoStage />
           <VideoTransport />
+          <VideoTimeline />
         </section>
       </AnnouncerProvider>
     </UiMessagesProvider>
@@ -76,8 +78,8 @@ const Shell = forwardRef<
 });
 
 /**
- * The video editor (docs/adr/0007): the preview and its playback controls,
- * over one editing session. The timeline, the inspector, the toolbar and
+ * The video editor (docs/adr/0007): the preview, its playback controls and
+ * the timeline, over one editing session. The inspector, the toolbar and
  * export join it in later releases.
  *
  * @example

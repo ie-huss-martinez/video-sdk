@@ -55,18 +55,22 @@ Below a container width of 720 px the inspector moves under the timeline. Sizes 
 - **Snapping:** a dragged edge or the playhead snaps with `snap` to the clips' boundaries and the playhead. Its tolerance is in output frames, converted from a fixed distance of 8 CSS pixels at the current zoom: `Math.round(8 × framesPerPixel)`, where `framesPerPixel` is the visible length in frames divided by the timeline's width. So snapping feels the same at every zoom. `Alt` while dragging turns it off.
 - **They replace this SDK's own `clipOffsets` and `locateFrame`** in the UI. The core's are kept, as they're public, and later reimplemented over the helpers.
 
-- **The track is a `listbox`** of clips, horizontal, with `aria-multiselectable`. One tab stop, with roving focus: Left and Right move between clips, Home and End to the first and last, and Shift and Mod extend the selection. Each clip's accessible name is its source's position and its range: "Clip 2 of 5, 0:04.00 to 0:09.20, muted".
+- **The track is a `listbox`** of clips, horizontal, with `aria-multiselectable`. One tab stop, with roving focus: Left and Right move between clips, Home and End to the first and last, and the selection follows focus. Shift extends it from the last clip chosen; Mod moves focus without it, `Mod+Space` adds or removes the focused clip, and `Mod+A` selects every clip. A click selects, Shift-click extends and Mod-click toggles. In a right-to-left layout, Left and Right swap, as time runs leftward. Each clip's accessible name is its source's position and its range: "Clip 2 of 5, 0:04.00 to 0:09.20, muted".
 - **The playhead is a `ui` Slider** over output frames, with `aria-valuetext` the time, so a screen reader reads "0:12.40" and not a frame number. Its arrow keys step one frame, and Page Up and Page Down one second, as the slider's own keys.
 - **Every drag has a keyboard alternative:**
 
   | Drag | Keys, on a focused clip |
   |---|---|
   | Move a clip | `Alt+Left`, `Alt+Right` move it before or after its neighbour |
-  | Trim its start or end | `[` and `]` set the start or end to the playhead; `Alt+[` and `Alt+]` move them one frame |
+  | Trim its start or end | `[` and `]` set the start or end to the playhead; `Alt+[` and `Alt+]` move it a frame inward, shortening the clip, and `Alt+Shift+[` and `Alt+Shift+]` a frame outward |
   | Scrub | the playhead slider |
 
+- **The bracket keys are matched by position,** `event.code`, not by character: `Alt` changes the character they type on Apple's layouts, and other layouts put brackets elsewhere.
+- **Every drag has a single-pointer alternative too** (WCAG 2.5.7): the toolbar's trim buttons set the focused clip's start or end to the playhead, which a click on the track or the slider places. Moving a clip has no drag yet; when it gets one, its alternative is a button pair.
 - **Zoom** is the family's `+`, `-` and `0`, without a modifier ([ADR 0030](https://github.com/ie-huss-martinez/sdk-core/blob/main/docs/adr/0030-tools-and-keyboard-shortcuts.md)), and `0` fits the plan to the track.
 - **Scrolling** follows the playhead while playing, and the focused clip otherwise.
+
+**As built** (the timeline's first release): the track, the playhead slider, the keys above, dragging an edge to trim, and the zoom and snap buttons. Zoom's `+`, `-` and `0` come with the shortcut registry, with the other tools. The waveform lane comes after it. An insert moves focus to the new clip only while focus is in the editor, or was lost from it, as when the drop zone goes: a host's insert on load doesn't take focus from the page.
 
 ### Tools and shortcuts
 

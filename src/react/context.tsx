@@ -68,6 +68,9 @@ interface EditorContext {
   readonly filePolicy: VideoFilePolicyOverrides | undefined;
   readonly output: VideoOutput | null;
   readonly setOutput: (output: VideoOutput | null) => void;
+  /** The clips selected in the timeline, by key, in plan order. */
+  readonly selectedClips: readonly string[];
+  readonly setSelectedClips: (keys: readonly string[]) => void;
 }
 
 const Context = /* @__PURE__ */ createContext<EditorContext | null>(null);
@@ -93,6 +96,7 @@ export function VideoEditorProvider(props: VideoEditorProviderProps): ReactNode 
     }),
   );
   const [output, setOutput] = useState<VideoOutput | null>(null);
+  const [selectedClips, setSelectedClips] = useState<readonly string[]>([]);
   const mounts = useRef(0);
 
   useEffect(() => {
@@ -119,8 +123,18 @@ export function VideoEditorProvider(props: VideoEditorProviderProps): ReactNode 
   );
 
   const value = useMemo(
-    () => ({ engine, session, messages, locale, filePolicy, output, setOutput }),
-    [engine, session, messages, locale, filePolicy, output],
+    () => ({
+      engine,
+      session,
+      messages,
+      locale,
+      filePolicy,
+      output,
+      setOutput,
+      selectedClips,
+      setSelectedClips,
+    }),
+    [engine, session, messages, locale, filePolicy, output, selectedClips],
   );
   return <Context.Provider value={value}>{props.children}</Context.Provider>;
 }

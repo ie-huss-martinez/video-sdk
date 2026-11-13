@@ -12,7 +12,7 @@
   /* The editor (docs/adr/0007): a column of regions that fills its container. */
   .hm-video-editor {
     display: grid;
-    grid-template-rows: minmax(calc(var(--hm-space-12) * 2), 1fr) auto;
+    grid-template-rows: minmax(calc(var(--hm-space-12) * 2), 1fr) auto auto;
     gap: var(--hm-gap-normal);
     min-block-size: calc(var(--hm-space-12) * 3);
     container-type: inline-size;
@@ -78,5 +78,104 @@
 
   .hm-video-transport-note {
     margin: 0;
+  }
+
+  .hm-video-timeline {
+    display: grid;
+    gap: var(--hm-gap-tight);
+    min-inline-size: 0;
+  }
+
+  .hm-video-timeline-scroll {
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    min-inline-size: 0;
+    /* Room for a focus ring inside the scrolling box. */
+    padding-block: var(--hm-focus-ring-width);
+  }
+
+  .hm-video-timeline-track {
+    position: relative;
+    block-size: calc(var(--hm-target-size) * 2);
+    min-inline-size: 100%;
+    background: var(--hm-color-surface-sunken);
+    border-radius: var(--hm-radius-sm);
+    touch-action: pan-x;
+  }
+
+  .hm-video-timeline-clips {
+    position: absolute;
+    inset: 0;
+  }
+
+  .hm-video-timeline-clip {
+    position: absolute;
+    inset-block: 0;
+    box-sizing: border-box;
+    background: var(--hm-color-accent-subtle);
+    border: var(--hm-border-width) solid var(--hm-color-border-strong);
+    border-radius: var(--hm-radius-sm);
+    cursor: pointer;
+  }
+
+  .hm-video-timeline-clip[aria-selected="true"] {
+    background: var(--hm-color-accent);
+    border-color: var(--hm-color-accent-active);
+  }
+
+  .hm-video-timeline-clip[data-hm-muted] {
+    background-image: repeating-linear-gradient(
+      135deg,
+      transparent 0 var(--hm-space-2),
+      var(--hm-color-overlay) var(--hm-space-2) var(--hm-space-3)
+    );
+  }
+
+  .hm-video-timeline-clip:focus-visible {
+    outline: var(--hm-focus-ring);
+    outline-offset: calc(var(--hm-focus-ring-width) * -1);
+    z-index: var(--hm-z-raised);
+  }
+
+  /* The edges trim by dragging; the keys and the trim buttons do the same. */
+  .hm-video-timeline-edge {
+    position: absolute;
+    inset-block: 0;
+    inline-size: var(--hm-space-3);
+    max-inline-size: 50%;
+    cursor: ew-resize;
+    touch-action: none;
+  }
+
+  .hm-video-timeline-edge[data-hm-edge="start"] {
+    inset-inline-start: 0;
+  }
+
+  .hm-video-timeline-edge[data-hm-edge="end"] {
+    inset-inline-end: 0;
+  }
+
+  .hm-video-timeline-clip:hover .hm-video-timeline-edge,
+  .hm-video-timeline-clip[data-hm-dragging] .hm-video-timeline-edge {
+    background: var(--hm-color-accent-active);
+  }
+
+  .hm-video-timeline-line {
+    position: absolute;
+    inset-block: 0;
+    inline-size: var(--hm-border-width-2);
+    background: var(--hm-color-danger);
+    pointer-events: none;
+    z-index: var(--hm-z-raised);
+  }
+
+  @media (forced-colors: active) {
+    .hm-video-timeline-clip[aria-selected="true"] {
+      background: Highlight;
+    }
+
+    .hm-video-timeline-line {
+      background: CanvasText;
+    }
   }
 }
