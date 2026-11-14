@@ -100,6 +100,13 @@ describe("the export dialog", () => {
     expect(dialog.textContent).toMatch(/× \d+ pixels, 30 frames per second, 0:02\.00 long/);
     expect(dialog.textContent).toContain("Nothing else from your original files is copied");
     expect(button(view, "Export")).toBeDefined();
+    // Each group of choices has a visible name, which names it (WCAG 2.5.3).
+    const names = [...dialog.querySelectorAll('[role="radiogroup"]')].map((group) => {
+      const label = document.getElementById(group.getAttribute("aria-labelledby") ?? "");
+      expect(label?.getBoundingClientRect().height).toBeGreaterThan(0);
+      return label?.textContent;
+    });
+    expect(names).toEqual(["File type", "Quality"]);
     await settled(dialog);
     const result = await axe.run(dialog);
     expect(result.violations.map((each) => `${each.id}: ${each.help}`)).toEqual([]);
