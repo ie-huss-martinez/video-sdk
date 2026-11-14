@@ -61,9 +61,21 @@
     min-inline-size: min(calc(var(--hm-space-12) * 3), 100%);
   }
 
+  /* An alert: the danger colours, at the foot of the stage over the clips. */
   .hm-video-stage-error {
     grid-area: 1 / 1;
     align-self: end;
+    margin: var(--hm-inset-normal);
+    padding: var(--hm-inset-tight) var(--hm-inset-normal);
+    color: var(--hm-color-danger-text);
+    background: var(--hm-color-danger-subtle);
+    border: var(--hm-border-width) solid var(--hm-color-danger);
+    border-radius: var(--hm-radius-control);
+  }
+
+  /* Inside the drop zone, it's part of its content, centred as the rest is. */
+  .hm-video-stage-drop .hm-video-stage-error {
+    align-self: center;
     margin: 0;
   }
 

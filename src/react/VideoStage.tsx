@@ -109,6 +109,11 @@ export function VideoStage(props: VideoStageProps): ReactNode {
   }, [paused, frame, frames, messages]);
 
   const empty = snapshot.plan === null || frames === 0;
+  const error = snapshot.error ? (
+    <p className="hm-video-stage-error" role="alert">
+      {messages.error(snapshot.error)}
+    </p>
+  ) : null;
   return (
     // Focusable by a click, not by Tab: after a click on the preview, focus is
     // in the editor on no control, so Space plays and the arrows step.
@@ -124,7 +129,10 @@ export function VideoStage(props: VideoStageProps): ReactNode {
           multiple
           onFiles={insertFiles}
           hint={messages.t("stage.empty")}
-        />
+        >
+          {/* With no clip, a failure sits in the drop zone, by the button that retries. */}
+          {error}
+        </FileDropZone>
       ) : null}
       {snapshot.inserting > 0 ? (
         <div className="hm-video-stage-progress">
@@ -132,11 +140,8 @@ export function VideoStage(props: VideoStageProps): ReactNode {
           <Button onClick={cancelInsert}>{messages.t("insert.cancel")}</Button>
         </div>
       ) : null}
-      {snapshot.error ? (
-        <p className="hm-video-stage-error" role="alert">
-          {messages.error(snapshot.error)}
-        </p>
-      ) : null}
+      {/* Over the clips, a failure is a banner at the foot of the stage. */}
+      {empty && snapshot.inserting === 0 ? null : error}
     </div>
   );
 }
