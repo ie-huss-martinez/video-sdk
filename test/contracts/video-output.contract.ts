@@ -12,9 +12,17 @@ export interface VideoOutputHarness {
   create(): Promise<{
     readonly output: VideoOutput;
     readonly source: VideoSourceInfo;
-    elapse(frames: number): Promise<void>;
+    /**
+     * Lets about `frames` of time pass, and returns how many frames actually
+     * passed: a busy browser's timers run late, so the playhead is expected
+     * where the measured time puts it, not where the intended time would.
+     */
+    elapse(frames: number): Promise<number>;
   }>;
-  /** How far the playhead may be from where it's expected, in frames. 0 for a manual clock. */
+  /**
+   * How far the playhead may be from where the measured time puts it, in
+   * frames: the clock's own scheduling, not the runner's. 0 for a manual clock.
+   */
   readonly positionTolerance: number;
 }
 
@@ -49,9 +57,9 @@ export function describeVideoOutputContract(name: string, harness: VideoOutputHa
         if (states.at(-1) !== state) states.push(state);
       });
       await output.play();
-      await elapse(30);
+      const passed = await elapse(30);
       expect(states).toEqual(["playing"]);
-      near(output.position(), 30);
+      near(output.position(), Math.min(passed, 90));
       await output.destroy();
     });
 
@@ -66,8 +74,8 @@ export function describeVideoOutputContract(name: string, harness: VideoOutputHa
       expect(output.getSnapshot().state).toBe("paused");
       expect(output.position()).toBe(paused);
       await output.play();
-      await elapse(15);
-      near(output.position(), paused + 15);
+      const passed = await elapse(15);
+      near(output.position(), Math.min(paused + passed, 90));
       await output.destroy();
     });
 
@@ -79,8 +87,8 @@ export function describeVideoOutputContract(name: string, harness: VideoOutputHa
       expect(output.getSnapshot().state).toBe("stopped");
       expect(output.position()).toBe(30);
       await output.play();
-      await elapse(5);
-      near(output.position(), 5);
+      const passed = await elapse(5);
+      near(output.position(), Math.min(passed, 30));
       await output.destroy();
     });
 
@@ -135,9 +143,9 @@ export function describeVideoOutputContract(name: string, harness: VideoOutputHa
       output.load(planOf(clipOf("x", source, 0, 90)));
       await output.play();
       output.resize(320, 40, 2);
-      await elapse(10);
+      const passed = await elapse(10);
       expect(output.getSnapshot().state).toBe("playing");
-      near(output.position(), 10);
+      near(output.position(), Math.min(passed, 90));
       expect(() => output.resize(0, 40)).toThrow(TypeError);
       expect(() => output.resize(320, 40, Number.NaN)).toThrow(TypeError);
       // 20,000 × 20,000 is far over the default maxFramePixels.
@@ -162,8 +170,8 @@ export function describeVideoOutputContract(name: string, harness: VideoOutputHa
       output.seek(10);
       await output.play();
       output.seek(60);
-      await elapse(6);
-      near(output.position(), 66);
+      const passed = await elapse(6);
+      near(output.position(), Math.min(60 + passed, 90));
       expect(output.getSnapshot().state).toBe("playing");
       await output.destroy();
     });
@@ -177,8 +185,8 @@ export function describeVideoOutputContract(name: string, harness: VideoOutputHa
       output.seek(10);
       await output.play();
       output.load(planOf(clipOf("x", source, 0, 20), clipOf("y", source, 0, 20)));
-      await elapse(10);
-      near(output.position(), 20);
+      const passed = await elapse(10);
+      near(output.position(), Math.min(10 + passed, 40));
       expect(output.getSnapshot().state).toBe("playing");
       await output.destroy();
     });

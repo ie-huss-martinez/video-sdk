@@ -54,7 +54,14 @@ export const fakeOutputHarness: VideoOutputHarness = {
   async create() {
     const { a } = await openTwo(4);
     const { output, clock } = createFakeOutput();
-    return { output, source: a, elapse: async (frames) => clock.advance(frames) };
+    return {
+      output,
+      source: a,
+      elapse: async (frames) => {
+        await clock.advance(frames);
+        return frames;
+      },
+    };
   },
   positionTolerance: 0,
 };

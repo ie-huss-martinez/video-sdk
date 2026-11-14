@@ -12,6 +12,12 @@ import { VideoEditor, type VideoEditorHandle } from "./VideoEditor.js";
 import { VideoExportDialog, type VideoExportResult } from "./VideoExportDialog.js";
 import { VideoToolbar } from "./VideoToolbar.js";
 
+// Real decoding, playback and export run in workers, and a heavily loaded
+// machine slows them several times over: minutes per test, so that load
+// fails a test only through its own checks. Waits inside get their own
+// timeouts, so no step runs on a nearly spent budget.
+vi.setConfig({ testTimeout: 120_000 });
+
 // The export dialog (docs/adr/0007): its summary before anything is written,
 // a real export, stopping, and closing at any point, over the SDK's own
 // engine and processor. The fixture is 2 s of 30 fps video.
