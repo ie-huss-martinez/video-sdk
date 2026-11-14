@@ -161,7 +161,14 @@ export function VideoEditorProvider(props: VideoEditorProviderProps): ReactNode 
   const { engine: given, assetsUrl, filePolicy, locale } = props;
   const onEvent = useRef(props.onEvent);
   onEvent.current = props.onEvent;
-  const [engine] = useState(() => given ?? createVideoEngine(assetsUrl ? { assetsUrl } : {}));
+  const [engine] = useState(
+    () =>
+      given ??
+      // A server has no page to resolve a relative assetsUrl against, and its
+      // engine never starts a worker: the client's own engine, made when it
+      // hydrates, takes the assetsUrl (sdk-core ADR 0007).
+      createVideoEngine(assetsUrl && typeof location !== "undefined" ? { assetsUrl } : {}),
+  );
   const [session] = useState(() =>
     createVideoSession({
       engine,

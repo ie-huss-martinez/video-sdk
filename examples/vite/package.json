@@ -1,0 +1,26 @@
+{
+  "name": "@hussmartinez/video-sdk-example-vite",
+  "private": true,
+  "description": "Vite pages that run the built @hussmartinez/video-sdk editor with its workers inlined and self-hosted, each under its Content Security Policy, for the end-to-end tests.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "build": "tsc --noEmit && vite build",
+    "start": "vite preview --port 4330 --strictPort"
+  },
+  "dependencies": {
+    "@hussmartinez/ui": "catalog:",
+    "@hussmartinez/video-sdk": "workspace:*",
+    "react": "catalog:",
+    "react-dom": "catalog:"
+  },
+  "devDependencies": {
+    "@hussmartinez/sdk-config": "catalog:",
+    "@types/node": "catalog:",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "typescript": "catalog:",
+    "vite": "catalog:"
+  }
+}

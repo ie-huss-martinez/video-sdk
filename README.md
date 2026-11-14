@@ -8,7 +8,7 @@ This repository will publish **`@hussmartinez/video-sdk`**. It follows the famil
 
 ## Development
 
-The repository root is the published package, laid out as in the family's [standard layout](https://github.com/ie-huss-martinez/sdk-core/blob/main/STANDARDS.md#repository-layout): the source is in [`src`](src), and the examples and end-to-end tests will join the pnpm workspace as `examples/` and `e2e/`.
+The repository root is the published package, laid out as in the family's [standard layout](https://github.com/ie-huss-martinez/sdk-core/blob/main/STANDARDS.md#repository-layout): the source is in [`src`](src). The pnpm workspace also holds the test applications ([ADR 0039](https://github.com/ie-huss-martinez/sdk-core/blob/main/docs/adr/0039-test-applications-in-each-repository.md)): [`examples/vite`](examples/vite) and [`examples/next`](examples/next), which run the built editor with its workers inlined and self-hosted, each under its Content Security Policy, and the [`e2e`](e2e) Playwright suite that tests them.
 
 You need Node 24 (see [`.node-version`](.node-version)) and pnpm. The exact pnpm version is pinned in `package.json`, and pnpm switches to it automatically.
 
@@ -31,6 +31,8 @@ Browser tests need Playwright's browsers once: `pnpm exec playwright install chr
 | Build | `build` | Vite, then api-extractor for the type declarations |
 | Unit tests | `test` | Vitest |
 | Browser tests | `test:browser` | Vitest in Chromium, and in Firefox and WebKit too in CI |
+| Example builds | `build:examples` | Vite and Next.js, on the workspace's build of the package |
+| End-to-end tests | `test:e2e` | Playwright, against the built examples, in Chromium, and all three engines in CI |
 | Size budgets | `check:size` | size-limit, brotli size of each entry point |
 | API reports | `check:api` | api-extractor, one report per entry point in [`api`](api) |
 | Package checks | `check:package` | publint and Are the Types Wrong? |
