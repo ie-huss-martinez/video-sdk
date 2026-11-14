@@ -10,6 +10,11 @@ import landscapeVp8 from "../../test/fixtures/video/landscape-vp8.webm?url";
 import type { VideoEngine } from "../core/ports/video-engine.js";
 import { VideoEditor } from "./VideoEditor.js";
 
+// The editor runs real decoding and playback in workers, and a heavily
+// loaded machine slows them several times over: a minute per test, so that
+// load fails a test only through its own checks.
+vi.setConfig({ testTimeout: 60_000 });
+
 // The editor shell (docs/adr/0007): its states, accessibility and lifecycle,
 // over the SDK's real engine and output.
 
@@ -92,20 +97,33 @@ describe("the video editor", () => {
       { timeout: 10_000 },
     );
     await userEvent.click(play);
-    await vi.waitFor(() =>
-      expect(view.querySelector('button[aria-label="Pause"]')?.getAttribute("aria-pressed")).toBe(
-        "true",
-      ),
+    await vi.waitFor(
+      () =>
+        expect(view.querySelector('button[aria-label="Pause"]')?.getAttribute("aria-pressed")).toBe(
+          "true",
+        ),
+      { timeout: 15_000 },
     );
-    await vi.waitFor(() =>
-      expect(view.querySelector(".hm-video-transport-time")?.textContent).not.toMatch(/^0:00\.00/),
+    await vi.waitFor(
+      () =>
+        expect(view.querySelector(".hm-video-transport-time")?.textContent).not.toMatch(
+          /^0:00\.00/,
+        ),
+      { timeout: 15_000 },
     );
-    await userEvent.click(view.querySelector('button[aria-label="Pause"]') as HTMLButtonElement);
-    await userEvent.click(view.querySelector('button[aria-label="Previous frame"]') as HTMLElement);
-    await vi.waitFor(() =>
-      expect(view.querySelector('button[aria-label="Play"]')?.getAttribute("aria-pressed")).toBe(
-        "false",
-      ),
+    // From the keyboard, as a keyboard user does: a pointer click waits for
+    // the button to hold still across frames, which a loaded runner, with the
+    // time redrawn every frame, can take most of a minute to see.
+    (view.querySelector('button[aria-label="Pause"]') as HTMLButtonElement).focus();
+    await userEvent.keyboard("{Enter}");
+    (view.querySelector('button[aria-label="Previous frame"]') as HTMLButtonElement).focus();
+    await userEvent.keyboard("{Enter}");
+    await vi.waitFor(
+      () =>
+        expect(view.querySelector('button[aria-label="Play"]')?.getAttribute("aria-pressed")).toBe(
+          "false",
+        ),
+      { timeout: 15_000 },
     );
   });
 

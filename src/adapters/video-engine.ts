@@ -25,6 +25,14 @@ export interface VideoEngineOptions {
    */
   readonly idleTimeout?: number;
   /**
+   * Milliseconds a worker may take to load before it fails with
+   * `WORKER_START_FAILED`: the engine's, its outputs' and the export worker of
+   * a processor over it. Defaults to sdk-core's 10
+   * seconds, many times what the packaged worker takes even on a heavily
+   * loaded machine.
+   */
+  readonly startTimeout?: number;
+  /**
    * Where the application serves the package's `dist/assets/` directory,
    * absolute or relative to the page, to start the media worker from
    * `video/media.worker.js` under it rather than inlined (sdk-core ADR 0038).
@@ -58,6 +66,7 @@ export interface EngineEnvironment {
   /** Loads the worker's code, on the first call, and returns how to start it. */
   readonly loadWorker: () => Promise<() => WorkerLike>;
   readonly idleTimeout?: number;
+  readonly startTimeout?: number;
   /** The self-hosted worker's file under `assetsUrl`, named in a version mismatch, or `undefined` when inlined. */
   readonly workerAsset?: string;
 }
@@ -95,6 +104,7 @@ export function createVideoEngine(options: VideoEngineOptions = {}): VideoEngine
       : async () => (await import("./media-worker/inline-worker.js")).createInlineWorker,
     ...(base ? { workerAsset: MEDIA_WORKER_ASSET } : {}),
     ...(options.idleTimeout === undefined ? {} : { idleTimeout: options.idleTimeout }),
+    ...(options.startTimeout === undefined ? {} : { startTimeout: options.startTimeout }),
   });
 }
 
@@ -108,6 +118,8 @@ export interface EngineInternals {
   readonly loadWorker: () => Promise<() => WorkerLike>;
   /** The self-hosted worker's file, or `undefined` when inlined. */
   readonly workerAsset: string | undefined;
+  /** How long its workers may take to start, or `undefined` for sdk-core's default. */
+  readonly startTimeout: number | undefined;
   /** An open source, or `undefined`. */
   source(id: string): PlaybackSource | undefined;
 }
@@ -176,6 +188,7 @@ export function createEngine(environment: EngineEnvironment): VideoEngine {
       packageVersion: PACKAGE_VERSION,
       ...(environment.workerAsset === undefined ? {} : { workerAsset: environment.workerAsset }),
       ...(environment.idleTimeout === undefined ? {} : { idleTimeout: environment.idleTimeout }),
+      ...(environment.startTimeout === undefined ? {} : { startTimeout: environment.startTimeout }),
     });
     return client;
   }
@@ -288,6 +301,7 @@ export function createEngine(environment: EngineEnvironment): VideoEngine {
   internals.set(engine, {
     loadWorker: environment.loadWorker,
     workerAsset: environment.workerAsset,
+    startTimeout: environment.startTimeout,
     source: (id) => sources.get(id),
   });
   return engine;

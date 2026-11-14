@@ -391,6 +391,7 @@ export interface VideoEngine {
 export interface VideoEngineOptions {
     readonly assetsUrl?: string | URL;
     readonly idleTimeout?: number;
+    readonly startTimeout?: number;
 }
 
 // @public

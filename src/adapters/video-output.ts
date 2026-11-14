@@ -137,6 +137,7 @@ export function createVideoOutput(options: VideoOutputOptions): VideoOutput {
           ...(internals.workerAsset === undefined ? {} : { workerAsset: internals.workerAsset }),
           // The worker holds the canvas: it lives as long as the output.
           idleTimeout: 0,
+          ...(internals.startTimeout === undefined ? {} : { startTimeout: internals.startTimeout }),
         });
         const attached = client.call("attach", { canvas: offscreen }, { transfer: true });
         return { client, attached };
