@@ -27,6 +27,20 @@ export interface VideoOutputHarness {
 }
 
 /**
+ * Waits, a frame at a time, until the playhead has moved past `frame`, as it
+ * does once playing resumes after a seek or a new plan, and returns where it
+ * is then. A manual clock passes at once; a loaded runner may take a while.
+ */
+async function resumedAfter(
+  output: VideoOutput,
+  frame: number,
+  elapse: (frames: number) => Promise<number>,
+): Promise<number> {
+  for (let tries = 0; tries < 300 && output.position() <= frame; tries += 1) await elapse(1);
+  return output.position();
+}
+
+/**
  * The behaviour every {@link VideoOutput} must have (ADR 0002, ADR 0003,
  * ADR 0005, ADR 0008). Adapters run it with their own harness.
  */
@@ -170,8 +184,12 @@ export function describeVideoOutputContract(name: string, harness: VideoOutputHa
       output.seek(10);
       await output.play();
       output.seek(60);
+      // Playing resumes from the seek once its frame is drawn, which a
+      // loaded runner delays: measure the clock from then, at its own rate.
+      const from = await resumedAfter(output, 60, elapse);
+      expect(from).toBeGreaterThanOrEqual(60);
       const passed = await elapse(6);
-      near(output.position(), Math.min(60 + passed, 90));
+      near(output.position(), Math.min(from + passed, 90));
       expect(output.getSnapshot().state).toBe("playing");
       await output.destroy();
     });
@@ -184,9 +202,13 @@ export function describeVideoOutputContract(name: string, harness: VideoOutputHa
       expect(output.position()).toBe(40);
       output.seek(10);
       await output.play();
+      const at = output.position();
       output.load(planOf(clipOf("x", source, 0, 20), clipOf("y", source, 0, 20)));
+      // It goes on from the playhead, at the clock's own rate.
+      const from = await resumedAfter(output, at, elapse);
+      expect(from).toBeGreaterThanOrEqual(at);
       const passed = await elapse(10);
-      near(output.position(), Math.min(10 + passed, 40));
+      near(output.position(), Math.min(from + passed, 40));
       expect(output.getSnapshot().state).toBe("playing");
       await output.destroy();
     });

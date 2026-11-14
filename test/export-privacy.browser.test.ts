@@ -8,6 +8,7 @@ import cutTones from "./fixtures/video/cut-tones.webm?url";
 import numberedBeeps from "./fixtures/video/numbered-beeps.webm?url";
 import privateMetadata from "./fixtures/video/private-metadata.mkv?url";
 import { unreadable } from "./support/codecs.js";
+import { DEV_WORKER_START_TIMEOUT } from "./support/load.js";
 import type { InspectContract } from "./workers/inspect.worker.js";
 
 // Real decoding, playback and export run in workers, and a heavily loaded
@@ -29,7 +30,7 @@ const inspector = createWorkerClient<InspectContract>({
 });
 
 async function exportOf(url: string, plan: (source: Parameters<typeof clipOf>[1]) => VideoPlan) {
-  const engine = createVideoEngine();
+  const engine = createVideoEngine({ startTimeout: DEV_WORKER_START_TIMEOUT });
   const file = await (await fetch(url)).blob();
   const source = await engine.open("s", file, await engine.probe(file));
   const processor = createVideoProcessor({ engine });

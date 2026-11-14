@@ -6,6 +6,7 @@ import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { userEvent } from "vitest/browser";
 import landscapeVp8 from "../../test/fixtures/video/landscape-vp8.webm?url";
+import { DEV_WORKER_START_TIMEOUT } from "../../test/support/load.js";
 import { createVideoEngine } from "../adapters/video-engine.js";
 import { useVideoSession, VideoEditorProvider } from "./context.js";
 import { VideoEditor, type VideoEditorHandle } from "./VideoEditor.js";
@@ -127,7 +128,7 @@ describe("the export dialog", () => {
     const [{ blob, result }] = exported as [{ blob: Blob; result: VideoExportResult }];
     expect(result.size).toBe(blob.size);
     expect(blob.type).toContain(result.container);
-    const engine = createVideoEngine();
+    const engine = createVideoEngine({ startTimeout: DEV_WORKER_START_TIMEOUT });
     try {
       const probe = await engine.probe(blob);
       expect(probe.duration).toBeGreaterThan(1_900_000);

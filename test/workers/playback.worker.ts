@@ -37,6 +37,27 @@ export interface LedgerRecord {
   readonly audio: number;
 }
 
+/** How late this worker's timers ran over an interval: its thread's noise under load. */
+export interface LagRecord {
+  readonly type: "lag";
+  /** The 90th percentile of the lateness, in milliseconds. */
+  readonly p90: number;
+}
+
+/**
+ * The worker's timer lateness, sampled every 10 ms with its wall time, so a
+ * test can ask how loaded this thread was while it drew: what the page's own
+ * measure can't see.
+ */
+const lateness: { readonly at: number; readonly late: number }[] = [];
+let expected = performance.now() + 10;
+setInterval(() => {
+  const now = performance.now();
+  lateness.push({ at: performance.timeOrigin + now, late: Math.max(0, now - expected) });
+  if (lateness.length > 6_000) lateness.splice(0, 1_000);
+  expected = now + 10;
+}, 10);
+
 /** What the test posts to the worker to receive its reports. */
 export interface TestPortMessage {
   readonly type: "video-sdk-test-port";
@@ -47,7 +68,19 @@ let port: MessagePort | undefined;
 self.addEventListener("message", (event: MessageEvent<Partial<TestPortMessage>>) => {
   if (event.data?.type !== "video-sdk-test-port" || !event.data.port) return;
   port = event.data.port;
-  port.addEventListener("message", (request: MessageEvent<{ type: string }>) => {
+  port.addEventListener("message", (request: MessageEvent<{ type: string; since?: number }>) => {
+    if (request.data.type === "lag") {
+      const since = request.data.since ?? 0;
+      const late = lateness
+        .filter((sample) => sample.at >= since)
+        .map((sample) => sample.late)
+        .sort((a, b) => a - b);
+      port?.postMessage({
+        type: "lag",
+        p90: late[Math.floor(late.length * 0.9)] ?? 0,
+      } satisfies LagRecord);
+      return;
+    }
     if (request.data.type !== "ledger") return;
     port?.postMessage({
       type: "ledger",

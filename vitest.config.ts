@@ -26,6 +26,25 @@ export default defineConfig(({ mode }) => {
           },
         },
         {
+          // Every package the browser tests and their workers import, optimised
+          // once before any test starts. Discovered one file at a time instead,
+          // a later file's new import makes Vite optimise again mid-run, which
+          // can fail a module worker that's loading meanwhile with
+          // WORKER_START_FAILED ("The worker failed to load").
+          optimizeDeps: {
+            include: [
+              "@hussmartinez/sdk-config/testing/audio-output",
+              "@hussmartinez/sdk-core",
+              "@hussmartinez/ui",
+              "@hussmartinez/ui/react",
+              "axe-core",
+              "mediabunny",
+              "react",
+              "react/jsx-dev-runtime",
+              "react-dom/client",
+              "react-dom/server",
+            ],
+          },
           test: {
             name: "browser",
             // Whether the tests run in the pinned browser image of ci/Dockerfile

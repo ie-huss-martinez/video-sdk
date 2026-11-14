@@ -11,6 +11,7 @@ import {
 import exportA from "./fixtures/video/export-a.webm?url";
 import exportB from "./fixtures/video/export-b.webm?url";
 import { unreadable } from "./support/codecs.js";
+import { DEV_WORKER_START_TIMEOUT } from "./support/load.js";
 import type { ExportTestContract } from "./workers/export.worker.js";
 import type { InspectContract } from "./workers/inspect.worker.js";
 
@@ -43,7 +44,7 @@ async function failure(promise: Promise<unknown>): Promise<unknown> {
 }
 
 async function setup() {
-  const engine = createVideoEngine();
+  const engine = createVideoEngine({ startTimeout: DEV_WORKER_START_TIMEOUT });
   const open = async (id: string, url: string) => {
     const file = await blob(url);
     return engine.open(id, file, await engine.probe(file));
@@ -138,7 +139,7 @@ describe("an export's file", () => {
   });
 
   it("fails with FILE_TOO_LARGE as soon as the file passes maxFileSize, warning first, and holds nothing", async () => {
-    const engine = createVideoEngine();
+    const engine = createVideoEngine({ startTimeout: DEV_WORKER_START_TIMEOUT });
     const file = await blob(exportA);
     const a = await engine.open("a", file, await engine.probe(file));
     const source = engineInternals(engine)?.source("a");
@@ -170,7 +171,7 @@ describe("an export's file", () => {
   });
 
   it("reports the warning and the limit through the processor", async () => {
-    const engine = createVideoEngine();
+    const engine = createVideoEngine({ startTimeout: DEV_WORKER_START_TIMEOUT });
     const file = await blob(exportA);
     const a = await engine.open("a", file, await engine.probe(file));
     const processor = createVideoProcessor({
@@ -191,7 +192,7 @@ describe("an export's file", () => {
   });
 
   it("holds no frame or audio after an export is cancelled partway", async () => {
-    const engine = createVideoEngine();
+    const engine = createVideoEngine({ startTimeout: DEV_WORKER_START_TIMEOUT });
     const file = await blob(exportA);
     const a = await engine.open("a", file, await engine.probe(file));
     const source = engineInternals(engine)?.source("a");

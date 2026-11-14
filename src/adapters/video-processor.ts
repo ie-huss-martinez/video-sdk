@@ -83,10 +83,15 @@ export function createVideoProcessor(options: VideoProcessorOptions): VideoProce
         return createExportRunner(
           selfHostedWorker(base, EXPORT_WORKER_ASSET, "hm-video-export"),
           EXPORT_WORKER_ASSET,
+          internals.startTimeout,
         );
       }
       const { createInlineExportWorker } = await import("./export-worker/export-inline-worker.js");
-      return createExportRunner(createInlineExportWorker as () => WorkerLike);
+      return createExportRunner(
+        createInlineExportWorker as () => WorkerLike,
+        undefined,
+        internals.startTimeout,
+      );
     },
   });
 }

@@ -67,6 +67,7 @@ function stallSignal(policy: VideoFilePolicy, signal: AbortSignal | undefined) {
 export function createExportRunner(
   startWorker: () => WorkerLike,
   workerAsset?: string,
+  startTimeout?: number,
 ): ExportRunner {
   let client: WorkerClient<ExportWorkerContract> | undefined;
   return {
@@ -76,6 +77,7 @@ export function createExportRunner(
         errorClasses: { VideoError },
         packageVersion: PACKAGE_VERSION,
         ...(workerAsset === undefined ? {} : { workerAsset }),
+        ...(startTimeout === undefined ? {} : { startTimeout }),
       });
       const stall = stallSignal(policy, options.signal);
       try {
