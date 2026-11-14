@@ -33,6 +33,7 @@ Browser tests need Playwright's browsers once: `pnpm exec playwright install chr
 | Browser tests | `test:browser` | Vitest in Chromium, and in Firefox and WebKit too in CI |
 | Example builds | `build:examples` | Vite and Next.js, on the workspace's build of the package |
 | End-to-end tests | `test:e2e` | Playwright, against the built examples, in Chromium, and all three engines in CI |
+| Screenshots | `test:visual` | Playwright, in the pinned browser image through Docker; `test:visual:update` rewrites the baselines ([sdk-core ADR 0048](https://github.com/ie-huss-martinez/sdk-core/blob/main/docs/adr/0048-visual-regression-for-sdk-editors.md)) |
 | Size budgets | `check:size` | size-limit, brotli size of each entry point |
 | API reports | `check:api` | api-extractor, one report per entry point in [`api`](api) |
 | Package checks | `check:package` | publint and Are the Types Wrong? |

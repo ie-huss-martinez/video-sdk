@@ -1,3 +1,12 @@
+/* The host page, in ui's tokens, as a host following its theme would. */
+body {
+  margin: 0;
+  padding: 1rem;
+  font-family: var(--hm-font-family);
+  color: var(--hm-color-text);
+  background: var(--hm-color-bg);
+}
+
 /* The page around the editor: the editor fills it, as a host's layout would. */
 .example-frame {
   block-size: 80vh;
