@@ -1,6 +1,6 @@
 {
   "name": "@hussmartinez/video-sdk",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Client-side video SDK: a headless core, a React editor and a custom element. Videos never leave the device.",
   "license": "Apache-2.0",
   "repository": {
