@@ -1,14 +1,14 @@
 import "@hussmartinez/ui/styles.css";
 import "../styles.css";
 import axe from "axe-core";
-import { act, StrictMode } from "react";
+import { act, createRef, StrictMode } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { renderToString } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { userEvent } from "vitest/browser";
 import landscapeVp8 from "../../test/fixtures/video/landscape-vp8.webm?url";
 import type { VideoEngine } from "../core/ports/video-engine.js";
-import { VideoEditor } from "./VideoEditor.js";
+import { VideoEditor, type VideoEditorHandle } from "./VideoEditor.js";
 
 // The editor runs real decoding and playback in workers, and a heavily
 // loaded machine slows them several times over: a minute per test, so that
@@ -125,6 +125,39 @@ describe("the video editor", () => {
         ),
       { timeout: 15_000 },
     );
+  });
+
+  it("shows a failed first open inside the drop zone, and a later failure over the clips", async () => {
+    const handle = createRef<VideoEditorHandle>();
+    const view = render(<VideoEditor ref={handle} />);
+    const input = view.querySelector('input[type="file"]') as HTMLInputElement;
+    await userEvent.upload(input, new File(["not a video"], "notes.webm", { type: "video/webm" }));
+    const error = await vi.waitFor(
+      () => {
+        const found = view.querySelector(".hm-video-stage-error");
+        expect(found).not.toBeNull();
+        return found as HTMLElement;
+      },
+      { timeout: 15_000 },
+    );
+    // Within the drop zone, by the button that retries, and still an alert.
+    expect(view.querySelector(".hm-video-stage-drop")?.contains(error)).toBe(true);
+    expect(error.getAttribute("role")).toBe("alert");
+    expect(await violations(view)).toEqual([]);
+    // With a clip open, a failure is a banner over the stage instead.
+    await act(async () => {
+      await (handle.current as VideoEditorHandle).insert(await fixture());
+    });
+    await act(async () => {
+      await (handle.current as VideoEditorHandle)
+        .insert(new File(["still not a video"], "more.webm", { type: "video/webm" }))
+        .catch(() => {});
+    });
+    await vi.waitFor(() => expect(view.querySelector(".hm-video-stage-error")).not.toBeNull(), {
+      timeout: 15_000,
+    });
+    expect(view.querySelector(".hm-video-stage-drop")).toBeNull();
+    expect(view.querySelector(".hm-video-stage-error")?.getAttribute("role")).toBe("alert");
   });
 
   it("keeps one canvas through StrictMode's second mount, and removes it on unmount", async () => {
