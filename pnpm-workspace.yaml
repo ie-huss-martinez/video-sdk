@@ -18,8 +18,8 @@ catalog:
   "@biomejs/biome": ^2.6.5
   "@commitlint/cli": ^21.2.4
   "@hussmartinez/sdk-config": ^0.5.0
-  "@hussmartinez/sdk-core": ^0.4.2
-  "@hussmartinez/ui": ^0.6.0
+  "@hussmartinez/sdk-core": ^0.4.3
+  "@hussmartinez/ui": ^0.7.0
   # The browser test image's version (ci/Dockerfile), so the end-to-end suite
   # drives the browsers the image installed.
   "@playwright/test": 1.65.0
