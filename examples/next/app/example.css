@@ -1,0 +1,4 @@
+/* The page around the editor: the editor fills it, as a host's layout would. */
+.example-frame {
+  block-size: 80vh;
+}

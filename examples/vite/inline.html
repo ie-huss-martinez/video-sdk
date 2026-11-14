@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <!-- Workers only from blob: URLs, as the inlined workers need, and nothing else from anywhere but this origin. -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; worker-src blob:; connect-src 'self'; style-src 'self'; object-src 'none'; base-uri 'self'"
+    />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>The video editor, with its workers inlined</title>
+  </head>
+  <body>
+    <main>
+      <h1>The video editor, with its workers inlined</h1>
+      <div id="editor"></div>
+    </main>
+    <script type="module" src="/src/editor.tsx"></script>
+  </body>
+</html>

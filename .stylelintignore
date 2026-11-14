@@ -3,3 +3,7 @@
 # builds can contain CSS with the token values inlined.
 **/.next/**
 **/dist-server/**
+# The examples' own CSS is a host page's, around the editor, not the SDK's:
+# the family's token and scope rules are for the SDK's stylesheet.
+examples/*/src/**/*.css
+examples/*/app/**/*.css

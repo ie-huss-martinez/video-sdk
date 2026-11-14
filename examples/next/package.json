@@ -1,0 +1,25 @@
+{
+  "name": "@hussmartinez/video-sdk-example-next",
+  "private": true,
+  "description": "A Next.js App Router application that renders the built @hussmartinez/video-sdk editor on the server and runs its workers self-hosted and inlined, each under its Content Security Policy, for the end-to-end tests.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "build": "node scripts/copy-assets.mjs && NEXT_TELEMETRY_DISABLED=1 next build",
+    "start": "NEXT_TELEMETRY_DISABLED=1 next start --port 4331"
+  },
+  "dependencies": {
+    "@hussmartinez/ui": "catalog:",
+    "@hussmartinez/video-sdk": "workspace:*",
+    "next": "catalog:",
+    "react": "catalog:",
+    "react-dom": "catalog:"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "typescript": "catalog:"
+  }
+}

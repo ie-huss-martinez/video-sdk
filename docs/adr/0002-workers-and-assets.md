@@ -94,8 +94,8 @@ Every call takes an `AbortSignal` and runs under `withProcessingTime`. Long call
 
 ### Tests
 
-- **No network:** the end-to-end suites fail on any request to another origin, and assert that inline mode makes no request at all beyond the page and its scripts.
-- **Self-hosted mode** runs the same fixtures with `assetsUrl` set and a CSP without `blob:`.
+- **No network:** the end-to-end suite fails on any request to another origin, and on any console error or warning, which is where every engine reports a Content Security Policy violation.
+- **Both modes, in both examples:** the suite opens, plays and exports a video in the Vite and Next.js examples, each with its workers inlined under `worker-src blob:` and self-hosted under `worker-src 'self'`, with no `img-src` or media directive. The self-hosted pages fetch the two worker files from `assetsUrl`, and the inline pages never do.
 - **Crash recovery:** a browser test terminates the media worker during playback, and checks that a new one redraws the same frame from the sources' `Blob`s.
 - **Messages:** a unit test checks that no message between the page and a worker carries a full-size `VideoFrame` or frame pixel buffer. The only media messages allowed are thumbnails, audio windows, peaks and an export's `Blob`.
 - **Frames:** after seeking, playing, cancelling, failing and closing, each worker's open-frame counter returns to zero. This covers both `VideoFrame` and `AudioData`.

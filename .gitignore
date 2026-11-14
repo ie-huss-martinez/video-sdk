@@ -20,3 +20,5 @@ release-assets/
 .next/
 next-env.d.ts
 dist-server/
+# The Next.js example's copy of the package's workers (examples/next/scripts/copy-assets.mjs).
+examples/next/public/video-sdk/
