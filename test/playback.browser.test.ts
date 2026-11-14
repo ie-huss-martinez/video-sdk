@@ -1,7 +1,13 @@
 import { audioOutput } from "@hussmartinez/sdk-config/testing/audio-output";
 import { afterEach, describe, expect, it, type TestContext, vi } from "vitest";
 import { userEvent } from "vitest/browser";
-import { audioLedger, audioTrace, type ScheduledWindow } from "../src/adapters/playback-audio.js";
+import {
+  audioLedger,
+  audioTrace,
+  FUTURE_STAMP,
+  PLAUSIBLE_STAMP,
+  type ScheduledWindow,
+} from "../src/adapters/playback-audio.js";
 import { createEngine } from "../src/adapters/video-engine.js";
 import { createVideoOutput } from "../src/adapters/video-output.js";
 import {
@@ -410,20 +416,32 @@ function toneOnsets(
 }
 
 /** The wall-clock time a context time is heard, from the context's own output timestamp. */
+/** How {@link heardAt} placed the last tone: by the output timestamp, or the context's own time. */
+let heardVia = "";
+
+/**
+ * When a context time is heard, by the same rule as the SDK's clock
+ * (docs/adr/0006): the output timestamp, unless it's more than
+ * {@link PLAUSIBLE_STAMP} ms old or more than {@link FUTURE_STAMP} ms in the
+ * future, as WebKit's is; then the context's own time and its reported
+ * latency. Placing it by another rule would measure the difference between
+ * the two rules, not the SDK's sync.
+ */
 function heardAt(context: AudioContext, time: number): number {
   const stamp = context.getOutputTimestamp();
-  // WebKit on Linux stamps another timeline: only a stamp near now is used.
-  if (
-    stamp.contextTime &&
-    stamp.performanceTime !== undefined &&
-    Math.abs(performance.now() - stamp.performanceTime) <= 200
-  ) {
-    return performance.timeOrigin + stamp.performanceTime + (time - stamp.contextTime) * 1_000;
+  const now = performance.now();
+  const age = stamp.performanceTime === undefined ? Number.NaN : now - stamp.performanceTime;
+  if (stamp.contextTime && age >= -FUTURE_STAMP && age <= PLAUSIBLE_STAMP) {
+    heardVia = `the output timestamp, ${age.toFixed(1)} ms old`;
+    return (
+      performance.timeOrigin +
+      (stamp.performanceTime as number) +
+      (time - (stamp.contextTime as number)) * 1_000
+    );
   }
   const latency = context.outputLatency || context.baseLatency || 0;
-  return (
-    performance.timeOrigin + performance.now() + (time - context.currentTime + latency) * 1_000
-  );
+  heardVia = `the context's time, with ${(latency * 1_000).toFixed(1)} ms latency (output ${context.outputLatency}, base ${context.baseLatency}); the stamp was ${age.toFixed(0)} ms old`;
+  return performance.timeOrigin + now + (time - context.currentTime + latency) * 1_000;
 }
 
 describe("audio as the clock", () => {
@@ -519,7 +537,7 @@ describe("audio as the clock", () => {
       const apart = drawnAt.wall - heard;
       expect(
         Math.abs(apart),
-        `flash ${flash}: ${apart.toFixed(1)} ms from its tone, allowing ${allowance.toFixed(1)} ms with the runner's ${lag.toFixed(1)} ms lag`,
+        `flash ${flash}: ${apart.toFixed(1)} ms from its tone, allowing ${allowance.toFixed(1)} ms with the runner's ${lag.toFixed(1)} ms lag; heard by ${heardVia}`,
       ).toBeLessThanOrEqual(allowance);
     }
     // Most flashes are drawn and measured even under heavy load; every one
