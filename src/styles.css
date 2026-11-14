@@ -10,7 +10,13 @@
 
 @layer hm.sdk {
   /* The editor (docs/adr/0007): a column of regions that fills its container. */
+  /* The editor's own text, such as the transport's time, in ui's type and
+     colour, not whatever the host page sets around it. */
   .hm-video-editor {
+    font-family: var(--hm-font-family);
+    font-size: var(--hm-font-size-body);
+    line-height: var(--hm-line-height-body);
+    color: var(--hm-color-text);
     display: grid;
     grid-template-rows: auto minmax(calc(var(--hm-space-12) * 2), 1fr) auto auto;
     gap: var(--hm-gap-normal);

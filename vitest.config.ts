@@ -1,3 +1,4 @@
+import { browserInstances } from "@hussmartinez/sdk-config/testing/browser-instances";
 import { playwright } from "@vitest/browser-playwright";
 import { defineConfig } from "vitest/config";
 import { testAssets, versionDefine } from "./tools/self-hosted-workers.js";
@@ -57,7 +58,9 @@ export default defineConfig(({ mode }) => {
               enabled: true,
               headless: true,
               provider: playwright(),
-              instances: browsers.map((browser) => ({ browser })),
+              // With HM_BROWSER_DIAGNOSTICS=<folder>, Chromium records a net
+              // log there, for a module worker that "failed to load" (#55).
+              instances: browserInstances(browsers),
             },
           },
         },

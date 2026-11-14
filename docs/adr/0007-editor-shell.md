@@ -139,6 +139,7 @@ Focus always lands somewhere meaningful, and never on `<body>`:
 ### Tests
 
 - **axe** on every designed state, in all three engines.
+- **Screenshots** of each designed state, in light and dark, compact and comfortable, on Chromium in the pinned image ([sdk-core ADR 0048](https://github.com/ie-huss-martinez/sdk-core/blob/main/docs/adr/0048-visual-regression-for-sdk-editors.md)): empty, with clips, a selection, paused at a frame, the export dialog's summary and its result, and an error. The states, and the one mask with its reason, are listed in `e2e/visual/editor.spec.ts`.
 - **Keyboard only, end to end:** insert through the drop zone's button, select clips, split, trim and move with the keys above, delete, undo, play and pause, step frames, and export. Each step checks where focus is.
 - **Shortcuts** don't fire in fields or on controls, and `Space` on a button presses it.
 - **StrictMode:** mounting, unmounting and mounting again leaves one output and one canvas, and the frame and audio ledgers at zero ([ADR 0002](0002-workers-and-assets.md)).
