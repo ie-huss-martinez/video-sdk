@@ -1,5 +1,15 @@
 # @hussmartinez/video-sdk
 
+## 0.1.1
+
+### Patch Changes
+
+- [#59](https://github.com/ie-huss-martinez/video-sdk/pull/59) [`d17c93b`](https://github.com/ie-huss-martinez/video-sdk/commit/d17c93be587f0dcf060dffaa34a3a9c554d69160) Thanks [@hussmartinez](https://github.com/hussmartinez)! - The editor's own text, such as the transport's time, uses ui's font, size and text colour instead of inheriting the host page's, so it stays readable in the dark theme.
+
+- [#61](https://github.com/ie-huss-martinez/video-sdk/pull/61) [`14febe2`](https://github.com/ie-huss-martinez/video-sdk/commit/14febe28fb7ebb8af9855c637607a411736bcf59) Thanks [@hussmartinez](https://github.com/hussmartinez)! - The editor shows a failed first open inside the empty stage's drop zone, by the button that retries, instead of as plain text below it. Over open clips, a failure is an alert banner at the foot of the stage, in the danger colours. Both keep `role="alert"`.
+
+- [#62](https://github.com/ie-huss-martinez/video-sdk/pull/62) [`194ffdf`](https://github.com/ie-huss-martinez/video-sdk/commit/194ffdfe345393ff457af5639a2aefdad08bf8dd) Thanks [@hussmartinez](https://github.com/hussmartinez)! - The timeline's playhead slider and the export dialog's file type and quality choices have visible labels, which also name them (WCAG 2.5.3, label in name). The playhead is in a ui `Field`, and each group of choices is named by its visible label.
+
 ## 0.1.0
 
 ### Minor Changes
