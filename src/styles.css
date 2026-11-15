@@ -91,6 +91,7 @@
   }
 
   .hm-video-transport-time {
+    margin-inline-start: var(--hm-gap-normal);
     font-variant-numeric: tabular-nums;
   }
 
