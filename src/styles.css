@@ -197,6 +197,12 @@
     min-inline-size: 0;
   }
 
+  /* A segmented control's visible name, as a ui Field shows its label. */
+  .hm-video-export-label {
+    color: var(--hm-field-label-fg);
+    font-weight: var(--hm-field-label-font-weight);
+  }
+
   .hm-video-export-summary p,
   .hm-video-export-result,
   .hm-video-export-note,
