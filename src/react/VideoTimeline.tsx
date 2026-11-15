@@ -1,5 +1,6 @@
 import { platformOf, snap } from "@hussmartinez/sdk-core";
 import {
+  Field,
   IconButton,
   Slider,
   SnapIcon,
@@ -408,18 +409,19 @@ export function VideoTimeline(props: VideoTimelineProps): ReactNode {
           onPressedChange={setSnapping}
         />
       </Toolbar>
-      <Slider
-        className="hm-video-timeline-playhead"
-        label={messages.t("timeline.playhead")}
-        min={0}
-        max={Math.max(0, frames - 1)}
-        step={1}
-        largeStep={Math.max(1, Math.round(rate.num / rate.den))}
-        value={Math.min(playhead, Math.max(0, frames - 1))}
-        formatValue={timecode}
-        disabled={empty || !output}
-        onValueChange={(frame) => output?.seek(frame)}
-      />
+      {/* The Field shows the slider's name, and labels it (WCAG 2.5.3). */}
+      <Field label={messages.t("timeline.playhead")} className="hm-video-timeline-playhead">
+        <Slider
+          min={0}
+          max={Math.max(0, frames - 1)}
+          step={1}
+          largeStep={Math.max(1, Math.round(rate.num / rate.den))}
+          value={Math.min(playhead, Math.max(0, frames - 1))}
+          formatValue={timecode}
+          disabled={empty || !output}
+          onValueChange={(frame) => output?.seek(frame)}
+        />
+      </Field>
       <div className="hm-video-timeline-scroll" ref={scroller}>
         {empty ? null : (
           <div

@@ -1,5 +1,5 @@
 import { Button, Dialog, ProgressBar, SegmentedControl, useAnnounce } from "@hussmartinez/ui/react";
-import { type ReactNode, useEffect, useRef, useState } from "react";
+import { type ReactNode, useEffect, useId, useRef, useState } from "react";
 import { isVideoError } from "../core/errors/video-error.js";
 import { planFrames, type VideoMetadata } from "../core/model/plan.js";
 import { frameTime } from "../core/model/time.js";
@@ -80,6 +80,7 @@ export function VideoExportDialog(props: VideoExportDialogProps): ReactNode {
   const controller = useRef<AbortController | null>(null);
   const objectUrl = useRef<string | null>(null);
   const downloadButton = useRef<HTMLButtonElement>(null);
+  const ids = useId();
 
   const plan = snapshot.plan;
   const frames = plan ? planFrames(plan) : 0;
@@ -256,7 +257,12 @@ export function VideoExportDialog(props: VideoExportDialogProps): ReactNode {
             ) : null}
           </section>
           <fieldset className="hm-video-export-choices" disabled={exporting}>
+            {/* A visible name for each group, which names it too (WCAG 2.5.3). */}
+            <span className="hm-video-export-label" id={`${ids}-container`}>
+              {messages.t("export.container")}
+            </span>
             <SegmentedControl
+              aria-labelledby={`${ids}-container`}
               label={messages.t("export.container")}
               size="small"
               value={choice}
@@ -266,7 +272,11 @@ export function VideoExportDialog(props: VideoExportDialogProps): ReactNode {
               }))}
               onValueChange={setChoice}
             />
+            <span className="hm-video-export-label" id={`${ids}-quality`}>
+              {messages.t("export.quality")}
+            </span>
             <SegmentedControl
+              aria-labelledby={`${ids}-quality`}
               label={messages.t("export.quality")}
               size="small"
               value={quality}
