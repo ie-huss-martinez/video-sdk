@@ -18,7 +18,7 @@ pnpm verify        # everything CI runs
 pnpm verify:fast   # the subset the pre-push hook runs
 ```
 
-Browser tests need Playwright's browsers once: `pnpm exec playwright install chromium`, plus `firefox webkit` to run all three engines with `CI=1` or `pnpm test:browser:all`. To run them exactly as CI does, in the pinned browser image of `ci/Dockerfile`, use `pnpm test:browser:image`, which needs Docker. The [capability matrix](docs/capabilities.md) is checked only there, because another machine's browsers can differ.
+Browser tests, the end-to-end tests and the screenshots run in the pinned browser image of `ci/Dockerfile`, as CI's do, through `hm-in-image` from [`@hussmartinez/sdk-config`](https://www.npmjs.com/package/@hussmartinez/sdk-config) ([sdk-core ADR 0049](https://github.com/ie-huss-martinez/sdk-core/blob/main/docs/adr/0049-local-browser-tests-in-the-pinned-image.md)). So they need Docker, and no browsers installed on the machine: the host's own libraries and network changes can't affect them. Pass a test file to run only it, such as `pnpm test:browser test/playback.browser.test.ts`, and use `pnpm test:browser:all` for all three engines. The [capability matrix](docs/capabilities.md) is checked there too.
 
 `pnpm verify` runs, in order:
 
@@ -30,9 +30,9 @@ Browser tests need Playwright's browsers once: `pnpm exec playwright install chr
 | Dependency rules | `lint:deps` | dependency-cruiser, through `hm-lint-deps` |
 | Build | `build` | Vite, then api-extractor for the type declarations |
 | Unit tests | `test` | Vitest |
-| Browser tests | `test:browser` | Vitest in Chromium, and in Firefox and WebKit too in CI |
+| Browser tests | `test:browser` | Vitest in the browser image, in Chromium, and in Firefox and WebKit too in CI |
 | Example builds | `build:examples` | Vite and Next.js, on the workspace's build of the package |
-| End-to-end tests | `test:e2e` | Playwright, against the built examples, in Chromium, and all three engines in CI |
+| End-to-end tests | `test:e2e` | Playwright in the browser image, against the built examples, in Chromium, and all three engines in CI |
 | Screenshots | `test:visual` | Playwright, in the pinned browser image through Docker; `test:visual:update` rewrites the baselines ([sdk-core ADR 0048](https://github.com/ie-huss-martinez/sdk-core/blob/main/docs/adr/0048-visual-regression-for-sdk-editors.md)) |
 | Size budgets | `check:size` | size-limit, brotli size of each entry point |
 | API reports | `check:api` | api-extractor, one report per entry point in [`api`](api) |

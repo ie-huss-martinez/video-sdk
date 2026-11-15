@@ -2,7 +2,7 @@
 
 <!-- Generated from test/capabilities/matrix.ts by test/capabilities/capabilities.test.ts. Don't edit it by hand: change the matrix, then run `pnpm exec vitest run --project unit test/capabilities -u`. -->
 
-What each browser engine in the test matrix offers the SDK: Playwright 1.65.0's builds, in the pinned browser test image of `ci/Dockerfile` (sdk-core ADR 0025), where CI runs. `test/capabilities/capabilities.browser.test.ts` measures it in a worker in that image, in CI and with `pnpm test:browser:image`, so a browser that changes fails a test. Elsewhere it skips, because another machine's browsers can differ.
+What each browser engine in the test matrix offers the SDK: Playwright 1.65.0's builds, in the pinned browser test image of `ci/Dockerfile` (sdk-core ADR 0025), where CI runs. `test/capabilities/capabilities.browser.test.ts` measures it in a worker in that image, in CI and locally through `hm-in-image` (sdk-core ADR 0049), so a browser that changes fails a test. Elsewhere it skips, because another machine's browsers can differ.
 
 These are Playwright's builds, not every release of each browser. Playwright's WebKit on Linux answers from the system's GStreamer plugins: in the image they claim every codec here, while on a machine with fewer plugins the same WebKit decodes only VP8 and Opus. Neither is Safari. The "Decoding a real file" table records whether each claim holds. The SDK asks the browser it runs in, with `isConfigSupported`, before it opens a file or chooses an export's codecs (docs/adr/0001), so this table documents the test environment rather than limiting any browser.
 

@@ -49,7 +49,7 @@ export default defineConfig(({ mode }) => {
           test: {
             name: "browser",
             // Whether the tests run in the pinned browser image of ci/Dockerfile
-            // (ADR 0025 in sdk-core), as in CI and pnpm test:browser:image: the
+            // (ADR 0025 in sdk-core), as in CI and locally through hm-in-image: the
             // environment the capability matrix describes (docs/capabilities.md).
             // Playwright's image installs its browsers there.
             provide: { browserImage: process.env["PLAYWRIGHT_BROWSERS_PATH"] === "/ms-playwright" },
