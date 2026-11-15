@@ -129,20 +129,31 @@ describe("the video editor", () => {
 
   it("shows a failed first open inside the drop zone, and a later failure over the clips", async () => {
     const handle = createRef<VideoEditorHandle>();
-    const view = render(<VideoEditor ref={handle} />);
+    const onEvent = vi.fn();
+    const view = render(<VideoEditor ref={handle} onEvent={onEvent} />);
     const input = view.querySelector('input[type="file"]') as HTMLInputElement;
-    await userEvent.upload(input, new File(["not a video"], "notes.webm", { type: "video/webm" }));
-    const error = await vi.waitFor(
-      () => {
-        const found = view.querySelector(".hm-video-stage-error");
-        expect(found).not.toBeNull();
-        return found as HTMLElement;
-      },
-      { timeout: 15_000 },
-    );
+    // The picker returns before the worker rejects the file. Keep that
+    // completion inside act, then inspect the committed alert below.
+    await act(async () => {
+      await userEvent.upload(
+        input,
+        new File(["not a video"], "notes.webm", { type: "video/webm" }),
+      );
+      await vi.waitFor(
+        () =>
+          expect(onEvent).toHaveBeenCalledWith({
+            type: "insert",
+            outcome: "failed",
+            commands: [],
+          }),
+        { timeout: 15_000 },
+      );
+    });
+    const error = view.querySelector(".hm-video-stage-error");
+    expect(error).not.toBeNull();
     // Within the drop zone, by the button that retries, and still an alert.
     expect(view.querySelector(".hm-video-stage-drop")?.contains(error)).toBe(true);
-    expect(error.getAttribute("role")).toBe("alert");
+    expect(error?.getAttribute("role")).toBe("alert");
     expect(await violations(view)).toEqual([]);
     // With a clip open, a failure is a banner over the stage instead.
     await act(async () => {
