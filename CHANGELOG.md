@@ -1,5 +1,11 @@
 # @hussmartinez/video-sdk
 
+## 0.1.2
+
+### Patch Changes
+
+- [#64](https://github.com/ie-huss-martinez/video-sdk/pull/64) [`6c85b5b`](https://github.com/ie-huss-martinez/video-sdk/commit/6c85b5b4e344bca3aae689e53c95f742d539bd25) Thanks [@hussmartinez](https://github.com/hussmartinez)! - The VideoTransport time display now has space after the frame-step buttons, following the theme’s spacing tokens.
+
 ## 0.1.1
 
 ### Patch Changes
