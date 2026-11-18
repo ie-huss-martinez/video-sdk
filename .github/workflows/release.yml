@@ -90,6 +90,11 @@ jobs:
       # The job runs in the browser test image, so the visual tests run
       # directly rather than through Docker (sdk-core ADR 0048).
       HM_VISUAL_CONTAINER: "1"
+      # Playwright's browser log: launches, exits and what the browsers print
+      # to stderr. A page that crashes, as WebKit's did in release run
+      # 44328498918, leaves only "the page crashed" in vitest's output; this
+      # keeps the browser's own account of it in the job's log.
+      DEBUG: pw:browser
     # The SHA-256 of the publish plan uploaded with the tarballs, which the
     # publish job checks (ADR 0041, in sdk-core).
     outputs:

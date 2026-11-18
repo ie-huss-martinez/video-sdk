@@ -34,11 +34,13 @@ import type {
   TestPortMessage,
 } from "./workers/playback.worker.js";
 
-// Real decoding, playback and export run in workers, and a heavily loaded
-// machine slows them several times over: a minute per test, so that load
-// fails a test only through its own checks. Waits inside get their own
-// timeouts, so no step runs on a nearly spent budget.
-vi.setConfig({ testTimeout: 60_000 });
+// Real decoding and playback run in workers, and a loaded machine slows them.
+// The slowest test here took 5.1-5.5 s on CI's runners, and 7.2 s locally
+// with WebKit sharing two cores with CPU burners: 20 s is about three times
+// that. A test that hangs fails by name well before anything else happens,
+// rather than sitting a minute in a page that may then crash. Waits inside
+// have their own 15 s timeouts, so each still fails through its own check.
+vi.setConfig({ testTimeout: 20_000 });
 
 // Playback over the real engine and output (docs/adr/0006), in every browser
 // engine: the numbered fixture shows each frame's number, and the worker
@@ -668,9 +670,20 @@ describe("audio as the clock", () => {
       const real = await setup(numberedBeeps);
       output = real.output;
       trace();
+      // Every failure from the load on, even one a later play clears from the
+      // snapshot, so a test that fails says why the output stopped.
+      const failures: string[] = [];
+      const unsubscribe = output.subscribe(() => {
+        const error = output?.getSnapshot().error;
+        if (error) {
+          failures.push(`${error.code} ${JSON.stringify(error.details)} ${String(error.cause)}`);
+        }
+      });
       output.load(planOf(clipOf("a", real.source, 0, 90)));
       await shown();
       await output.play();
+      unsubscribe();
+      expect(failures).toEqual([]);
       expect(output.getSnapshot()).toMatchObject({ state: "playing", audio: "blocked" });
       await sleep(500);
       expect(output.position()).toBeGreaterThan(8);
