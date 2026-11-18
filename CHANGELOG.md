@@ -1,5 +1,25 @@
 # @hussmartinez/video-sdk
 
+## 0.2.0
+
+### Minor Changes
+
+- [#74](https://github.com/ie-huss-martinez/video-sdk/pull/74) [`981978c`](https://github.com/ie-huss-martinez/video-sdk/commit/981978c09144daeef3bb88c2dabb9120cc92f950) Thanks [@hussmartinez](https://github.com/hussmartinez)! - The editor has an inspector for the selected clips' sound: a volume slider with a number field in decibels, mute, and a fade in and fade out, each with its length in seconds and its shape. A change applies to every selected clip as one undo step, and a drag of the volume slider is one step too. While the video plays, the drag is heard as it moves.
+  
+  A change of volume, mute or a fade while playing no longer restarts the picture's decoding: only the sound changes.
+  
+  `VideoEditor` shows it under the timeline in a narrow container and beside the other regions from 720 px. `VideoInspector` is exported from `@hussmartinez/video-sdk/react` as a building block, for a layout of your own inside a `VideoEditorProvider`. The catalogue gains the `inspector.*` messages.
+  
+  The editor's root is now a two-column grid. Host CSS that sets `grid-template-columns` or `gap` on `.hm-video-editor` should be checked against it.
+
+### Patch Changes
+
+- [#75](https://github.com/ie-huss-martinez/video-sdk/pull/75) [`35c93a2`](https://github.com/ie-huss-martinez/video-sdk/commit/35c93a2bfbb8c057badc0fcc928c2076e6a5b29f) Thanks [@hussmartinez](https://github.com/hussmartinez)! - `@hussmartinez/video-sdk/react` exports three types its API already used without naming them: `VideoEditorCatalogue`, the shape of the catalogue behind `VideoEditorMessages` and `VideoEditorMessageOverrides`, and `UseVideoSessionResult` and `UseVideoOutputResult`, what the `useVideoSession` and `useVideoOutput` hooks return. Nothing changes at run time. The core's types that the React entry mentions, such as `VideoSession` and `VideoOutput`, are imported from `@hussmartinez/video-sdk`, as before.
+
+- [#71](https://github.com/ie-huss-martinez/video-sdk/pull/71) [`5be0365`](https://github.com/ie-huss-martinez/video-sdk/commit/5be0365131968982b9bbf6b7999b9c1bf93d71a2) Thanks [@hussmartinez](https://github.com/hussmartinez)! - The editor's root now has ui's `hm-text` class, which sets its own text's font, size, weight, letter spacing, line height and colour from the theme's tokens. It replaces the SDK's own rules on `.hm-video-editor`, so the editor's text follows ui's type tokens with the other SDKs'. The stylesheet from `@hussmartinez/ui` 0.11 or later must be loaded, as before. Host CSS that styles `.hm-video-editor` still wins.
+
+- [#69](https://github.com/ie-huss-martinez/video-sdk/pull/69) [`adbdff8`](https://github.com/ie-huss-martinez/video-sdk/commit/adbdff8342662edbb8433ec11f08220104652937) Thanks [@hussmartinez](https://github.com/hussmartinez)! - The package now depends on `@hussmartinez/ui` ^0.11.0 and `@hussmartinez/sdk-core` ^0.4.4, up from ^0.7.0 and ^0.4.3. Nothing in the editor changes yet: this brings in ui's `Timeline` and its `hm-text` class, which later releases use. An application that installs `@hussmartinez/ui` itself, for its stylesheet or its components, should move to 0.11 too, so it has one copy.
+
 ## 0.1.2
 
 ### Patch Changes
