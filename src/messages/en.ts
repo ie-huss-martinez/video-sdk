@@ -33,6 +33,7 @@ export const videoOwnMessages = /* @__PURE__ */ defineMessages({
   "timeline.playhead": "Playhead",
   "timeline.clip": "Clip {index, number} of {count, number}, {start} to {end}",
   "timeline.clipMuted": "Clip {index, number} of {count, number}, {start} to {end}, muted",
+  "timeline.clipTitle": "Clip {index, number}",
   "timeline.trimStart": "Trim the clip's start to the playhead",
   "timeline.trimEnd": "Trim the clip's end to the playhead",
   "timeline.snap": "Snap to clip edges and the playhead",

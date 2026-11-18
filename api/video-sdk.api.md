@@ -164,6 +164,9 @@ export const NO_FADE: VideoFade;
 export function outputFromSource(source: VideoSourceInfo): VideoPlanOutput;
 
 // @public
+export function peakColumns(peaks: VideoPeaks, options: VideoPeakColumnsOptions): VideoPeakColumns;
+
+// @public
 export function planFrames(plan: VideoPlan): number;
 
 // @public
@@ -606,6 +609,7 @@ export const videoMessages: {
     readonly "timeline.playhead": "Playhead";
     readonly "timeline.clip": "Clip {index, number} of {count, number}, {start} to {end}";
     readonly "timeline.clipMuted": "Clip {index, number} of {count, number}, {start} to {end}, muted";
+    readonly "timeline.clipTitle": "Clip {index, number}";
     readonly "timeline.trimStart": "Trim the clip's start to the playhead";
     readonly "timeline.trimEnd": "Trim the clip's end to the playhead";
     readonly "timeline.snap": "Snap to clip edges and the playhead";
@@ -895,6 +899,19 @@ export interface VideoOutputSnapshot {
 export type VideoOutputState = "stopped" | "playing" | "paused";
 
 // @public
+export interface VideoPeakColumns {
+    readonly max: Float32Array;
+    readonly min: Float32Array;
+}
+
+// @public
+export interface VideoPeakColumnsOptions {
+    readonly columns: number;
+    readonly from: number;
+    readonly to: number;
+}
+
+// @public
 export interface VideoPeaks {
     readonly bucketDuration: number;
     // (undocumented)
@@ -996,6 +1013,7 @@ export interface VideoSession {
     destroy(): Promise<void>;
     execute(commands: VideoCommand | readonly VideoCommand[]): void;
     export(options?: VideoSessionExportOptions): Promise<VideoExportResult>;
+    getPeaks(source: string): VideoPeaks | undefined;
     // (undocumented)
     getSnapshot(): VideoSessionSnapshot;
     insert(file: Blob, options?: VideoInsertOptions): Promise<VideoSourceInfo>;
@@ -1040,6 +1058,7 @@ export interface VideoSessionSnapshot {
     readonly decodingBytes: number;
     readonly error: VideoError | null;
     readonly inserting: number;
+    readonly peaksVersion: number;
     readonly plan: VideoPlan | null;
     readonly selection: VideoTimelineRange | null;
     readonly sources: readonly VideoSourceInfo[];

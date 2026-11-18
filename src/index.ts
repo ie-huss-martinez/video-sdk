@@ -39,6 +39,11 @@ export {
   videoPlanDocumentSource,
 } from "./core/format/plan-document.js";
 export { dbToGain, gainAt } from "./core/model/envelope.js";
+export {
+  peakColumns,
+  type VideoPeakColumns,
+  type VideoPeakColumnsOptions,
+} from "./core/model/peaks.js";
 export type {
   VideoClip,
   VideoClipProblem,

@@ -2,7 +2,7 @@
 
 - **Status:** Accepted. The audio rows of the timeline depend on an amendment to [ui ADR 0011](https://github.com/ie-huss-martinez/ui/blob/main/docs/adr/0011-timeline.md), in section 10; the headless core and the inspector don't
 - **Date:** 2026-11-18
-- **Amended:** 2026-11-19, with what 0.4.0 carries. Earlier, 2026-11-18, with 8c as built: the summary's date, and the writer's own rolled-over dates. Earlier, with 8b as built: sound that can't be decoded or encoded. Earlier, with item 8 split in three, the export's result as built (8a), and the date rule moved to version 2 of the formats, which sdk-core ADR 0045 requires. Earlier, with the releases as they went out: 0.2.0 after the clip panel, and each later release one number on; the clock's anchor and the element join the plan. Earlier, with the review's rulings: the mix follows [audio-sdk ADR 0006](https://github.com/ie-huss-martinez/audio-sdk/blob/main/docs/adr/0006-multitrack.md) where a user would notice a difference, why `maxAudioTracks` is 8, and `ui`'s lanes are designed for both SDKs.
+- **Amended:** 2026-11-19, with the waveform as built, and with what 0.4.0 carries. Earlier, 2026-11-18, with 8c as built: the summary's date, and the writer's own rolled-over dates. Earlier, with 8b as built: sound that can't be decoded or encoded. Earlier, with item 8 split in three, the export's result as built (8a), and the date rule moved to version 2 of the formats, which sdk-core ADR 0045 requires. Earlier, with the releases as they went out: 0.2.0 after the clip panel, and each later release one number on; the clock's anchor and the element join the plan. Earlier, with the review's rulings: the mix follows [audio-sdk ADR 0006](https://github.com/ie-huss-martinez/audio-sdk/blob/main/docs/adr/0006-multitrack.md) where a user would notice a difference, why `maxAudioTracks` is 8, and `ui`'s lanes are designed for both SDKs.
 
 ## Context
 
@@ -187,6 +187,13 @@ They follow ADR 0003's rules: strict, pure, refused with a `details.reason`, nev
 - **Names come from the catalogue:** "Audio clip 2 of 3 on track 1, 0:04.00 to 0:09.20, muted". Nothing from a file is shown as HTML, and events carry counts, never names.
 - **Tools:** `video.add-audio`, which opens a picker and asks "Music" or "Voice-over", and `video.detach-audio`. Scrubbing stays silent.
 
+**As built, the waveform (item 11):** a `TimelineLayer` under the video track's clips, as audio-sdk draws each track's, until item 16 gives the video track its lane.
+
+- **The session builds a source's peaks in the background,** once the source has opened, and `session.getPeaks(source)` returns them, as audio-sdk's session does. The snapshot's `peaksVersion` goes up when they arrive, so a waveform redraws. **Unlike audio-sdk, the insert doesn't wait for them.** A video's insert already walks every packet to check its limits, and decoding all its sound as well before the clip appears would double the wait for the picture, which is what the user opened the file for. Peaks that arrive after their source was closed, or the session destroyed, are dropped, and closing a source cancels the build. A source without sound, or whose sound this browser can't decode, has none, and no waveform.
+- **`peakColumns(peaks, { from, to, columns })`** gives each column's lowest and highest sample, in microseconds over the engine's single level of 10 ms buckets. It's audio-sdk's function for video's peaks, and a candidate for `sdk-core` under section 9 now that both SDKs have one.
+- **It's drawn as it's heard:** each clip's part of its source, at its volume and fades through `gainAt`, the envelope playback and export apply, so a muted clip is flat. Only the range in view is drawn, on a canvas as wide as the view, and it redraws on the next animation frame after the plan, the peaks, the zoom, the scroll, the size or the colour scheme changes, never as the playhead moves.
+- **Clips let it show through,** with ui's `--hm-timeline-clip-bg` and `--hm-timeline-clip-selected-bg` transparent, and a title strip, "Clip 2", that keeps ui's clip background, so the text never sits on the waveform.
+
 ### 11. The order of the work
 
 Each line is one pull request. A release is cut where shown.
@@ -216,7 +223,7 @@ Each line is one pull request. A release is cut where shown.
 
 The inspector comes before the timeline's move to `ui` because it doesn't touch the timeline, and it's what the user asked for.
 
-**As released:** 0.2.0 went out after item 5, with the README, `ui` 0.11 and `hm-text`, so the clip panel reached the application at once. Items 6 to 8 moved to 0.3.0, and each later release moved up one. Two items joined the table from review: the clock's anchor (item 9), and the element (item 12). 0.4.0 carries the shared timeline's first half, item 10, with what came in from review after 0.3.0: the handle's `export()`, the output and plan-length refusals' own text, the session's warnings and playback's failures said in the stage, and fixes. The waveform lane, item 11, moves to the release after it.
+**As released:** 0.2.0 went out after item 5, with the README, `ui` 0.11 and `hm-text`, so the clip panel reached the application at once. Items 6 to 8 moved to 0.3.0, and each later release moved up one. Two items joined the table from review: the clock's anchor (item 9), and the element (item 12). 0.4.0 carries the shared timeline, items 10 and 11, with what came in from review after 0.3.0: the handle's `export()`, the output and plan-length refusals' own text, the session's warnings and playback's failures said in the stage, and fixes.
 
 ## Alternatives considered
 

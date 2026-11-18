@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { createFakeEngine, type FakeEngine } from "../../../test/fakes/fake-engine.js";
 import { createFakeProcessor } from "../../../test/fakes/fake-processor.js";
 import { encodeFakeVideo, type FakeVideoSpec } from "../../../test/fakes/fake-video.js";
@@ -449,5 +449,70 @@ describe("exporting through the session", () => {
     const { session } = setup();
     await session.insert(file());
     expect(await rejection(session.export())).toBeInstanceOf(TypeError);
+  });
+});
+
+/** A fake engine whose peaks wait until the test lets them through, one by one. */
+function slowPeaks() {
+  const engine = createFakeEngine();
+  const waiting: { readonly id: string; readonly release: () => void }[] = [];
+  const signals: AbortSignal[] = [];
+  const peaks = engine.peaks;
+  engine.peaks = async (id, options) => {
+    if (options?.signal) signals.push(options.signal);
+    await new Promise<void>((resolve) => waiting.push({ id, release: resolve }));
+    return peaks(id, {});
+  };
+  return { engine, waiting, signals };
+}
+
+describe("a source's peaks", () => {
+  it("are built in the background after the insert, and bump peaksVersion when they arrive", async () => {
+    const { engine, waiting } = slowPeaks();
+    const { session } = setup(undefined, engine);
+    const info = await session.insert(file());
+    // The clip is in, and its peaks are still being built.
+    expect(session.getSnapshot().plan?.clips).toHaveLength(1);
+    expect(session.getPeaks(info.id)).toBeUndefined();
+    expect(session.getSnapshot().peaksVersion).toBe(0);
+    waiting.shift()?.release();
+    await vi.waitFor(() => expect(session.getSnapshot().peaksVersion).toBe(1));
+    expect(session.getPeaks(info.id)?.bucketDuration).toBe(10_000);
+  });
+
+  it("are never built for a source without sound", async () => {
+    const { engine, waiting } = slowPeaks();
+    const { session } = setup(undefined, engine);
+    const info = await session.insert(file({ audio: null }));
+    expect(waiting).toHaveLength(0);
+    expect(session.getPeaks(info.id)).toBeUndefined();
+  });
+
+  it("are dropped when they arrive after their source was closed, and their build is cancelled", async () => {
+    const { engine, waiting, signals } = slowPeaks();
+    const { session } = setup(undefined, engine);
+    const first = await session.insert(file());
+    // Undone, then replaced by another edit: nothing refers to it, so it closes.
+    session.undo();
+    const second = await session.insert(file());
+    expect(session.getSnapshot().sources.map((source) => source.id)).toEqual([second.id]);
+    expect(signals[0]?.aborted).toBe(true);
+    const published = session.getSnapshot().peaksVersion;
+    waiting.find((each) => each.id === first.id)?.release();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(session.getPeaks(first.id)).toBeUndefined();
+    expect(session.getSnapshot().peaksVersion).toBe(published);
+  });
+
+  it("are dropped when they arrive after the session was destroyed", async () => {
+    const { engine, waiting, signals } = slowPeaks();
+    const { session } = setup(undefined, engine);
+    const info = await session.insert(file());
+    await session.destroy();
+    expect(signals[0]?.aborted).toBe(true);
+    waiting.shift()?.release();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(session.getPeaks(info.id)).toBeUndefined();
+    expect(session.getSnapshot().peaksVersion).toBe(0);
   });
 });

@@ -4,13 +4,14 @@ import {
   Timeline,
   TimelineClips,
   type TimelineClipsHandle,
+  TimelineLayer,
   TimelinePlayhead,
   ToggleButton,
   Toolbar,
   TrimEndIcon,
   TrimStartIcon,
 } from "@hussmartinez/ui/react";
-import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { frameTime } from "../core/model/time.js";
 import type { VideoCommand } from "../core/operations/commands.js";
 import { useVideoEditor, useVideoOutput, useVideoPlayhead, useVideoSession } from "./context.js";
@@ -23,6 +24,7 @@ import {
   trimEdge,
   trimToPlayhead,
 } from "./timeline-model.js";
+import { VideoWaveform } from "./VideoWaveform.js";
 
 /**
  * Props of {@link VideoTimeline}.
@@ -67,6 +69,17 @@ export function VideoTimeline(props: VideoTimelineProps): ReactNode {
   const [focusKey, setFocusKey] = useState<string | null>(null);
   const hadFocus = useRef(false);
   const knownKeys = useRef<readonly string[] | null>(null);
+
+  // Scrolling and zooming redraw the waveform, without rendering anything.
+  const rangeListeners = useRef(new Set<() => void>());
+  const subscribeRange = useCallback((listener: () => void) => {
+    rangeListeners.current.add(listener);
+    return () => {
+      rangeListeners.current.delete(listener);
+    };
+  }, []);
+  const peaksOf = useCallback((source: string) => session.getPeaks(source), [session]);
+  const waveform = useMemo(() => ({ clips, offsets, rate }), [clips, offsets, rate]);
 
   const focusIndex = Math.max(
     0,
@@ -181,6 +194,9 @@ export function VideoTimeline(props: VideoTimelineProps): ReactNode {
           onMaxZoomChange={setMaxZoom}
           snapping={snapping}
           classNames={{ track: "hm-video-timeline-track" }}
+          onVisibleRangeChange={() => {
+            for (const listener of rangeListeners.current) listener();
+          }}
         >
           <TimelinePlayhead
             label={messages.t("timeline.playhead")}
@@ -190,8 +206,18 @@ export function VideoTimeline(props: VideoTimelineProps): ReactNode {
             formatValue={timecode}
             following={playback?.state === "playing"}
           />
+          {/* The clips' sound, under them: they let it show through (ADR 0008). */}
+          <TimelineLayer className="hm-video-timeline-wave-layer" aria-hidden="true">
+            <VideoWaveform
+              plan={waveform}
+              peaksOf={peaksOf}
+              peaksVersion={snapshot.peaksVersion}
+              subscribeRange={subscribeRange}
+            />
+          </TimelineLayer>
           <TimelineClips
             ref={track}
+            classNames={{ content: "hm-video-timeline-clip-title" }}
             label={messages.t("timeline.clips")}
             selectionMode="multiple"
             selectedKeys={selectedClips}
@@ -208,6 +234,7 @@ export function VideoTimeline(props: VideoTimelineProps): ReactNode {
                   start: timecode(start),
                   end: timecode(start + length),
                 }),
+                content: messages.t("timeline.clipTitle", { index: index + 1 }),
                 attributes: { "data-hm-muted": clip.muted ? "" : undefined },
               };
             })}

@@ -138,6 +138,47 @@
     min-inline-size: 0;
   }
 
+  /*
+   * A clip lets the track's waveform show through it: its outline, and the
+   * accent one when it's selected, mark where it is (ADR 0008).
+   */
+  .hm-video-timeline {
+    --hm-timeline-clip-bg: transparent;
+    --hm-timeline-clip-selected-bg: transparent;
+  }
+
+  /* Its title keeps ui's clip background, so the text never sits on the waveform. */
+  .hm-video-timeline-clip-title {
+    background: var(--hm-color-control);
+  }
+
+  [aria-selected="true"] > .hm-video-timeline-clip-title {
+    background: var(--hm-color-accent-subtle);
+  }
+
+  /*
+   * The waveform: a canvas as wide as the view, placed over the part of the
+   * track in view by the CSSOM. Layout, not paint, so in any mode.
+   */
+  .hm-video-timeline-wave-layer {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .hm-video-timeline-waveform {
+    position: absolute;
+    inset-block: 0;
+    block-size: 100%;
+    pointer-events: none;
+    color: var(--hm-color-accent);
+  }
+
+  @media (forced-colors: active) {
+    .hm-video-timeline-waveform {
+      color: CanvasText;
+    }
+  }
+
   /* A muted clip: stripes over ui's clip colours, selected or not. */
   .hm-video-timeline-track [role="option"][data-hm-muted] {
     background-image: repeating-linear-gradient(
