@@ -8,6 +8,7 @@ import { createFrameScheduler } from "../../core/playback/scheduler.js";
 import { mediaTimeAt, type PlaybackAnchor } from "../../core/playback/timeline.js";
 import { paint } from "../canvas/paint.js";
 import { mixAudioWindow } from "./audio-window.js";
+import { createBitmapDraws } from "./bitmap-draws.js";
 import type { MediaWorkerContract, PlaybackSource } from "./contract.js";
 import { createReaderCache } from "./readers.js";
 
@@ -80,7 +81,10 @@ export function playbackHandlers(hooks: PlaybackHooks = {}): WorkerHandlers<Play
   let loadedPlan: VideoPlan | undefined;
   /** Once `drawImage` refuses a frame, every later frame is drawn through an `ImageBitmap`. */
   let throughBitmaps = false;
-  let bitmapQueue: Promise<void> = Promise.resolve();
+  /** At most one frame waits for a bitmap; a newer one replaces it. */
+  const bitmapDraws = createBitmapDraws<VideoFrame, ImageBitmap>((frame) =>
+    createImageBitmap(frame),
+  );
 
   const { readerFor, setSources } = createReaderCache();
 
@@ -116,19 +120,11 @@ export function playbackHandlers(hooks: PlaybackHooks = {}): WorkerHandlers<Play
         return;
       }
     }
-    const copy = frame.clone();
-    bitmapQueue = bitmapQueue
-      .then(async () => {
-        const bitmap = await createImageBitmap(copy);
-        try {
-          paint(target, bitmap, composition);
-          hooks.afterDraw?.(drawn);
-        } finally {
-          bitmap.close();
-        }
-      })
-      .catch(() => {})
-      .finally(() => copy.close());
+    // The decoder closes `frame` when this returns, so the bitmap is made from a copy.
+    bitmapDraws.submit(frame.clone(), (bitmap) => {
+      paint(target, bitmap, composition);
+      hooks.afterDraw?.(drawn);
+    });
   };
 
   const scheduler = createFrameScheduler<VideoFrame>({
