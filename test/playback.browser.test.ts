@@ -251,6 +251,61 @@ describe("drawing what the plan places at the clock", () => {
     await noFramesOpen();
   });
 
+  it("keeps playing through many plans that change only the sound, drawing every frame from the same decoder", async () => {
+    const real = await setup();
+    output = real.output;
+    const base = planOf(clipOf("a", real.source, 0, 120));
+    output.load(base);
+    await shown();
+    await output.play();
+    await vi.waitFor(() => expect(drawn.length).toBeGreaterThan(3), { timeout: 15_000 });
+    // Every failure, even one a later load clears from the snapshot.
+    const failures: string[] = [];
+    const unsubscribe = output.subscribe(() => {
+      const error = output?.getSnapshot().error;
+      if (error) failures.push(`${error.code} ${JSON.stringify(error.details)}`);
+    });
+    // A volume slider dragged while playing: a plan every 50 ms, picture unchanged.
+    const clip = base.clips[0] as VideoPlan["clips"][number];
+    for (let step = 0; step < 20; step += 1) {
+      output.load({ ...base, clips: [{ ...clip, volumeDb: -step }] });
+      await sleep(50);
+    }
+    // Still drawing, frame after frame.
+    const count = drawn.length;
+    await vi.waitFor(() => expect(drawn.length).toBeGreaterThan(count + 3), { timeout: 15_000 });
+    unsubscribe();
+    expect(failures).toEqual([]);
+    expect(output.getSnapshot().state).toBe("playing");
+    output.pause();
+    await noFramesOpen();
+  });
+
+  it("keeps playing after a mute while playing, from the same decoder", async () => {
+    const real = await setup();
+    output = real.output;
+    const base = planOf(clipOf("a", real.source, 0, 120));
+    output.load(base);
+    await shown();
+    await output.play();
+    await vi.waitFor(() => expect(drawn.length).toBeGreaterThan(3), { timeout: 15_000 });
+    const failures: string[] = [];
+    const unsubscribe = output.subscribe(() => {
+      const error = output?.getSnapshot().error;
+      if (error) failures.push(`${error.code} ${JSON.stringify(error.details)}`);
+    });
+    const clip = base.clips[0] as VideoPlan["clips"][number];
+    output.load({ ...base, clips: [{ ...clip, muted: true }] });
+    const count = drawn.length;
+    // Frames keep coming: the decoder wasn't stopped by the new plan.
+    await vi.waitFor(() => expect(drawn.length).toBeGreaterThan(count + 10), { timeout: 15_000 });
+    unsubscribe();
+    expect(failures).toEqual([]);
+    expect(output.getSnapshot().state).toBe("playing");
+    output.pause();
+    await noFramesOpen();
+  });
+
   it("resizes the canvas, keeping exact frames, and letterboxes another shape", async () => {
     const real = await setup();
     output = real.output;

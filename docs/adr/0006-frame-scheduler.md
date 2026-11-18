@@ -3,7 +3,7 @@
 - **Status:** Accepted
 - **Date:** 2026-11-12
 - **Amended:** 2026-11-12, when audio playback was built: the output timestamp's latency, stamps that aren't believed, corrections without restarts, an audio clock that stops, the start of playback, and audio windows. Earlier, when video playback was built: the clock reads wall-clock time, a late frame is dropped only when a later one is due, and timestamps within a millisecond of the frame grid are on it. Then, the canvas's size follows the stage's.
-- **Amended:** 2026-11-18, with the inspector ([ADR 0007](0007-editor-shell.md)): a new plan that shows the same picture keeps the decoders.
+- **Amended:** 2026-11-18, with the inspector ([ADR 0007](0007-editor-shell.md)): a new plan that shows the same picture keeps the decoders, and the worker's readers, which are told apart by opening.
 
 ## Context
 
@@ -79,6 +79,7 @@ Both sides compute media time the same way, `M + (now − P) × 1,000` microseco
 - **Seeks are coalesced.** A seek that arrives while another decodes replaces it: the earlier one is aborted, and only the latest target is drawn. Scrubbing is a stream of such seeks, and silent ([ADR 0005](0005-playback-and-export.md)).
 - **An edit during playback** loads the new plan, then seeks to the current position under it. A playhead past the new plan's end moves to the end ([ADR 0003](0003-clip-plan-document-model.md)).
   - **A new plan that shows the same picture stops nothing.** When the output's size and frame rate, and every clip's key, source, range and transform, are as they were, only sound or metadata changed. The scheduler takes the new plan and keeps its decoders, the frames it holds, its clock and its count of dropped frames, playing or paused. So a change of volume, mute or a fade while playing doesn't decode from a key frame again or drop a frame, and a volume slider can load a plan on every move ([ADR 0007](0007-editor-shell.md)). `samePicture` is the one definition, and a test changes each of those fields in turn and expects a restart.
+  - **The worker's readers stay open too,** for the decoders to read from. A source is told apart by which opening of it the engine sent, never by its `Blob`: every message clones a `Blob` into a new object. Comparing `Blob`s, as 0.2.0 did, closed the reader under the running decoder on every new plan, so a single mute while playing paused playback in every engine.
 
 ### The canvas's size
 

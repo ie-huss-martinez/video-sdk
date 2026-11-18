@@ -15,6 +15,13 @@ export type PolicyLimits = Readonly<
 /** A source the plan plays, as the playback worker needs it. */
 export interface PlaybackSource {
   readonly id: string;
+  /**
+   * Which opening of the source this is: the engine numbers each `open`,
+   * and the number stays the same however often the source is sent. A
+   * worker can't tell that from the file: every message clones the `Blob`
+   * into a new object.
+   */
+  readonly opening: number;
   readonly file: Blob;
   readonly probe: VideoProbe;
   /** The policy the source was opened under, for the front check before it's read. */
