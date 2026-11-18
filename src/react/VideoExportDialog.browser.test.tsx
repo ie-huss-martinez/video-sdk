@@ -96,6 +96,23 @@ function Insert({ file }: { readonly file: File }) {
   return null;
 }
 
+/** A host's own layout: a session whose plan has a title and a date no file can hold. */
+function Dated({ file }: { readonly file: File }) {
+  const { session, snapshot } = useVideoSession();
+  useEffect(() => {
+    void session.insert(file);
+  }, [session, file]);
+  const ready = snapshot.plan !== null;
+  useEffect(() => {
+    if (!ready) return;
+    session.execute([
+      { type: "video.setMetadata", field: "title", value: "Harbour" },
+      { type: "video.setMetadata", field: "date", value: "2025-02-31" },
+    ]);
+  }, [ready, session]);
+  return null;
+}
+
 describe("the export dialog", () => {
   it("summarises the file before writing anything, with no accessibility violations", async () => {
     const { view } = await editor();
@@ -120,6 +137,24 @@ describe("the export dialog", () => {
     await userEvent.click(button(view, "Cancel") as HTMLButtonElement);
     await eventually(() => expect(dialog.open).toBe(false));
     expect(document.activeElement).toBe(exportTool(view));
+  });
+
+  it("says a date that isn't a real year-month-day date won't be written, and leaves it out of what is", async () => {
+    const view = mount(
+      <VideoEditorProvider>
+        <Dated file={await fixture()} />
+        <VideoToolbar />
+        <VideoExportDialog />
+      </VideoEditorProvider>,
+    );
+    await eventually(() => expect(exportTool(view).getAttribute("aria-disabled")).toBeNull());
+    await userEvent.click(exportTool(view));
+    const dialog = dialogOf(view);
+    await eventually(() => expect(dialog.open).toBe(true));
+    await eventually(() =>
+      expect(dialog.textContent).toContain("Also written, as you set it: title."),
+    );
+    expect(dialog.textContent).toContain("The date isn't written");
   });
 
   it("exports a file the SDK reads back, and hands it to a host's onExport", async () => {
