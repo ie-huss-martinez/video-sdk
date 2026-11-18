@@ -119,7 +119,10 @@ export function createProcessor(environment: ProcessorEnvironment): VideoProcess
       busy = true;
       try {
         runner ??= environment.loadRunner();
-        const outcome = await (await runner).run(
+        const loaded = await runner;
+        // Stopped while the export code loaded: it never starts.
+        throwIfAborted(options.signal);
+        const outcome = await loaded.run(
           {
             plan: job.plan,
             sources: [...sources.values()],

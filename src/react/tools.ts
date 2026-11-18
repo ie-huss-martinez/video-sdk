@@ -1,10 +1,9 @@
 import type { ShortcutPart } from "@hussmartinez/sdk-core";
-import { usePlatform } from "@hussmartinez/ui/react";
+import { useAnnounce, usePlatform } from "@hussmartinez/ui/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { VideoOutput } from "../core/ports/video-output.js";
 import type { VideoSession } from "../core/session/session.js";
 import type { VideoToolContext, VideoToolState } from "../features/tools/tools.js";
-import { useJoinedAnnounce } from "./announce.js";
 import { useVideoEditor, useVideoOutput, useVideoSession } from "./context.js";
 
 /** Whether a tool can run now, and whether a toggle is on. */
@@ -49,7 +48,7 @@ export function useVideoTools(): VideoTools {
   } = editor;
   const { session, snapshot } = useVideoSession();
   const { output, snapshot: playback } = useVideoOutput();
-  const announce = useJoinedAnnounce();
+  const announce = useAnnounce();
   const platform = usePlatform();
 
   const stateAt = useCallback(
