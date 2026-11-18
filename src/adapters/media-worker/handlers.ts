@@ -18,8 +18,7 @@ export function mediaWorkerHandlers(hooks?: PlaybackHooks): WorkerHandlers<Media
     async support({ file, limits, probe }, { signal }) {
       // The same front check as a probe, before mediabunny reads the file.
       await frontCheck(file, videoLimits.resolve(limits));
-      await checkDecoderSupport(file, probe, signal);
-      return undefined;
+      return checkDecoderSupport(file, probe, signal);
     },
     async peaks({ file, limits, probe }, { signal }) {
       await frontCheck(file, videoLimits.resolve(limits));

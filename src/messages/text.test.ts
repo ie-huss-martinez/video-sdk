@@ -22,6 +22,16 @@ describe("a warning's text", () => {
     ).toBe("This video is long, and may be slow to open and save.");
   });
 
+  it("says a video opened without its sound", () => {
+    expect(
+      videoWarningText(messages, {
+        type: "audioUndecodable",
+        source: "source-1",
+        codec: "mp4a.40.2",
+      }),
+    ).toContain("opened without sound");
+  });
+
   it("has text for every limit", () => {
     for (const limit of Object.keys(videoLimitDefinitions) as VideoLimitName[]) {
       const text = videoWarningText(messages, { type: "limit", limit, actual: 1 });

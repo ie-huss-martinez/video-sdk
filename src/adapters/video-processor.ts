@@ -125,6 +125,7 @@ export function createProcessor(environment: ProcessorEnvironment): VideoProcess
             sources: [...sources.values()],
             ...(job.container === undefined ? {} : { container: job.container }),
             ...(job.quality === undefined ? {} : { quality: job.quality }),
+            ...(job.audio === undefined ? {} : { audio: job.audio }),
           },
           environment.policy,
           options,

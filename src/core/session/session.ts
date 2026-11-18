@@ -122,6 +122,8 @@ export interface VideoSessionExportOptions extends VideoExportOptions {
   readonly container?: VideoExportContainer;
   /** Defaults to `medium`. */
   readonly quality?: VideoExportQuality;
+  /** `"omit"` exports without sound, as `VideoExportJob.audio` says. */
+  readonly audio?: "include" | "omit";
 }
 
 /**
@@ -192,7 +194,10 @@ export interface VideoSession {
 /** Warnings without repeats: one per limit and source, the last one found. */
 function distinct(found: readonly VideoWarning[]): VideoWarning[] {
   const byKey = new Map<string, VideoWarning>();
-  for (const warning of found) byKey.set(`${warning.limit}\u0000${warning.source ?? ""}`, warning);
+  for (const warning of found) {
+    const kind = warning.type === "limit" ? warning.limit : warning.type;
+    byKey.set(`${kind}\u0000${warning.source ?? ""}`, warning);
+  }
   return [...byKey.values()];
 }
 
@@ -391,6 +396,10 @@ export function createVideoSession(options: VideoSessionOptions): VideoSession {
         opened = true;
         throwIfAborted(signal);
         assertAlive();
+        // Its sound can't be decoded here: it opened with its picture only.
+        if (info.unplayableAudio) {
+          near.push({ type: "audioUndecodable", source: id, codec: info.unplayableAudio.codec });
+        }
 
         // From here to the end nothing awaits, so the plan can't change under us.
         const base = plan ?? createPlan(outputFromSource(info));
@@ -461,7 +470,7 @@ export function createVideoSession(options: VideoSessionOptions): VideoSession {
       if (!processor) {
         throw new TypeError("Exporting needs a processor in createVideoSession.");
       }
-      const { container, quality, ...call } = exportOptions;
+      const { container, quality, audio, ...call } = exportOptions;
       try {
         // The plan as it is now: an edit during the export can't change the file.
         const current = plan;
@@ -479,6 +488,7 @@ export function createVideoSession(options: VideoSessionOptions): VideoSession {
             plan: current,
             ...(container === undefined ? {} : { container }),
             ...(quality === undefined ? {} : { quality }),
+            ...(audio === undefined ? {} : { audio }),
           },
           call,
         );

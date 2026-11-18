@@ -35,6 +35,8 @@ export interface ExportRequest {
   readonly sources: readonly PlaybackSource[];
   readonly container?: VideoExportContainer;
   readonly quality?: VideoExportQuality;
+  /** `"omit"` writes no sound track, as when the browser can't encode sound. */
+  readonly audio?: "include" | "omit";
   /** The policy the export runs under: the file may grow to `maxFileSize`. */
   readonly limits: PolicyLimits;
 }
@@ -242,8 +244,11 @@ function restamp(chunk: EncodedAudioChunk, from: number, length: number, rate: n
 
 /**
  * The first candidate this browser can encode, proved by encoding with it
- * (docs/adr/0001). Throws `UNSUPPORTED_CODEC` when none can, or
- * `UNSUPPORTED_ENVIRONMENT` without WebCodecs' encoders.
+ * (docs/adr/0001). `AudioEncoder` is needed only for a plan with sound
+ * (docs/adr/0008). Throws `UNSUPPORTED_ENVIRONMENT` without `VideoEncoder`,
+ * and `UNSUPPORTED_CODEC` when no candidate encodes, with `details.track`
+ * saying which: `"audio"` when the picture could be encoded but no sound,
+ * so the export can be made without sound instead.
  */
 async function chooseCandidate(
   plan: VideoPlan,
@@ -251,16 +256,21 @@ async function chooseCandidate(
   withAudio: boolean,
   container: VideoExportContainer | undefined,
 ): Promise<{ readonly candidate: ExportCandidate; readonly priming: number }> {
-  for (const feature of ["VideoEncoder", "AudioEncoder"] as const) {
-    if (typeof globalThis[feature] !== "function") {
-      throw new VideoError(
-        "UNSUPPORTED_ENVIRONMENT",
-        `This browser has no ${feature} in workers.`,
-        {
-          details: { feature },
-        },
-      );
-    }
+  if (typeof globalThis.VideoEncoder !== "function") {
+    throw new VideoError(
+      "UNSUPPORTED_ENVIRONMENT",
+      "This browser has no VideoEncoder in workers.",
+      {
+        details: { feature: "VideoEncoder" },
+      },
+    );
+  }
+  const noSound = (codec: string) =>
+    new VideoError("UNSUPPORTED_CODEC", "This browser can't encode the export's sound.", {
+      details: { codec, track: "audio" },
+    });
+  if (withAudio && typeof globalThis.AudioEncoder !== "function") {
+    throw noSound("AudioEncoder");
   }
   const proved = new Map<string, boolean>();
   const cached = async (key: string, prove: () => Promise<boolean>) => {
@@ -268,9 +278,11 @@ async function chooseCandidate(
     return proved.get(key) as boolean;
   };
   const primings = new Map<string, number | undefined>();
+  let pictureEncodes = false;
   for (const candidate of exportCandidates(plan.output, container)) {
     const video = videoConfig(plan, candidate, quality);
     if (!(await cached(`v:${video.codec}`, () => provesVideo(video)))) continue;
+    pictureEncodes = true;
     if (withAudio) {
       const audio = audioConfig(plan, candidate, quality);
       if (!primings.has(audio.codec)) primings.set(audio.codec, await provesAudio(audio));
@@ -280,6 +292,7 @@ async function chooseCandidate(
     }
     return { candidate, priming: 0 };
   }
+  if (pictureEncodes) throw noSound(container ?? "mp4/webm");
   throw new VideoError("UNSUPPORTED_CODEC", "This browser can't encode the export.", {
     details: { codec: container ?? "mp4/webm", track: "video" },
   });
@@ -340,7 +353,9 @@ export async function exportPlan(
       details: { reason: "empty-plan" },
     });
   }
-  const withAudio = plan.clips.some((clip) => sources.get(clip.source)?.probe.audio);
+  // Sound is left out only when asked, never silently (docs/adr/0008).
+  const withAudio =
+    request.audio !== "omit" && plan.clips.some((clip) => sources.get(clip.source)?.probe.audio);
   const readers = createReaderCache();
   readers.setSources(sources);
 

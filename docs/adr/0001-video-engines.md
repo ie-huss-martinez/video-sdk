@@ -2,7 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-11-12
-- **Amended:** 2026-11-12, when decoding was built: a decoded frame's visible picture must fit the probe exactly, and its coded size may carry the decoder's alignment padding. Then, before export was built: what the encoding order gives in each engine, as measured, and how a configuration is chosen and proved. Then, when export's tests read audio back: decoded audio is placed by the stream, encoded audio is stamped by the stream, and AAC's priming is measured and trimmed. Then: two timing limits, measured and accepted.
+- **Amended:** 2026-11-18, with [ADR 0008](0008-audio-editing.md): sound the browser can't decode no longer refuses a file, and an export needs an audio encoder only for sound. Earlier, 2026-11-12, when decoding was built: a decoded frame's visible picture must fit the probe exactly, and its coded size may carry the decoder's alignment padding. Then, before export was built: what the encoding order gives in each engine, as measured, and how a configuration is chosen and proved. Then, when export's tests read audio back: decoded audio is placed by the stream, encoded audio is stamped by the stream, and AAC's priming is measured and trimmed. Then: two timing limits, measured and accepted.
 
 ## Context
 
@@ -90,7 +90,7 @@ Only then does the worker open the file with mediabunny.
 
 ### Decoding: WebCodecs in the worker, with our own loops
 
-- **Configuring:** `VideoDecoder` and `AudioDecoder` are configured from the track's decoder configuration, after `isConfigSupported`. A codec the browser can't decode fails with `UNSUPPORTED_CODEC` and `details.codec`.
+- **Configuring:** `VideoDecoder` and `AudioDecoder` are configured from the track's decoder configuration, after `isConfigSupported`. A video codec the browser can't decode fails with `UNSUPPORTED_CODEC`, `details.codec` and `details.track: "video"`. Sound the browser can't decode, or a browser without `AudioDecoder` in workers, doesn't refuse the file: it opens with its picture, and the engine reads it as having no sound, for playback, peaks and export alike. Its source's `unplayableAudio` names the codec, and the session warns ([ADR 0008](0008-audio-editing.md)).
 - **Feeding:** the SDK's own loop reads packets from `EncodedPacketSink` and feeds the decoder. Both the decoder's queue and the decoded-frame queue are bounded, and every `VideoFrame` and `AudioData` is closed on every path ([ADR 0002](0002-workers-and-assets.md)).
 - **Decoded audio is placed by the stream,** not by the decoder's timestamps alone. Each chunk keeps its own timestamp when that's within half a chunk of where the chunks before it end, and otherwise goes there; the first goes where its packet is. In the pinned image, WebKit's Opus decoder stamps every chunk away from its packet, and its AAC decoder stamps chunks seconds away for an MP4 with an edit list. Audio chunks follow each other without gaps, so the stream says where each belongs.
   - **The cost:** a real gap in a source's audio, a missing packet or a discontinuity, is closed rather than kept, so the audio after it plays early by the gap. Telling a gap from a misstamp would need to know which output belongs to which packet, and WebKit's AAC decoder swallows leading outputs, so a per-engine rule would itself be a guess. Such files are rare, and every chunk placed by the stream is counted in a test ledger.
@@ -123,7 +123,7 @@ Only then does the worker open the file with mediabunny.
   3. WebM with VP9 and Opus;
   4. WebM with VP8 and Opus.
 
-  A host may ask for MP4 or WebM. If the browser can't encode either, the export fails with `UNSUPPORTED_CODEC`. A plan without audio writes no audio track.
+  A host may ask for MP4 or WebM. If the browser can't encode either, the export fails with `UNSUPPORTED_CODEC`. A plan without audio writes no audio track, and needs no `AudioEncoder`. A plan with sound that no candidate encodes, or a browser without `AudioEncoder` in workers, fails with `UNSUPPORTED_CODEC` and `details.track: "audio"`, so the export can be made again with `audio: "omit"`, which writes no sound track. Sound is never left out otherwise ([ADR 0008](0008-audio-editing.md)).
 - **What the order gives, as measured** in the pinned image's [capability matrix](../capabilities.md): every engine encodes H.264, VP8, VP9, AV1 and Opus, but only WebKit encodes AAC.
   - **In those builds, Chromium and Firefox export MP4 with H.264 and Opus,** and WebKit exports MP4 with H.264 and AAC.
   - **The order is decided at runtime, by probing the browser the user has,** not from this table. The image's Chromium is Playwright's open-source build, without proprietary codecs. Branded Chrome on Windows, macOS and ChromeOS, and Edge, generally encode AAC through the platform's encoders, so their users most likely get H.264 and AAC. Opus in MP4 is the fallback for builds without an AAC encoder, such as Chromium on Linux, and Firefox.

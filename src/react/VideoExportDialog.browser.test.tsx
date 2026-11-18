@@ -8,7 +8,12 @@ import { userEvent } from "vitest/browser";
 import landscapeVp8 from "../../test/fixtures/video/landscape-vp8.webm?url";
 import { DEV_WORKER_START_TIMEOUT } from "../../test/support/load.js";
 import { createVideoEngine } from "../adapters/video-engine.js";
-import type { VideoExportResult } from "../core/ports/video-processor.js";
+import { VideoError } from "../core/errors/video-error.js";
+import type {
+  VideoExportJob,
+  VideoExportResult,
+  VideoProcessor,
+} from "../core/ports/video-processor.js";
 import { useVideoSession, VideoEditorProvider } from "./context.js";
 import { VideoEditor, type VideoEditorHandle } from "./VideoEditor.js";
 import { VideoExportDialog } from "./VideoExportDialog.js";
@@ -295,6 +300,51 @@ describe("the export dialog", () => {
       .map((each) => each.textContent)
       .join(" ");
     expect(note).toMatch(/louder than a file can hold, by up to \d+(\.\d)? dB/);
+  });
+
+  it("offers an export without sound when the browser can't encode sound, and says so before and after", async () => {
+    const jobs: VideoExportJob[] = [];
+    // A host's processor in a browser that can encode pictures but not sound.
+    const processor: VideoProcessor = {
+      async export(job) {
+        jobs.push(job);
+        if (job.audio !== "omit") {
+          throw new VideoError("UNSUPPORTED_CODEC", "No sound encoder.", {
+            details: { codec: "AudioEncoder", track: "audio" },
+          });
+        }
+        const blob = new Blob(["picture only"], { type: "video/mp4" });
+        return {
+          blob,
+          container: "mp4",
+          size: blob.size,
+          peakDb: Number.NEGATIVE_INFINITY,
+          clippedFrames: 0,
+        };
+      },
+      async destroy() {},
+    };
+    const view = mount(<VideoEditor processor={processor} initialFiles={[await fixture()]} />);
+    await eventually(() => expect(exportTool(view).getAttribute("aria-disabled")).toBeNull());
+    await userEvent.click(exportTool(view));
+    await userEvent.click(button(view, "Export") as HTMLButtonElement);
+    const alert = await eventually(() => {
+      const found = dialogOf(view).querySelector('[role="alert"]');
+      expect(found?.textContent).toContain("can't save this video's sound");
+      return found as HTMLElement;
+    });
+    expect(alert.textContent).toContain("export it without sound");
+    // The way on is said in its own button, not the plain Export.
+    expect(button(view, "Export")).toBeUndefined();
+    await userEvent.click(button(view, "Export without sound") as HTMLButtonElement);
+    await eventually(() => expect(button(view, "Download")).toBeDefined());
+    expect(jobs.map((job) => job.audio)).toEqual([undefined, "omit"]);
+    // Reopened, it starts over, with the sound.
+    await userEvent.click(button(view, "Done") as HTMLButtonElement);
+    await eventually(() => expect(dialogOf(view).open).toBe(false));
+    await userEvent.click(exportTool(view));
+    await eventually(() => expect(button(view, "Export")).toBeDefined());
+    expect(dialogOf(view).textContent).not.toContain("No sound");
   });
 
   it("stops an export, says so, and keeps the dialog open at its summary", async () => {
