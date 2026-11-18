@@ -2,7 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-11-12
-- **Amended:** 2026-11-18, with the handle's `export` as built. Earlier the same day, with `ui`'s `onValueCommit` for the volume slider, and with the inspector's clip panel as built, then its picture group, then the output and metadata: see "The inspector".
+- **Amended:** 2026-11-19, with the timeline on `ui`'s `Timeline`: see "As built" under the timeline. Earlier, 2026-11-18, with the handle's `export` as built. Earlier the same day, with `ui`'s `onValueCommit` for the volume slider, and with the inspector's clip panel as built, then its picture group, then the output and metadata: see "The inspector".
 
 ## Context
 
@@ -85,7 +85,7 @@ Below a container width of 720 px the inspector moves under the timeline. Sizes 
 - **They replace this SDK's own `clipOffsets` and `locateFrame`** in the UI. The core's are kept, as they're public, and later reimplemented over the helpers.
 
 - **The track is a `listbox`** of clips, horizontal, with `aria-multiselectable`. One tab stop, with roving focus: Left and Right move between clips, Home and End to the first and last, and the selection follows focus. Shift extends it from the last clip chosen; Mod moves focus without it, `Space` (or `Mod+Space`) adds or removes the focused clip, `Shift+Space` selects up to it, and `Mod+A` selects every clip. Space is the listbox's own key here: sdk-core's registry counts an option as a control, whose Space it never takes. A click selects, Shift-click extends and Mod-click toggles. In a right-to-left layout, Left and Right swap, as time runs leftward. Each clip's accessible name is its source's position and its range: "Clip 2 of 5, 0:04.00 to 0:09.20, muted".
-- **The playhead is a `ui` Slider** over output frames, with `aria-valuetext` the time, so a screen reader reads "0:12.40" and not a frame number. Its arrow keys step one frame, and Page Up and Page Down one second, as the slider's own keys.
+- **The playhead is a `ui` Slider** over output frames, from the first to the plan's end, with `aria-valuetext` the time, so a screen reader reads "0:12.40" and not a frame number. Its arrow keys step one frame, and Page Up and Page Down one second, as the slider's own keys.
 - **Every drag has a keyboard alternative:**
 
   | Drag | Keys, on a focused clip |
@@ -100,6 +100,11 @@ Below a container width of 720 px the inspector moves under the timeline. Sizes 
 - **Scrolling** follows the playhead while playing, and the focused clip otherwise.
 
 **As built** (the timeline's first release): the track, the playhead slider, the keys above, dragging an edge to trim, and the snap button. Zoom moved to the editor's tools, with `+`, `-` and `0`, and the timeline reads the editor's zoom: a multiple of fitting the plan, up to 48 px a frame. The waveform lane comes after it. An insert moves focus to the new clip only while focus is in the editor, or was lost from it, as when the drop zone goes: a host's insert on load doesn't take focus from the page.
+
+**As built, on `ui`'s `Timeline`** ([ui ADR 0011](https://github.com/ie-huss-martinez/ui/blob/main/docs/adr/0011-timeline.md)), as audio-sdk's timeline is: `Timeline`, `TimelinePlayhead` and `TimelineClips` replace the timeline's own track, slider, listbox and drag code, with the same keys, names, snapping and zoom. `ui` reports the edits, and the timeline turns them into the same commands as before. Two things changed with it, as `ui` designs them for the family:
+
+- **The playhead is the slider on the track,** as wide as it, named "Playhead" by its `aria-label`, where it was a separate slider above the track with a visible label. It's named and reads the time, which is what a screen reader needs.
+- **It goes to the plan's end,** one frame past the last, where it was stopped on the last frame. That's where playback stops, and the stage shows the last frame there, as "The playhead and the pointer" says.
 
 ### Tools and shortcuts
 

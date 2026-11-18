@@ -89,13 +89,11 @@ describe("the timeline", () => {
     expect(clipsIn(view).map((clip) => clip.tabIndex)).toEqual([0, -1]);
     expect(document.activeElement?.getAttribute("role")).not.toBe("option");
     const slider = view.querySelector('input[type="range"]') as HTMLInputElement;
-    // A visible label names it (WCAG 2.5.3), not an aria-label.
-    const label = slider.labels?.[0];
-    expect(label?.textContent).toBe("Playhead");
-    expect(label?.getBoundingClientRect().height).toBeGreaterThan(0);
-    expect(slider.getAttribute("aria-label")).toBeNull();
+    // ui's playhead is the slider on the track, named by its label (ui ADR 0011).
+    expect(slider.getAttribute("aria-label")).toBe("Playhead");
     expect(slider.getAttribute("aria-valuetext")).toBe("0:00.00");
-    expect(slider.max).toBe("119");
+    // It goes to the plan's end, where playback stops (docs/adr/0007).
+    expect(slider.max).toBe("120");
     const result = await axe.run(view);
     expect(result.violations.map((each) => `${each.id}: ${each.help}`)).toEqual([]);
   });
