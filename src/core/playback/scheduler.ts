@@ -265,7 +265,17 @@ export function createFrameScheduler<Frame extends SchedulerFrame>(
     const publishFirst = async () => {
       started = true;
       if (playing) await until(from, signal);
-      if (first) drawNow(first.frame, first.time, clip, false, signal);
+      if (first) {
+        // While playing, a first frame that decoded more than an output frame
+        // late takes the late-frame rule like any other: it's held for the
+        // next animation frame, and a later frame decoded by then replaces
+        // it. Shown paused, it's what was asked for, and is drawn at once.
+        if (playing && clock() - first.time > frameDuration()) {
+          due(first.frame, first.time, clip, signal);
+        } else {
+          drawNow(first.frame, first.time, clip, false, signal);
+        }
+      }
       release(first);
       first = undefined;
     };

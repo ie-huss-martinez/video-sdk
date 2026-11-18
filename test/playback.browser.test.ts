@@ -13,6 +13,7 @@ import { createVideoOutput } from "../src/adapters/video-output.js";
 import {
   clipOffsets,
   locateFrame,
+  planFrames,
   type VideoEngine,
   type VideoOutput,
   type VideoPlan,
@@ -107,6 +108,18 @@ async function setup(url: string = numberedVp8) {
   const output = createVideoOutput({ engine, canvas });
   drawn = [];
   return { engine, source, output };
+}
+
+/** Where on the plan's timeline a clip's source frame is shown, in output frames, or -1. */
+function placeIn(
+  plan: VideoPlan,
+  record: { readonly clip: string; readonly number: number },
+): number {
+  for (let frame = 0; frame < planFrames(plan); frame += 1) {
+    const expected = planned(plan, frame);
+    if (expected?.clip === record.clip && expected.number === record.number) return frame;
+  }
+  return -1;
 }
 
 /** The source frame the plan shows at an output frame. */
@@ -418,15 +431,25 @@ describe("drawing what the plan places at the clock", () => {
       timeout: 15_000,
       interval: 50,
     });
+    // What holds however slow the machine is (docs/adr/0006): every frame drawn
+    // is the new plan's frame for some place on its timeline, never drawn
+    // before the clock reaches that place, and places never go backwards. How
+    // late a frame is after the restart is the decoder's speed, which the
+    // scheduler's unit tests pin exactly with a decoder of known speed.
     const after = ofEdit();
+    let previous = Number.NEGATIVE_INFINITY;
     for (const record of after) {
       const at = frameOf(record.clock as number);
-      const matches = BEHIND.some((d) => {
-        const expected = planned(edited, at - d);
-        return expected?.clip === record.clip && expected.number === record.number;
-      });
-      expect(matches, `frame ${record.number} of ${record.clip} at ${at}`).toBe(true);
+      const place = placeIn(edited, record);
+      const where = `frame ${record.number} of ${record.clip} at ${at}`;
+      expect(place, `${where}: not a frame the new plan shows`).toBeGreaterThanOrEqual(0);
+      expect(place, `${where}: drawn before its place`).toBeLessThanOrEqual(at);
+      expect(place, `${where}: drawn after a later one`).toBeGreaterThan(previous);
+      previous = place;
     }
+    // And once the new plan's first frame is drawn, never the old plan's again.
+    const firstNew = drawn.findIndex((record) => record.clip === "x" || record.clip === "y");
+    expect(drawn.slice(firstNew).filter((record) => record.clip === "a")).toEqual([]);
     expect(clipOffsets(edited)).toEqual([0, 60]);
     output.pause();
     await noFramesOpen();
