@@ -1,5 +1,46 @@
 # @hussmartinez/video-sdk
 
+## 0.3.0
+
+### Minor Changes
+
+- [#84](https://github.com/ie-huss-martinez/video-sdk/pull/84) [`a89b904`](https://github.com/ie-huss-martinez/video-sdk/commit/a89b9043c59145c8df727ca353717378c5ed0c41) Thanks [@hussmartinez](https://github.com/hussmartinez)! - A browser that can't decode or encode a video's sound no longer stops you editing it.
+  
+  - **A file whose sound this browser can't decode opens with its picture,** instead of failing with `UNSUPPORTED_CODEC`. Its `VideoSourceInfo` has `audio: null` and `unplayableAudio: { codec }`, and the session's warnings include `{ type: "audioUndecodable", source, codec }`, whose text says the video opened without sound. A browser without `AudioDecoder` in workers behaves the same way. A video codec it can't decode still fails, now with `details.track: "video"`.
+  - **An export needs an audio encoder only when the plan has sound.** Where the browser can't encode the sound, the export fails with `UNSUPPORTED_CODEC` and `details.track: "audio"`, instead of `UNSUPPORTED_ENVIRONMENT` or a failure naming the video. `VideoExportJob.audio` and `session.export`'s `audio` take `"omit"` to export without sound; sound is never left out otherwise. The export dialog says the browser can't save the sound and offers "Export without sound", with "No sound" in its summary.
+
+- [#82](https://github.com/ie-huss-martinez/video-sdk/pull/82) [`a13e086`](https://github.com/ie-huss-martinez/video-sdk/commit/a13e0861bc4245bdeb7398dc5b1bf19db5b4ba67) Thanks [@hussmartinez](https://github.com/hussmartinez)! - `VideoEditor` takes `onExport(blob, result)`, as the family's editors do: it receives each export's file instead of the download, with `result.container` (`mp4` or `webm`) and `result.size`, so a host can upload it or save it its own way. The export dialog closes once it's called. `VideoExportDialog` already had it; the editor didn't pass it on.
+
+- [#83](https://github.com/ie-huss-martinez/video-sdk/pull/83) [`1708e42`](https://github.com/ie-huss-martinez/video-sdk/commit/1708e424b16c139272f6dca3a97bb5799c60e8b9) Thanks [@hussmartinez](https://github.com/hussmartinez)! - **Breaking.** Exports say what they did to the sound, and the session can export.
+  
+  - **`VideoProcessor.export` resolves with a result, not a `Blob`:** `{ blob, container, size, peakDb, clippedFrames }`. `peakDb` is the mix's peak before clamping, in decibels relative to full scale (above 0 means it was too loud, by that much; `-Infinity` for silence), and `clippedFrames` counts the sample frames that were over full scale. The same shape as `@hussmartinez/audio-sdk`'s. Migrate with `const { blob } = await processor.export(job)`.
+  - **The sound is clamped at full scale,** in playback and export alike, and a sample that isn't a number is silence. Before, a clip turned up past full scale was passed to the encoder over it. Nothing is limited or normalised: the export dialog says when the sound was clamped, and by how much.
+  - **`session.export(options)`** exports the plan as it is when the call starts, with `container`, `quality`, `signal`, `onProgress` and `onWarning`. `createVideoSession` takes a `processor` for it, such as `createVideoProcessor({ engine })`; without one, `export()` throws `TypeError`. An export emits an `export` event with its outcome.
+  - **The snapshot's `warnings` are objects,** `{ type: "limit", limit, actual, source? }`, not limit names: the value that came near the limit, and the source a file's own warning is about. `checkProbe` and `checkOutput` return them too, and `checkPlanLength` returns its warning or `undefined` instead of a boolean. Show their text with the new `videoWarningText(messages, warning)`. Migrate `warnings.includes("maxDuration")` to `warnings.some((w) => w.limit === "maxDuration")`.
+  - **`VideoExportResult` is now the core's,** exported from `@hussmartinez/video-sdk`, and is what `VideoEditor`'s and `VideoExportDialog`'s `onExport` receive as their second argument. `@hussmartinez/video-sdk/react` no longer exports its own `VideoExportResult`: import it from `@hussmartinez/video-sdk`.
+
+- [#80](https://github.com/ie-huss-martinez/video-sdk/pull/80) [`e041aa3`](https://github.com/ie-huss-martinez/video-sdk/commit/e041aa369a7c3ffeadfff858cc2505e1eb07c029) Thanks [@hussmartinez](https://github.com/hussmartinez)! - With no clip selected, the inspector shows the whole video's settings. "The exported video" sets the width and height in pixels, the frames per second (29.97 becomes the exact 30000/1001), the sound quality (44.1 or 48 kHz) and mono or stereo; a size or rate over your `filePolicy`'s limit is refused in the field, with the limit. "Details in the file" sets the title, artist, date, description and comment, the only metadata an export writes; a value is set on Enter or when focus leaves, and the date must be a real date as year-month-day. Each change is one undo step.
+  
+  The catalogue gains the messages for it, under `inspector.*`, and `inspector.empty` now also says that these settings are for the whole video.
+
+- [#76](https://github.com/ie-huss-martinez/video-sdk/pull/76) [`cd3b60e`](https://github.com/ie-huss-martinez/video-sdk/commit/cd3b60eabc01ae4d1e12855e441dc07784eb7f8c) Thanks [@hussmartinez](https://github.com/hussmartinez)! - The inspector has a second group, for the selected clips' picture: "Rotate left" and "Rotate right", a quarter turn each; how the picture fills the frame, "Show all" or "Fill"; and, with one clip selected, its crop in pixels, with a button that removes it. Each change is one undo step for every selected clip, and a crop turns with its picture.
+  
+  The catalogue gains the messages for it, under `inspector.*`, and `inspector.empty` now reads "Select a clip to change its sound and picture."
+
+### Patch Changes
+
+- [#86](https://github.com/ie-huss-martinez/video-sdk/pull/86) [`a6dad8c`](https://github.com/ie-huss-martinez/video-sdk/commit/a6dad8ce4e0adbeac89775912f9f6aaffb66ae8f) Thanks [@hussmartinez](https://github.com/hussmartinez)! - An export writes the metadata date only as the real calendar date it names. Before, a date that doesn't exist, such as `2025-02-31`, was written as the day it rolls over to, 3 March, which nobody set. Now a date that isn't a real `YYYY-MM-DD` date isn't written at all, and the export dialog's summary says so before anything is written, rather than leaving it out silently.
+  
+  Also note for this release, from 0.3.0's earlier changes: the snapshot's `warnings` are now a union, `VideoWarning`, of `{ type: "limit", … }` and `{ type: "audioUndecodable", … }`. TypeScript code that reads `warning.limit` must check `warning.type === "limit"` first; `videoWarningText(messages, warning)` handles both.
+
+- [#81](https://github.com/ie-huss-martinez/video-sdk/pull/81) [`a76b16f`](https://github.com/ie-huss-martinez/video-sdk/commit/a76b16f13fd5fc14a2f4cfd7ed38894fd2545ca9) Thanks [@hussmartinez](https://github.com/hussmartinez)! - `VideoEditor` takes a `fileName`: the name an export downloads under, such as the name of the file being edited. Before, the editor had no way to pass one to its export dialog, so every download was `video.mp4` or `video.webm`. Without a `fileName`, the video's title from the inspector is used, and then `video`.
+  
+  The name is cleaned as the family cleans a file name, by the same rules as `@hussmartinez/pdf-sdk` and `@hussmartinez/audio-sdk` ([pdf-sdk ADR 0009](https://github.com/ie-huss-martinez/pdf-sdk/blob/main/docs/adr/0009-saving-the-document.md)): only the last path segment is kept, so `Holiday/day 1.mov` gives `day 1`; control characters, bidirectional formatting characters and the characters Windows refuses are removed; leading dots are trimmed; and it's at most 128 characters. Then a video extension is dropped, as the export adds its own.
+
+- [#87](https://github.com/ie-huss-martinez/video-sdk/pull/87) [`9480ff0`](https://github.com/ie-huss-martinez/video-sdk/commit/9480ff0956b03c08cdec2269e9184f2d92010c69) Thanks [@hussmartinez](https://github.com/hussmartinez)! - After an edit or a seek during playback, the preview no longer draws a frame it already knows is late when a newer one has just been decoded. The first frame after the decoder restarts now follows the same rule as every other late frame: held until the next animation frame and replaced by a newer one decoded by then, and counted in `droppedFrames`. A paused seek still draws its frame as soon as it's decoded.
+
+- [#88](https://github.com/ie-huss-martinez/video-sdk/pull/88) [`8f98d53`](https://github.com/ie-huss-martinez/video-sdk/commit/8f98d53a9916a3db796dd354fa00f0574b60aafe) Thanks [@hussmartinez](https://github.com/hussmartinez)! - The toolbar's buttons now update in the same render as the editor. Before, a button's enabled state followed one render later: right after Zoom in widened the timeline, Zoom out still read as disabled for a moment, and a click on it then did nothing. The same applied to undo, redo, split, delete and the other tools.
+
 ## 0.2.1
 
 ### Patch Changes
