@@ -200,6 +200,38 @@ describe("the export dialog", () => {
     }
   });
 
+  it("hands the file to the editor's onExport instead of a download, and closes", async () => {
+    const clicks: string[] = [];
+    const click = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(function (
+      this: HTMLAnchorElement,
+    ) {
+      clicks.push(this.download);
+    });
+    try {
+      const exported: { blob: Blob; result: VideoExportResult }[] = [];
+      const view = mount(
+        <VideoEditor
+          initialFiles={[await fixture()]}
+          onExport={(blob, result) => exported.push({ blob, result })}
+        />,
+      );
+      await eventually(() => expect(exportTool(view).getAttribute("aria-disabled")).toBeNull());
+      await userEvent.click(exportTool(view));
+      await userEvent.click(button(view, "Export") as HTMLButtonElement);
+      await eventually(() => expect(exported).toHaveLength(1), 60_000);
+      const [only] = exported;
+      expect(only?.result.size).toBe(only?.blob.size);
+      expect(only?.result.size).toBeGreaterThan(0);
+      expect(["mp4", "webm"]).toContain(only?.result.container);
+      // The host has the file: no download, and the dialog closes.
+      await eventually(() => expect(dialogOf(view).open).toBe(false));
+      expect(button(view, "Download")).toBeUndefined();
+      expect(clicks).toEqual([]);
+    } finally {
+      click.mockRestore();
+    }
+  });
+
   it("downloads under the video's title when the editor has no fileName", async () => {
     const names: string[] = [];
     const click = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(function (

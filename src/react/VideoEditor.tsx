@@ -3,7 +3,11 @@ import { forwardRef, type ReactNode, useEffect, useImperativeHandle, useRef } fr
 import type { VideoSourceInfo } from "../core/model/source.js";
 import { useVideoEditor, VideoEditorProvider, type VideoEditorProviderProps } from "./context.js";
 import { useVideoTools } from "./tools.js";
-import { VideoExportDialog, type VideoExportDialogProps } from "./VideoExportDialog.js";
+import {
+  VideoExportDialog,
+  type VideoExportDialogProps,
+  type VideoExportResult,
+} from "./VideoExportDialog.js";
 import { VideoInspector } from "./VideoInspector.js";
 import { VideoStage } from "./VideoStage.js";
 import { VideoTimeline } from "./VideoTimeline.js";
@@ -26,6 +30,12 @@ export interface VideoEditorProps extends Omit<VideoEditorProviderProps, "childr
    * used, or else `video`. See {@link VideoExportDialogProps.fileName}.
    */
   readonly fileName?: string;
+  /**
+   * Takes an export's file instead of the download, such as to upload it or
+   * save it the host's own way. The export dialog closes once it's called.
+   * See {@link VideoExportDialogProps.onExport}.
+   */
+  readonly onExport?: (blob: Blob, result: VideoExportResult) => void;
 }
 
 /**
@@ -49,8 +59,9 @@ const Shell = forwardRef<
     readonly initialFiles?: readonly Blob[];
     readonly className?: string;
     readonly fileName?: string;
+    readonly onExport?: (blob: Blob, result: VideoExportResult) => void;
   }
->(function Shell({ initialFiles, className, fileName }, ref) {
+>(function Shell({ initialFiles, className, fileName, onExport }, ref) {
   const { session, messages, output } = useVideoEditor();
   const inserted = useRef(false);
 
@@ -79,7 +90,7 @@ const Shell = forwardRef<
     // One Messages object for the SDK's text and ui's (sdk-core ADR 0046).
     <UiMessagesProvider messages={messages}>
       <AnnouncerProvider>
-        <Root className={className} fileName={fileName} />
+        <Root className={className} fileName={fileName} onExport={onExport} />
       </AnnouncerProvider>
     </UiMessagesProvider>
   );
@@ -93,9 +104,11 @@ const Shell = forwardRef<
 function Root({
   className,
   fileName,
+  onExport,
 }: {
   readonly className?: string | undefined;
   readonly fileName?: string | undefined;
+  readonly onExport?: ((blob: Blob, result: VideoExportResult) => void) | undefined;
 }): ReactNode {
   const { messages, shortcuts } = useVideoEditor();
   const { run } = useVideoTools();
@@ -118,7 +131,10 @@ function Root({
       <VideoTransport />
       <VideoTimeline />
       <VideoInspector />
-      <VideoExportDialog {...(fileName === undefined ? {} : { fileName })} />
+      <VideoExportDialog
+        {...(fileName === undefined ? {} : { fileName })}
+        {...(onExport ? { onExport } : {})}
+      />
     </section>
   );
 }
@@ -141,7 +157,10 @@ function Root({
  * @public
  */
 export const VideoEditor = /* @__PURE__ */ forwardRef<VideoEditorHandle, VideoEditorProps>(
-  function VideoEditor({ initialFiles, className, fileName, ...provider }, ref): ReactNode {
+  function VideoEditor(
+    { initialFiles, className, fileName, onExport, ...provider },
+    ref,
+  ): ReactNode {
     return (
       <VideoEditorProvider {...provider}>
         <Shell
@@ -149,6 +168,7 @@ export const VideoEditor = /* @__PURE__ */ forwardRef<VideoEditorHandle, VideoEd
           {...(initialFiles ? { initialFiles } : {})}
           {...(className ? { className } : {})}
           {...(fileName === undefined ? {} : { fileName })}
+          {...(onExport ? { onExport } : {})}
         />
       </VideoEditorProvider>
     );
