@@ -2,7 +2,7 @@
 
 - **Status:** Accepted. The audio rows of the timeline depend on an amendment to [ui ADR 0011](https://github.com/ie-huss-martinez/ui/blob/main/docs/adr/0011-timeline.md), in section 10; the headless core and the inspector don't
 - **Date:** 2026-11-18
-- **Amended:** 2026-11-18, with the review's rulings: the mix follows [audio-sdk ADR 0006](https://github.com/ie-huss-martinez/audio-sdk/blob/main/docs/adr/0006-multitrack.md) where a user would notice a difference, why `maxAudioTracks` is 8, and `ui`'s lanes are designed for both SDKs.
+- **Amended:** 2026-11-18, with the releases as they went out: 0.2.0 after the clip panel, and each later release one number on; the clock's anchor and the element join the plan. Earlier, with the review's rulings: the mix follows [audio-sdk ADR 0006](https://github.com/ie-huss-martinez/audio-sdk/blob/main/docs/adr/0006-multitrack.md) where a user would notice a difference, why `maxAudioTracks` is 8, and `ui`'s lanes are designed for both SDKs.
 
 ## Context
 
@@ -192,20 +192,24 @@ Each line is one pull request. A release is cut where shown.
 | 2 | `docs:` the README: what the package is, how to use it, the CSP, and no "being bootstrapped" | |
 | 3 | `build:` `ui` 0.11 and its `sdk-core`, together (one copy) | |
 | 4 | `refactor:` `hm-text` on the editor's root, without our own font rules ([ui ADR 0010](https://github.com/ie-huss-martinez/ui/blob/main/docs/adr/0010-opt-in-text-root.md)) | |
-| 5 | `feat:` the inspector's clip panel: volume, mute and fades | |
+| 5 | `feat:` the inspector's clip panel: volume, mute and fades, heard as a drag moves | **0.2.0:** a clip's sound can be edited |
 | 6 | `feat:` the inspector's rotation, crop and fit, then the output and the metadata | |
-| 7 | `fix:` `fileName` reaches the export dialog from `VideoEditor` and the element | |
-| 8 | `fix!:` audio encoder and decoder failures, the clamp and the export's clipping report, as section 6 says | **0.2.0:** a clip's sound can be edited |
-| 9 | `refactor:` `VideoTimeline` on `ui`'s `Timeline`, with the same keys | |
-| 10 | `feat:` the waveform lane | **0.3.0:** the shared timeline |
-| 11 | `feat!:` the model, the reducer and the formats' version 2, with the migration and vectors | |
-| 12 | `feat:` mixing audio tracks, in playback and export | |
-| 13 | `feat:` audio-only files from the containers already read, and `insertAudio` | |
-| 14 | `feat:` audio rows, track headers and the tools, after `ui`'s release with lanes | |
-| 15 | `feat:` detach | **0.4.0:** music, voice-over and detached audio |
-| 16 | `feat:` MP3 and WAV, amending ADR 0001 | **0.5.0** |
+| 7 | `fix:` `fileName` reaches the export dialog from `VideoEditor` | |
+| 8 | `fix!:` audio encoder and decoder failures, the clamp, the export's clipping report and `session.export`, as section 6 says | |
+| 9 | `fix:` the clock's anchor is renewed at once when the audio clock's offset jumps, amending [ADR 0006](0006-frame-scheduler.md) | **0.3.0:** the whole inspector, and exports that say what they did to the sound |
+| 10 | `refactor:` `VideoTimeline` on `ui`'s `Timeline`, with the same keys | |
+| 11 | `feat:` the waveform lane | **0.4.0:** the shared timeline |
+| 12 | `feat:` the `<hm-video-editor>` element, which the family requires of every SDK and `./element` doesn't have yet | |
+| 13 | `feat!:` the model, the reducer and the formats' version 2, with the migration and vectors | |
+| 14 | `feat:` mixing audio tracks, in playback and export | |
+| 15 | `feat:` audio-only files from the containers already read, and `insertAudio` | |
+| 16 | `feat:` audio rows, track headers and the tools, after `ui`'s release with lanes | |
+| 17 | `feat:` detach | **0.5.0:** music, voice-over and detached audio |
+| 18 | `feat:` MP3 and WAV, amending ADR 0001 | **0.6.0** |
 
 The inspector comes before the timeline's move to `ui` because it doesn't touch the timeline, and it's what the user asked for.
+
+**As released:** 0.2.0 went out after item 5, with the README, `ui` 0.11 and `hm-text`, so the clip panel reached the application at once. Items 6 to 8 moved to 0.3.0, and each later release moved up one. Two items joined the table from review: the clock's anchor (item 9), and the element (item 12).
 
 ## Alternatives considered
 
@@ -228,7 +232,7 @@ The inspector comes before the timeline's move to `ui` because it doesn't touch 
 - **Clips on a track can't overlap,** so a crossfade is two tracks, and some commands are refused with `clips-overlap`. The UI clamps a drag at its neighbours.
 - **An audio clip can't be nudged by less than a frame** in this version.
 - **Free music doesn't follow cuts** unless its track is switched to. The switch's name and the track's header have to make that plain.
-- **The formats move to version 2,** with a migration, and the summary of a source changes shape in the TypeScript API, so 0.4.0 is a breaking release. So is 0.2.0, for `export`'s result.
+- **The formats move to version 2,** with a migration, and the summary of a source changes shape in the TypeScript API, so 0.5.0 is a breaking release. So is 0.3.0, for `export`'s result.
 - **Files with audio the browser can't decode now open,** silent and with a warning, rather than failing.
 - **Work outside this repository:** `ui` builds the lanes (section 10); and `sdk-core` gets the shared arithmetic later (section 9).
 - **ADR 0003, 0004, 0005 and 0007 are amended** when each part is built, as their own amendments record.

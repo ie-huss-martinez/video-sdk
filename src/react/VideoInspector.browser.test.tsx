@@ -115,6 +115,15 @@ const button = (view: HTMLElement, name: string) =>
     (element) => element.textContent === name,
   ) as HTMLButtonElement;
 
+/** One of the inspector's groups, by its legend. */
+const group = (view: HTMLElement, legend: string) =>
+  [...view.querySelectorAll<HTMLElement>("fieldset")].find(
+    (element) => element.querySelector("legend")?.textContent === legend,
+  ) as HTMLElement;
+const iconButton = (view: HTMLElement, label: string) =>
+  view.querySelector(`button[aria-label="${label}"]`) as HTMLButtonElement;
+const transforms = () => planClips().map((clip) => clip.transform);
+
 /** Selects clips by their place, from 1: a click, then Mod-clicks. */
 async function select(view: HTMLElement, ...places: number[]) {
   for (const [index, place] of places.entries()) {
@@ -166,7 +175,7 @@ describe("the inspector's clip panel", () => {
       await userEvent.keyboard("{/Control}");
     }
     await eventually(() =>
-      expect(inspector(view)?.textContent).toBe("Select a clip to change its sound."),
+      expect(inspector(view)?.textContent).toBe("Select a clip to change its sound and picture."),
     );
   });
 
@@ -339,7 +348,8 @@ describe("the inspector's clip panel", () => {
       expect(planClips()[0]?.fadeIn).toEqual({ duration: 500_000, curve: "linear" }),
     );
     const shapes = [...view.querySelectorAll<HTMLElement>('[role="radiogroup"]')];
-    expect(shapes.map((group) => group.getAttribute("aria-labelledby"))).toHaveLength(2);
+    // The two fades' shapes, then the picture's fit.
+    expect(shapes).toHaveLength(3);
     await userEvent.click(
       [...(shapes[0] as HTMLElement).querySelectorAll<HTMLElement>('[role="radio"]')].find(
         (radio) => radio.textContent === "Smooth",
@@ -383,8 +393,97 @@ describe("the inspector's clip panel", () => {
   it("says so, with no controls, when the selected clip has no sound", async () => {
     const view = await inspectorWith(1, silent);
     await select(view, 1);
-    const panel = inspector(view) as HTMLElement;
-    expect(panel.textContent).toContain("This clip has no sound.");
-    expect(panel.querySelectorAll("input, button")).toHaveLength(0);
+    const sound = group(view, "Sound of the selected clip");
+    expect(sound.textContent).toContain("This clip has no sound.");
+    expect(sound.querySelectorAll("input, button")).toHaveLength(0);
+    // Its picture can still be changed.
+    expect(iconButton(view, "Rotate right").disabled).toBe(false);
+  });
+
+  it("turns the selected clip a quarter turn either way, and says its rotation", async () => {
+    const view = await inspectorWith(1);
+    await select(view, 1);
+    const picture = group(view, "Picture of the selected clip");
+    const rotation = picture.querySelector("output") as HTMLOutputElement;
+    expect(rotation.textContent).toBe("0°");
+    await userEvent.click(iconButton(view, "Rotate right"));
+    await eventually(() => expect(transforms()[0]?.rotation).toBe(90));
+    expect(rotation.textContent).toBe("90°");
+    await userEvent.click(iconButton(view, "Rotate left"));
+    await userEvent.click(iconButton(view, "Rotate left"));
+    await eventually(() => expect(transforms()[0]?.rotation).toBe(270));
+    expect(rotation.textContent).toBe("270°");
+    const result = await axe.run(picture);
+    expect(result.violations.map((violation) => `${violation.id}: ${violation.help}`)).toEqual([]);
+  });
+
+  it("sets how the picture fills the frame", async () => {
+    const view = await inspectorWith(1);
+    await select(view, 1);
+    const fit =
+      view.querySelector('[role="radiogroup"][aria-label="Fit in the frame"]') ??
+      [...view.querySelectorAll<HTMLElement>('[role="radiogroup"]')].at(-1);
+    const fill = [...(fit as HTMLElement).querySelectorAll<HTMLElement>('[role="radio"]')].find(
+      (radio) => radio.textContent === "Fill",
+    ) as HTMLElement;
+    await userEvent.click(fill);
+    await eventually(() => expect(transforms()[0]?.fit).toBe("cover"));
+    expect(fill.getAttribute("aria-checked")).toBe("true");
+  });
+
+  it("crops one clip in pixels of its picture, keeps the crop inside it, and removes it", async () => {
+    const view = await inspectorWith(1);
+    await select(view, 1);
+    const source = (session as VideoSession).getSnapshot().sources[0]?.video as {
+      width: number;
+      height: number;
+    };
+    const { width, height } = source;
+    // With no crop, the fields show the whole picture, and there's none to remove.
+    expect(byLabel(view, "Crop width, in pixels").value).toBe(String(width));
+    expect(byLabel(view, "Crop height, in pixels").value).toBe(String(height));
+    expect(button(view, "Remove the crop").disabled).toBe(true);
+
+    await enter(byLabel(view, "Crop from the left, in pixels"), "10");
+    await eventually(() =>
+      expect(transforms()[0]?.crop).toEqual({ x: 10, y: 0, width: width - 10, height }),
+    );
+    // Wider than what's left of the picture: kept inside it.
+    await enter(byLabel(view, "Crop width, in pixels"), "99999");
+    await eventually(() =>
+      expect(byLabel(view, "Crop width, in pixels").value).toBe(String(width - 10)),
+    );
+    await enter(byLabel(view, "Crop height, in pixels"), "1");
+    await eventually(() => expect(transforms()[0]?.crop?.height).toBe(2));
+    expect((session as VideoSession).getSnapshot().error).toBeNull();
+
+    // A turn takes the crop with it: its size swaps, and the reducer accepts it.
+    await userEvent.click(iconButton(view, "Rotate right"));
+    await eventually(() => expect(transforms()[0]?.rotation).toBe(90));
+    expect(transforms()[0]?.crop).toMatchObject({ width: 2, height: width - 10 });
+    expect((session as VideoSession).getSnapshot().error).toBeNull();
+
+    await userEvent.click(button(view, "Remove the crop"));
+    await eventually(() => expect(transforms()[0]?.crop).toBeNull());
+    expect(button(view, "Remove the crop").disabled).toBe(true);
+  });
+
+  it("turns every selected clip as one undo step, and crops only one clip at a time", async () => {
+    const view = await inspectorWith(2);
+    await select(view, 1);
+    await userEvent.click(iconButton(view, "Rotate right"));
+    await eventually(() => expect(transforms()[0]?.rotation).toBe(90));
+    await select(view, 1, 2);
+    const picture = group(view, "Picture of the 2 selected clips");
+    expect(picture.querySelector("output")?.textContent).toBe("Different for each clip");
+    expect(picture.textContent).toContain("Select one clip to crop it.");
+    expect(picture.querySelectorAll('[role="spinbutton"]')).toHaveLength(0);
+    // Each turns from where it is.
+    await userEvent.click(iconButton(view, "Rotate right"));
+    await eventually(() => expect(transforms().map((t) => t.rotation)).toEqual([180, 90]));
+    act(() => {
+      (session as VideoSession).undo();
+    });
+    expect(transforms().map((t) => t.rotation)).toEqual([90, 0]);
   });
 });

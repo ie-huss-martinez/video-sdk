@@ -574,7 +574,7 @@ export const videoMessages: {
     readonly "timeline.trimEnd": "Trim the clip's end to the playhead";
     readonly "timeline.snap": "Snap to clip edges and the playhead";
     readonly "inspector.label": "Inspector";
-    readonly "inspector.empty": "Select a clip to change its sound.";
+    readonly "inspector.empty": "Select a clip to change its sound and picture.";
     readonly "inspector.sound": {
         readonly $plural: "count";
     } & {
@@ -598,6 +598,26 @@ export const videoMessages: {
     readonly "inspector.fadeOutShape": "Fade out shape";
     readonly "inspector.curves.linear": "Straight";
     readonly "inspector.curves.equalPower": "Smooth";
+    readonly "inspector.picture": {
+        readonly $plural: "count";
+    } & {
+        readonly one: "Picture of the selected clip";
+        readonly other: "Picture of the {count, number} selected clips";
+    };
+    readonly "inspector.rotation": "Rotation";
+    readonly "inspector.degrees": "{degrees, number}°";
+    readonly "inspector.rotationMixed": "Different for each clip";
+    readonly "inspector.rotateLeft": "Rotate left";
+    readonly "inspector.rotateRight": "Rotate right";
+    readonly "inspector.fit": "Fit in the frame";
+    readonly "inspector.fits.contain": "Show all";
+    readonly "inspector.fits.cover": "Fill";
+    readonly "inspector.cropLeft": "Crop from the left, in pixels";
+    readonly "inspector.cropTop": "Crop from the top, in pixels";
+    readonly "inspector.cropWidth": "Crop width, in pixels";
+    readonly "inspector.cropHeight": "Crop height, in pixels";
+    readonly "inspector.cropReset": "Remove the crop";
+    readonly "inspector.cropOne": "Select one clip to crop it.";
     readonly "toolbar.label": "Editing tools";
     readonly "toolbar.file": "File";
     readonly "toolbar.history": "History";

@@ -190,6 +190,20 @@ for (const target of targets) {
         }),
       ).toBeChecked();
 
+      // The picture: a quarter turn, announced as text, and a crop in pixels.
+      await inspector.getByRole("button", { name: "Rotate right" }).focus();
+      await page.keyboard.press("Enter");
+      await expect(inspector.getByRole("status")).toHaveText("90°");
+      const cropTop = inspector.getByRole("spinbutton", { name: "Crop from the top, in pixels" });
+      await cropTop.fill("8");
+      await page.keyboard.press("Enter");
+      await expect(cropTop).toHaveValue("8");
+      await expect(inspector.getByRole("button", { name: "Remove the crop" })).toBeEnabled();
+      const undoPicture = page.getByRole("button", { name: /^Undo/ });
+      await undoPicture.click();
+      await undoPicture.click();
+      await expect(inspector.getByRole("status")).toHaveText("0°");
+
       // Undo takes each back, a step at a time: the shape, the fade, the mute, the volume.
       const undo = page.getByRole("button", { name: /^Undo/ });
       for (let step = 0; step < 3; step += 1) await undo.click();

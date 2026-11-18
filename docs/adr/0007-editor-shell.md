@@ -2,7 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-11-12
-- **Amended:** 2026-11-18, with the inspector's clip panel as built: see "The inspector".
+- **Amended:** 2026-11-18, with the inspector's clip panel as built, then its picture group: see "The inspector".
 
 ## Context
 
@@ -53,9 +53,14 @@ Below a container width of 720 px the inspector moves under the timeline. Sizes 
   - **The picture doesn't stutter:** a plan that differs only in sound keeps the scheduler's decoders and clock ([ADR 0006](0006-frame-scheduler.md)), and the audio takes the new plan 200 ms ahead, without a gap. So the change is heard about a fifth of a second after the thumb moves.
   - **The fades' fields commit on Enter, blur or an arrow key,** each a step of its own, and are heard from then.
 - **A clip without sound** gets a line saying so, and no controls.
-- **Layout:** under the timeline below a container width of 720 px, and a column beside the other regions from there.
-- **The logic is headless,** in `src/features/clip-audio/`: what the selected clips share, and the commands for a fade. The React layer renders it.
-- **Still to come:** rotation, crop and fit, and the output and metadata with no clip selected.
+- **Layout:** under the timeline below a container width of 720 px, and a column beside the other regions from there. The column takes no height of its own: the other regions set the editor's height, and the inspector scrolls within it, so a long inspector never stretches the editor.
+- **The logic is headless,** in `src/features/clip-audio/` and `src/features/clip-picture/`: what the selected clips share, and the commands for a fade, a turn, a fit and a crop. The React layer renders it.
+- **The picture of the selected clips** is a second group, after their sound:
+  - **Rotation:** "Rotate left" and "Rotate right" buttons, a quarter turn each, beside the clip's rotation as text in an `output`, so a turn is announced. Each selected clip turns from its own rotation, and a crop turns with its picture, so it frames the same part of it.
+  - **Fit:** a SegmentedControl, "Show all" or "Fill".
+  - **Crop,** with one clip selected: four NumberFields in whole pixels of the picture as it's shown, from the left, from the top, the width and the height, and a button that removes the crop. With no crop they show the whole picture. A crop is kept inside the picture and at least 2 pixels each way before the command is built, and a crop of the whole picture is none. With several clips, whose pictures may differ in size, a line says to select one.
+  - **A crop frame dragged on the stage** comes later; the fields are its keyboard and single-pointer alternative, and stay.
+- **Still to come:** the output and the metadata with no clip selected.
 
 ### The stage's canvas
 
