@@ -13,6 +13,7 @@ import { video } from "../targets.js";
  * | `open` | Two clips on the timeline, the first frame on the stage, the transport, the toolbar and the inspector |
  * | `selection` | The second clip selected, with its tools enabled, and its sound in the inspector |
  * | `paused` | Paused at 1 s, frame 31: the playhead, the stage and the time there |
+ * | `output` | No clip selected: the inspector's settings for the exported video, and its details |
  * | `export-summary` | The export dialog's summary and choices |
  * | `export-done` | The export dialog's result, with Download focused |
  * | `error` | A file that isn't a video, and the catalogue's text for it |
@@ -88,6 +89,16 @@ const STATES: Readonly<Record<string, State>> = {
       );
       await expect(page.getByRole("img", { name: "Video preview, frame 31 of 120" })).toBeVisible();
       await page.getByRole("slider", { name: "Playhead" }).blur();
+    },
+  },
+  output: {
+    reach: async (page) => {
+      await opened(page);
+      // The last clip added is selected: a Mod-click clears it.
+      const clip = page.getByRole("option", { name: /^Clip 2 of 2/ });
+      await clip.click({ modifiers: ["ControlOrMeta"] });
+      await expect(clip).toHaveAttribute("aria-selected", "false");
+      await expect(page.getByRole("group", { name: "The exported video" })).toBeVisible();
     },
   },
   "export-summary": { reach: exportDialog },

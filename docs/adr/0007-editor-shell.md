@@ -2,7 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-11-12
-- **Amended:** 2026-11-18, with the inspector's clip panel as built, then its picture group: see "The inspector".
+- **Amended:** 2026-11-18, with the inspector's clip panel as built, then its picture group, then the output and metadata: see "The inspector".
 
 ## Context
 
@@ -54,13 +54,15 @@ Below a container width of 720 px the inspector moves under the timeline. Sizes 
   - **The fades' fields commit on Enter, blur or an arrow key,** each a step of its own, and are heard from then.
 - **A clip without sound** gets a line saying so, and no controls.
 - **Layout:** under the timeline below a container width of 720 px, and a column beside the other regions from there. The column takes no height of its own: the other regions set the editor's height, and the inspector scrolls within it, so a long inspector never stretches the editor.
-- **The logic is headless,** in `src/features/clip-audio/` and `src/features/clip-picture/`: what the selected clips share, and the commands for a fade, a turn, a fit and a crop. The React layer renders it.
+- **The logic is headless,** in `src/features/clip-audio/`, `src/features/clip-picture/` and `src/features/output-settings/`: what the selected clips share, and the commands for a fade, a turn, a fit, a crop, the output and the metadata. The React layer renders it.
 - **The picture of the selected clips** is a second group, after their sound:
   - **Rotation:** "Rotate left" and "Rotate right" buttons, a quarter turn each, beside the clip's rotation as text in an `output`, so a turn is announced. Each selected clip turns from its own rotation, and a crop turns with its picture, so it frames the same part of it.
   - **Fit:** a SegmentedControl, "Show all" or "Fill".
   - **Crop,** with one clip selected: four NumberFields in whole pixels of the picture as it's shown, from the left, from the top, the width and the height, and a button that removes the crop. With no crop they show the whole picture. A crop is kept inside the picture and at least 2 pixels each way before the command is built, and a crop of the whole picture is none. With several clips, whose pictures may differ in size, a line says to select one.
   - **A crop frame dragged on the stage** comes later; the fields are its keyboard and single-pointer alternative, and stay.
-- **Still to come:** the output and the metadata with no clip selected.
+- **With no clip selected, the inspector shows the whole video's settings,** under a line that says so:
+  - **The exported video:** its width and height in pixels, rounded down to even numbers as encoders need; its frames per second, snapped to an exact rate, so 29.97 is 30000/1001 ([ADR 0003](0003-clip-plan-document-model.md)); its sound quality, 44.1 or 48 kHz; and mono or stereo. The output's own rate or channel count is offered too when it's another. A size or rate over the file policy's limit is refused in the field, with the limit, before the session would refuse it. Each change is one `video.setOutput`, and one undo step.
+  - **Details in the file:** the title, artist, date, description and comment, the only metadata an export writes ([ADR 0005](0005-playback-and-export.md)), under a line that says nothing is copied from the original files. Typing changes nothing in the plan; a value is set on Enter in a line, or when focus leaves, as one step. A date is taken only as a real calendar date, year-month-day, the only kind a container stores, and a value over 1,000 code points is refused; both say why in the field. An undo puts the field back.
 
 ### The stage's canvas
 
