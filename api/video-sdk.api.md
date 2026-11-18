@@ -574,7 +574,7 @@ export const videoMessages: {
     readonly "timeline.trimEnd": "Trim the clip's end to the playhead";
     readonly "timeline.snap": "Snap to clip edges and the playhead";
     readonly "inspector.label": "Inspector";
-    readonly "inspector.empty": "Select a clip to change its sound and picture.";
+    readonly "inspector.empty": "Select a clip to change its sound and picture. With none selected, these settings are for the whole video.";
     readonly "inspector.sound": {
         readonly $plural: "count";
     } & {
@@ -618,6 +618,30 @@ export const videoMessages: {
     readonly "inspector.cropHeight": "Crop height, in pixels";
     readonly "inspector.cropReset": "Remove the crop";
     readonly "inspector.cropOne": "Select one clip to crop it.";
+    readonly "inspector.output": "The exported video";
+    readonly "inspector.outputNote": "What an export is made at. Every clip is fitted to it.";
+    readonly "inspector.width": "Width, in pixels";
+    readonly "inspector.height": "Height, in pixels";
+    readonly "inspector.outputTooLarge": "That's more than the {maximum, number} pixels a picture can have here. Choose a smaller size.";
+    readonly "inspector.frameRate": "Frames per second";
+    readonly "inspector.frameRateNote": "Each clip's end moves to the nearest whole frame.";
+    readonly "inspector.rateTooHigh": "That's more than the {maximum, number} frames per second allowed here.";
+    readonly "inspector.sampleRate": "Sound quality";
+    readonly "inspector.kilohertz": "{rate, number} kHz";
+    readonly "inspector.outputSound": "Sound channels";
+    readonly "inspector.mono": "Mono";
+    readonly "inspector.stereo": "Stereo";
+    readonly "inspector.channels": "{count, number} channels";
+    readonly "inspector.metadata": "Details in the file";
+    readonly "inspector.metadataNote": "Only these are written into the exported file. Nothing is copied from your original files.";
+    readonly "inspector.metadataFields.title": "Title";
+    readonly "inspector.metadataFields.artist": "Artist";
+    readonly "inspector.metadataFields.date": "Date";
+    readonly "inspector.metadataFields.description": "Description";
+    readonly "inspector.metadataFields.comment": "Comment";
+    readonly "inspector.dateNote": "As year-month-day, such as 2026-11-18.";
+    readonly "inspector.notADate": "Enter a date as year-month-day, such as 2026-11-18, or leave it empty.";
+    readonly "inspector.tooLong": "Use at most 1,000 characters.";
     readonly "toolbar.label": "Editing tools";
     readonly "toolbar.file": "File";
     readonly "toolbar.history": "History";
