@@ -132,6 +132,14 @@ export function VideoStage(props: VideoStageProps): ReactNode {
       {videoErrorText(messages, snapshot.error)}
     </p>
   ) : null;
+  // A playback failure, such as a decoder that stopped: playback pauses, and
+  // without this the stage would stay as it was, with nothing to say why.
+  // Playing again clears it.
+  const playbackError = playback?.error ? (
+    <p className="hm-video-stage-error" role="alert">
+      {videoErrorText(messages, playback.error)}
+    </p>
+  ) : null;
   return (
     // Focusable by a click, not by Tab: after a click on the preview, focus is
     // in the editor on no control, so Space plays and the arrows step.
@@ -158,13 +166,14 @@ export function VideoStage(props: VideoStageProps): ReactNode {
           <Button onClick={cancelInsert}>{messages.t("insert.cancel")}</Button>
         </div>
       ) : null}
-      {/* Over the clips, the warnings and a failure are banners at the foot of the stage.
+      {/* Over the clips, the warnings and failures are banners at the foot of the stage.
           The notices stay mounted while the stage is empty, as after undoing the only
           insert, so what was dismissed or announced is remembered when a redo brings
           the clips back. */}
       <div className="hm-video-stage-foot">
         <StageNotices hidden={empty && snapshot.inserting === 0} />
         {empty && snapshot.inserting === 0 ? null : error}
+        {empty ? null : playbackError}
       </div>
     </div>
   );
