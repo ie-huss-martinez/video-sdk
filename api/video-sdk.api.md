@@ -744,8 +744,8 @@ export const videoMessages: {
     readonly "export.download": "Download";
     readonly "export.done": "Done";
     readonly "export.unavailable": "Exporting isn't available with this engine.";
-    readonly "announce.undone": "Undone";
-    readonly "announce.redone": "Redone";
+    readonly "announce.undone": "Undone.";
+    readonly "announce.redone": "Redone.";
     readonly "errors.INVALID_VIDEO": "This file isn't a valid video, or it's too damaged to open.";
     readonly "errors.UNSUPPORTED_FORMAT": "This video format isn't supported. Try converting the file to MP4 or WebM, then open it again.";
     readonly "errors.UNSUPPORTED_CODEC": "This browser can't play or save this kind of video. Try another browser, or convert the file to MP4.";

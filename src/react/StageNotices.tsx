@@ -1,7 +1,6 @@
-import { CloseIcon, IconButton } from "@hussmartinez/ui/react";
+import { CloseIcon, IconButton, useAnnounce } from "@hussmartinez/ui/react";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { videoWarningText } from "../messages/text.js";
-import { useJoinedAnnounce } from "./announce.js";
 import { useVideoEditor, useVideoSession } from "./context.js";
 
 /**
@@ -16,7 +15,7 @@ import { useVideoEditor, useVideoSession } from "./context.js";
 export function StageNotices({ hidden }: { readonly hidden: boolean }): ReactNode {
   const { messages } = useVideoEditor();
   const { snapshot } = useVideoSession();
-  const announce = useJoinedAnnounce();
+  const announce = useAnnounce();
   const [dismissed, setDismissed] = useState<ReadonlySet<string>>(() => new Set());
 
   // One notice per kind of warning, which is also what a dismissal hides: a

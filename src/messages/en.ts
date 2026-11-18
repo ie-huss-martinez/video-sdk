@@ -168,8 +168,8 @@ export const videoOwnMessages = /* @__PURE__ */ defineMessages({
   "export.download": "Download",
   "export.done": "Done",
   "export.unavailable": "Exporting isn't available with this engine.",
-  "announce.undone": "Undone",
-  "announce.redone": "Redone",
+  "announce.undone": "Undone.",
+  "announce.redone": "Redone.",
   "errors.INVALID_VIDEO": "This file isn't a valid video, or it's too damaged to open.",
   "errors.UNSUPPORTED_FORMAT":
     "This video format isn't supported. Try converting the file to MP4 or WebM, then open it again.",
