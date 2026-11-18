@@ -2,6 +2,7 @@ import { AnnouncerProvider, UiMessagesProvider } from "@hussmartinez/ui/react";
 import { forwardRef, type ReactNode, useEffect, useImperativeHandle, useRef } from "react";
 import type { VideoSourceInfo } from "../core/model/source.js";
 import type { VideoExportResult } from "../core/ports/video-processor.js";
+import type { VideoSessionExportOptions } from "../core/session/session.js";
 import { useVideoEditor, VideoEditorProvider, type VideoEditorProviderProps } from "./context.js";
 import { useVideoTools } from "./tools.js";
 import { VideoExportDialog, type VideoExportDialogProps } from "./VideoExportDialog.js";
@@ -48,6 +49,17 @@ export interface VideoEditorHandle {
   play(): Promise<void>;
   pause(): void;
   seek(frame: number): void;
+  /**
+   * Exports the plan as it is now, for a host's own export button, without
+   * the editor's dialog (ADR 0005): through the editor's processor, or the
+   * host's `processor`. It resolves with the file and what clamping did to
+   * its sound, and never downloads anything or calls `onExport`. It fails as
+   * `session.export` does, such as with `UNSUPPORTED_CODEC` and
+   * `details.track: "audio"` where the browser can't encode the sound, and
+   * `audio: "omit"` exports without it. It throws `TypeError` when there's
+   * no processor, as with a host's engine and none of its own.
+   */
+  export(options?: VideoSessionExportOptions): Promise<VideoExportResult>;
 }
 
 const Shell = forwardRef<
@@ -71,6 +83,7 @@ const Shell = forwardRef<
       play: async () => output?.play(),
       pause: () => output?.pause(),
       seek: (frame) => output?.seek(frame),
+      export: (options) => session.export(options),
     }),
     [session, output],
   );
