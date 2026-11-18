@@ -189,6 +189,26 @@ describe("the video editor", () => {
     expect(view.querySelectorAll("canvas")).toHaveLength(0);
   });
 
+  it("shows its own text in ui's type and colour, not the host page's", () => {
+    const view = render(<VideoEditor />);
+    view.style.font = '31px/3 "Times New Roman", serif';
+    view.style.color = "rgb(1, 2, 3)";
+    // What ui's tokens give, read from an element that only names them.
+    const probe = document.createElement("div");
+    probe.style.cssText =
+      "font-family: var(--hm-font-family); font-size: var(--hm-font-size-body); line-height: var(--hm-line-height-body); color: var(--hm-color-text)";
+    view.append(probe);
+    const editor = view.querySelector(".hm-video-editor") as HTMLElement;
+    expect(editor.classList.contains("hm-text")).toBe(true);
+    const shown = getComputedStyle(editor);
+    const tokens = getComputedStyle(probe);
+    for (const property of ["fontFamily", "fontSize", "lineHeight", "color"] as const) {
+      expect(shown[property], property).toBe(tokens[property]);
+    }
+    expect(shown.fontSize).not.toBe("31px");
+    expect(shown.color).not.toBe("rgb(1, 2, 3)");
+  });
+
   it("renders on a server, with no canvas", () => {
     const html = renderToString(<VideoEditor />);
     expect(html).toContain("hm-video-editor");
