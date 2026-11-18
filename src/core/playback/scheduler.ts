@@ -391,11 +391,15 @@ export function createFrameScheduler<Frame extends SchedulerFrame>(
     control(command) {
       if (command.mode === "play" && mode === "play" && anchor) {
         if (sameAnchor(anchor, command.anchor)) return;
-        // The audio clock drifting from wall-clock time, corrected every
-        // 250 ms: follow it without restarting the decoders.
+        // The audio clock moving from wall-clock time: its drift, corrected
+        // every 250 ms, or a stall, sent at once. Followed without restarting
+        // the decoders, up to a second either way: a clock moved back holds
+        // the next frame until the sound reaches it, and one moved forward
+        // drops what's now late. Re-decoding from a key frame would leave the
+        // picture later still (docs/adr/0006). More than that is a seek.
         const now = environment.now();
         const drift = Math.abs(mediaTimeAt(command.anchor, now) - mediaTimeAt(anchor, now));
-        if (drift <= frameDuration()) {
+        if (drift < PREROLL) {
           anchor = command.anchor;
           return;
         }
