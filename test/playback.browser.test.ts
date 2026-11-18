@@ -230,18 +230,22 @@ describe("drawing what the plan places at the clock", () => {
       timeout: 10_000,
     });
     const playing = drawn.filter((record) => record.clock !== null);
-    const late: number[] = [];
+    // What holds however slow the machine is (docs/adr/0006): each frame is
+    // the plan's frame for some place, never drawn before the clock reaches
+    // it, and never after a later one. How late frames run, and how smoothly,
+    // is the decoder's speed, which the scheduler's unit tests pin with a
+    // decoder of known speed.
+    let previous = Number.NEGATIVE_INFINITY;
     for (const record of playing) {
       // The pixels are the frame the worker meant to draw.
       expect(record.number).toBe(Math.round(record.sourceTime / FRAME));
-      // It's the frame the plan places at the clock, or one shortly before it: never a later one.
       const at = Math.min(frameOf(record.clock as number), 89);
-      const behind = BEHIND.find((d) => {
-        const expected = planned(plan, at - d);
-        return expected?.clip === record.clip && expected.number === record.number;
-      });
-      expect(behind, `frame ${record.number} of ${record.clip} at ${at}`).toBeDefined();
-      late.push(behind as number);
+      const place = placeIn(plan, record);
+      const where = `frame ${record.number} of ${record.clip} at ${at}`;
+      expect(place, `${where}: not a frame the plan shows`).toBeGreaterThanOrEqual(0);
+      expect(place, `${where}: drawn before its place`).toBeLessThanOrEqual(at);
+      expect(place, `${where}: drawn after a later one`).toBeGreaterThan(previous);
+      previous = place;
     }
     // Drawn in the plan's order, across the cut.
     const order = playing.map((record) => `${record.clip}${record.number}`);
@@ -249,7 +253,6 @@ describe("drawing what the plan places at the clock", () => {
     // Every frame was drawn or counted dropped.
     const distinct = new Set(order).size;
     expect(distinct + (output.getSnapshot().droppedFrames ?? 0)).toBeGreaterThanOrEqual(88);
-    expect(late.filter((d) => d === 0).length / late.length).toBeGreaterThan(0.7);
     await noFramesOpen();
   });
 
@@ -500,14 +503,6 @@ async function needAudio(context: TestContext): Promise<void> {
 const RUNNER_JITTER = 2;
 
 /**
- * How many frames behind the clock a drawn frame may be, under a heavily
- * loaded machine: the draw itself, and the record of it, run late there.
- * A frame is never later than the plan places it at the clock; how far
- * behind it may be is the runner's, not the scheduler's. The share of
- * frames drawn exactly on time is checked separately.
- */
-const LOAD_LAG = 8;
-/**
  * Measures how late the page's timers run while `during` runs: a loaded
  * runner's own noise, which the sync check allows on top of its one output
  * frame. Returns the 90th percentile of the lateness, in milliseconds: near
@@ -545,8 +540,6 @@ async function workerLags(since: number): Promise<number[]> {
  * still be within one output frame of its tone.
  */
 const MIN_FLASHES_DRAWN = 2;
-/** 0 to {@link LOAD_LAG}: how far behind the clock a drawn frame is checked. */
-const BEHIND = Array.from({ length: LOAD_LAG + 1 }, (_, frames) => frames);
 
 /** When each tone starts on the timeline, in samples, from the windows scheduled. */
 function toneOnsets(
