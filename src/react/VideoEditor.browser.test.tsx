@@ -230,6 +230,40 @@ describe("the video editor", () => {
     expect(box(".hm-video-stage").right).toBeLessThanOrEqual(box(".hm-video-inspector").left);
   });
 
+  it("exports from its handle, without the dialog or onExport, and with sound left out when asked", async () => {
+    const handle = createRef<VideoEditorHandle>();
+    const exported: Blob[] = [];
+    const view = render(
+      <VideoEditor
+        ref={handle}
+        initialFiles={[await fixture()]}
+        onExport={(blob) => exported.push(blob)}
+      />,
+    );
+    await vi.waitFor(() => expect(view.querySelector('[role="option"]')).not.toBeNull(), {
+      timeout: 15_000,
+    });
+    const editor = handle.current as VideoEditorHandle;
+    const progress: number[] = [];
+    const result = await editor.export({ onProgress: (fraction) => progress.push(fraction) });
+    expect(result.size).toBe(result.blob.size);
+    expect(["mp4", "webm"]).toContain(result.container);
+    expect(result.clippedFrames).toBe(0);
+    expect(progress.at(-1)).toBe(1);
+    // The host has the file from the call: no dialog, and onExport isn't called.
+    expect(view.querySelector("dialog")?.open ?? false).toBe(false);
+    expect(exported).toEqual([]);
+    // Without sound when asked: silence.
+    const silent = await editor.export({ audio: "omit" });
+    expect(silent.peakDb).toBe(Number.NEGATIVE_INFINITY);
+    // Cancelled, it rejects with ABORTED.
+    const controller = new AbortController();
+    controller.abort();
+    await expect(editor.export({ signal: controller.signal })).rejects.toMatchObject({
+      code: "ABORTED",
+    });
+  });
+
   it("renders on a server, with no canvas", () => {
     const html = renderToString(<VideoEditor />);
     expect(html).toContain("hm-video-editor");

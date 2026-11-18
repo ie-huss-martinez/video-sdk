@@ -2,7 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-11-12
-- **Amended:** 2026-11-18, with `ui`'s `onValueCommit` for the volume slider. Earlier, with the inspector's clip panel as built, then its picture group, then the output and metadata: see "The inspector".
+- **Amended:** 2026-11-18, with the handle's `export` as built. Earlier the same day, with `ui`'s `onValueCommit` for the volume slider, and with the inspector's clip panel as built, then its picture group, then the output and metadata: see "The inspector".
 
 ## Context
 
@@ -157,6 +157,7 @@ Focus always lands somewhere meaningful, and never on `<body>`:
 
 - **`<VideoEditor>`** takes the family's props. `initialFiles` are inserted on mount; `file` and `onChange` are the controlled form, where `onChange` gets the plan after each committed command. Then `engine` and `processor`, which default to the SDK's own; `filePolicy`, `assetsUrl` (once `sdk-core` 0.3.0 is in), `tools`, `toolbar` and `features`, `theme`, `className`, `classNames`, `unstyled`, `messages` and `locale`, `icons`, `onEvent`, and `onExport`, which gets the `Blob` instead of the download.
 - **The ref handle** has `insert(file)`, `export(job)`, `undo()`, `redo()`, `play()`, `pause()` and `seek(frame)`.
+  - **As built:** `insert(file, at?)`, and `export(options?)`, which is `session.export` with the same options and result ([ADR 0005](0005-playback-and-export.md)): the plan as it is when it's called, through the editor's processor or the host's, without the dialog, and without calling `onExport`, since the caller has the file.
 - **Building blocks:** `VideoStage`, `VideoTransport`, `VideoTimeline`, `VideoInspector`, `VideoToolbar` and `VideoExportDialog`, each usable inside a `VideoEditorProvider`.
 - **Hooks:** `useVideoSession`, `useVideoOutput`, and `useVideoPlayhead`, which reads `position()` on animation frames while playing, and from the snapshot otherwise, so a component that shows the time re-renders at most once a frame, and nothing else does.
 - **The entry starts with `"use client"`** and does nothing on import. On a server it renders the empty state's markup, with no canvas, engine or worker ([ADR 0007 in sdk-core](https://github.com/ie-huss-martinez/sdk-core/blob/main/docs/adr/0007-server-rendering-and-nextjs.md)).
