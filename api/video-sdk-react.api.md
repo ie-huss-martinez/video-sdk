@@ -79,6 +79,7 @@ export interface VideoEditorProps extends Omit<VideoEditorProviderProps, "childr
     readonly className?: string;
     readonly fileName?: string;
     readonly initialFiles?: readonly Blob[];
+    readonly onExport?: (blob: Blob, result: VideoExportResult) => void;
 }
 
 // @public
