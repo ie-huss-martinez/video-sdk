@@ -19,11 +19,13 @@ import { VideoEditor, type VideoEditorHandle } from "./VideoEditor.js";
 import { VideoExportDialog } from "./VideoExportDialog.js";
 import { VideoToolbar } from "./VideoToolbar.js";
 
-// Real decoding, playback and export run in workers, and a heavily loaded
-// machine slows them several times over: minutes per test, so that load
-// fails a test only through its own checks. Waits inside get their own
-// timeouts, so no step runs on a nearly spent budget.
-vi.setConfig({ testTimeout: 120_000 });
+// Real decoding and export run in workers, and a loaded machine slows them.
+// The slowest test here took 5.5-6.4 s on CI's runners (Firefox, two runs):
+// 20 s is about three times that. A test that hangs fails by name well before
+// anything else happens, as WebKit's page did once, crashing 64 s into this
+// file (verify run 44410142740). Waits inside have their own 15 s timeouts,
+// so each still fails through its own check.
+vi.setConfig({ testTimeout: 20_000 });
 
 // The export dialog (docs/adr/0007): its summary before anything is written,
 // a real export, stopping, and closing at any point, over the SDK's own
@@ -44,7 +46,7 @@ afterEach(async () => {
 });
 
 /** Waits for an assertion, with room for a loaded machine: exports run in a worker. */
-const eventually = <T,>(assertion: () => T | Promise<T>, timeout = 20_000) =>
+const eventually = <T,>(assertion: () => T | Promise<T>, timeout = 15_000) =>
   vi.waitFor(assertion, { timeout });
 
 const fixture = async () => {
@@ -170,7 +172,7 @@ describe("the export dialog", () => {
     await eventually(() => expect(exportTool(view).getAttribute("aria-disabled")).toBeNull());
     await userEvent.click(exportTool(view));
     await userEvent.click(button(view, "Export") as HTMLButtonElement);
-    await eventually(() => expect(exported).toHaveLength(1), 60_000);
+    await eventually(() => expect(exported).toHaveLength(1));
     // The dialog closes once a host takes the file.
     await eventually(() => expect(dialogOf(view).open).toBe(false));
     const [{ blob, result }] = exported as [{ blob: Blob; result: VideoExportResult }];
@@ -194,7 +196,7 @@ describe("the export dialog", () => {
       const found = button(view, "Download");
       expect(found).toBeDefined();
       return found as HTMLButtonElement;
-    }, 60_000);
+    });
     await eventually(() => expect(document.activeElement).toBe(download));
     expect(dialogOf(view).textContent).toMatch(/Your (MP4|WebM) video is ready: /);
     await eventually(() => expect(announced(view)).toMatch(/video is ready/));
@@ -231,7 +233,7 @@ describe("the export dialog", () => {
         const found = button(view, "Download");
         expect(found).toBeDefined();
         return found as HTMLButtonElement;
-      }, 60_000);
+      });
       await userEvent.click(download);
       expect(names).toHaveLength(1);
       // The last path segment, without the host's video extension.
@@ -259,7 +261,7 @@ describe("the export dialog", () => {
       await eventually(() => expect(exportTool(view).getAttribute("aria-disabled")).toBeNull());
       await userEvent.click(exportTool(view));
       await userEvent.click(button(view, "Export") as HTMLButtonElement);
-      await eventually(() => expect(exported).toHaveLength(1), 60_000);
+      await eventually(() => expect(exported).toHaveLength(1));
       const [only] = exported;
       expect(only?.result.size).toBe(only?.blob.size);
       expect(only?.result.size).toBeGreaterThan(0);
@@ -306,7 +308,7 @@ describe("the export dialog", () => {
         const found = button(view, "Download");
         expect(found).toBeDefined();
         return found as HTMLButtonElement;
-      }, 60_000);
+      });
       await userEvent.click(download);
       expect(names[0]).toMatch(/^Take 1\.(mp4|webm)$/);
     } finally {
@@ -330,7 +332,7 @@ describe("the export dialog", () => {
     await userEvent.type(field, "24{Enter}");
     await userEvent.click(exportTool(view));
     await userEvent.click(button(view, "Export") as HTMLButtonElement);
-    await eventually(() => expect(button(view, "Download")).toBeDefined(), 60_000);
+    await eventually(() => expect(button(view, "Download")).toBeDefined());
     const note = [...dialogOf(view).querySelectorAll('[role="status"]')]
       .map((each) => each.textContent)
       .join(" ");
@@ -421,6 +423,6 @@ describe("the export dialog", () => {
     // It reopens at its summary, and exports again.
     await userEvent.click(exportTool(view));
     await userEvent.click(button(view, "Export") as HTMLButtonElement);
-    await eventually(() => expect(exported).toHaveLength(1), 60_000);
+    await eventually(() => expect(exported).toHaveLength(1));
   });
 });
