@@ -154,6 +154,10 @@ export const videoOwnMessages = /* @__PURE__ */ defineMessages({
   "export.largeFile": "This file is getting large. Very large files may be slow to save and share.",
   "export.ready": "Your {container} video is ready: {size, fileSize}.",
   "export.cancelled": "Export stopped.",
+  "export.noSoundEncoder":
+    "This browser can't save this video's sound. You can export it without sound, or try another browser to keep the sound.",
+  "export.withoutSound": "Export without sound",
+  "export.noSound": "No sound: this browser can't save it",
   "export.clipped":
     "Some of the sound was louder than a file can hold, by up to {db, number} dB, so it was cut off at full volume. Lower the volume of the loudest clips and export again to avoid it.",
   "export.download": "Download",
@@ -198,6 +202,8 @@ export const videoOwnMessages = /* @__PURE__ */ defineMessages({
     one: "A video can have {maximum} clip. Join or delete clips, and try again.",
     other: "A video can have up to {maximum, number} clips. Join or delete clips, and try again.",
   }),
+  "warnings.audioUndecodable":
+    "This browser can't play this video's sound, so it opened without sound. Its sound won't be in your export. Try another browser to keep it.",
   "warnings.maxFramePixels": "This video's picture is large, and may play slowly on some devices.",
   "warnings.maxFrameRate":
     "This video has {actual, number} frames per second, and may play slowly on some devices.",

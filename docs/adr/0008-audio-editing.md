@@ -2,7 +2,7 @@
 
 - **Status:** Accepted. The audio rows of the timeline depend on an amendment to [ui ADR 0011](https://github.com/ie-huss-martinez/ui/blob/main/docs/adr/0011-timeline.md), in section 10; the headless core and the inspector don't
 - **Date:** 2026-11-18
-- **Amended:** 2026-11-18, with item 8 split in three, the export's result as built (8a), and the date rule moved to version 2 of the formats, which sdk-core ADR 0045 requires. Earlier, with the releases as they went out: 0.2.0 after the clip panel, and each later release one number on; the clock's anchor and the element join the plan. Earlier, with the review's rulings: the mix follows [audio-sdk ADR 0006](https://github.com/ie-huss-martinez/audio-sdk/blob/main/docs/adr/0006-multitrack.md) where a user would notice a difference, why `maxAudioTracks` is 8, and `ui`'s lanes are designed for both SDKs.
+- **Amended:** 2026-11-18, with 8b as built: sound that can't be decoded or encoded. Earlier, with item 8 split in three, the export's result as built (8a), and the date rule moved to version 2 of the formats, which sdk-core ADR 0045 requires. Earlier, with the releases as they went out: 0.2.0 after the clip panel, and each later release one number on; the clock's anchor and the element join the plan. Earlier, with the review's rulings: the mix follows [audio-sdk ADR 0006](https://github.com/ie-huss-martinez/audio-sdk/blob/main/docs/adr/0006-multitrack.md) where a user would notice a difference, why `maxAudioTracks` is 8, and `ui`'s lanes are designed for both SDKs.
 
 ## Context
 
@@ -118,6 +118,7 @@ They follow ADR 0003's rules: strict, pure, refused with a `details.reason`, nev
   - A plan with sound that no candidate can encode fails with `UNSUPPORTED_CODEC` and `details.track: "audio"`.
   - **Sound is never dropped silently.** The export dialog then says the browser can't encode sound and offers an export without it, which is `session.export({ audio: "omit" })`. The summary says "No sound" before the download.
 - **Where the browser can't decode a file's audio,** the file opens with its picture, its source has `audio: null`, and the session adds a warning, instead of refusing the whole file. The same holds without `AudioDecoder`.
+- **As built (8b):** the media worker's open check says whether the sound decodes rather than refusing the file. The engine then keeps the source's probe without sound, so playback, peaks and export all read it as silent, and its info names the codec in `unplayableAudio`, an optional field, so a host's own engine needn't set it. The session warns with `{ type: "audioUndecodable", source, codec }`. An export asks for `AudioEncoder` only for a plan with sound; it fails with `UNSUPPORTED_CODEC` and `details.track: "audio"` when the picture encodes and the sound doesn't, and `VideoExportJob.audio` and `session.export`'s `audio` take `"omit"`. The export dialog then says the browser can't save the sound, and its main button becomes "Export without sound"; its summary says "No sound" for that export. Every engine in the test image has both audio codecs, so the tests run the SDK's own worker code in a worker with them removed.
 - **Privacy:** an audio file's tags and cover art are never read into an export, like a video's. The privacy test gains an audio source carrying marker strings.
 
 ### 7. Audio files

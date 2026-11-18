@@ -74,6 +74,8 @@ export function VideoExportDialog(props: VideoExportDialogProps): ReactNode {
   const [choice, setChoice] = useState<Choice>("auto");
   const [quality, setQuality] = useState<VideoExportQuality>("medium");
   const [phase, setPhase] = useState<Phase>({ kind: "choose" });
+  /** Whether the export leaves the sound out, as the user chose after the browser couldn't encode it. */
+  const [withoutSound, setWithoutSound] = useState(false);
   const [error, setError] = useState<unknown>(null);
   const controller = useRef<AbortController | null>(null);
   const objectUrl = useRef<string | null>(null);
@@ -96,6 +98,7 @@ export function VideoExportDialog(props: VideoExportDialogProps): ReactNode {
     objectUrl.current = null;
     setChoice("auto");
     setQuality("medium");
+    setWithoutSound(false);
     setPhase((now) => (now.kind === "choose" ? now : { kind: "choose" }));
     setError(null);
     // The plan emptied under an open dialog: close it for good.
@@ -121,8 +124,14 @@ export function VideoExportDialog(props: VideoExportDialogProps): ReactNode {
 
   const close = () => setDialog(null);
 
-  const run = async () => {
+  /** Whether the browser couldn't encode the plan's sound, which an export without it can avoid. */
+  const noSoundEncoder =
+    isVideoError(error, "UNSUPPORTED_CODEC") &&
+    (error.details as { readonly track?: unknown } | undefined)?.track === "audio";
+
+  const run = async (audio: "include" | "omit" = withoutSound ? "omit" : "include") => {
     setError(null);
+    setWithoutSound(audio === "omit");
     const running = new AbortController();
     controller.current = running;
     setPhase({ kind: "exporting", progress: 0, large: false });
@@ -131,6 +140,7 @@ export function VideoExportDialog(props: VideoExportDialogProps): ReactNode {
       const result = await session.export({
         quality,
         ...(choice === "auto" ? {} : { container: choice }),
+        ...(audio === "omit" ? { audio } : {}),
         signal: running.signal,
         onProgress: (progress) =>
           setPhase((now) => (now.kind === "exporting" ? { ...now, progress } : now)),
@@ -201,9 +211,16 @@ export function VideoExportDialog(props: VideoExportDialogProps): ReactNode {
         <Button variant="secondary" onClick={close}>
           {messages.t("export.cancel")}
         </Button>
-        <Button variant="primary" onClick={() => void run()}>
-          {messages.t("export.confirm")}
-        </Button>
+        {/* Sound the browser can't encode: an export without it, said plainly, never silently. */}
+        {noSoundEncoder ? (
+          <Button variant="primary" onClick={() => void run("omit")}>
+            {messages.t("export.withoutSound")}
+          </Button>
+        ) : (
+          <Button variant="primary" onClick={() => void run()}>
+            {messages.t("export.confirm")}
+          </Button>
+        )}
       </>
     );
 
@@ -247,10 +264,12 @@ export function VideoExportDialog(props: VideoExportDialogProps): ReactNode {
               })}
             </p>
             <p>
-              {messages.t("export.audio", {
-                channels: output.channels,
-                sampleRate: output.sampleRate,
-              })}
+              {withoutSound
+                ? messages.t("export.noSound")
+                : messages.t("export.audio", {
+                    channels: output.channels,
+                    sampleRate: output.sampleRate,
+                  })}
             </p>
             <p>{messages.t("export.private")}</p>
             {kept.length > 0 ? (
@@ -313,7 +332,9 @@ export function VideoExportDialog(props: VideoExportDialogProps): ReactNode {
               {/* A TypeError: no processor, as with a host's engine and none of its own. */}
               {error instanceof TypeError
                 ? messages.t("export.unavailable")
-                : messages.error(error)}
+                : noSoundEncoder
+                  ? messages.t("export.noSoundEncoder")
+                  : messages.error(error)}
             </p>
           ) : null}
         </>

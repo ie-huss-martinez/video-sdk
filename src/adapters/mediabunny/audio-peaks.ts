@@ -17,6 +17,8 @@ export async function audioPeaks(
 ): Promise<VideoPeaks | null> {
   const input = openInput(file, familyOf(probe.container));
   try {
+    // A probe without sound, such as a track this browser can't decode, has no peaks.
+    if (probe.audio === null) return null;
     const { audio } = await pickTracks(input, probe.container);
     const config = audio && (await audio.getDecoderConfig());
     if (!audio || !config) return null;

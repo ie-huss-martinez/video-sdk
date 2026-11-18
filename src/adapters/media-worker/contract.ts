@@ -2,6 +2,7 @@ import type { VideoLimitName } from "../../core/errors/video-limits.js";
 import type { VideoPlan } from "../../core/model/plan.js";
 import type { VideoPeaks, VideoProbe } from "../../core/model/source.js";
 import type { SchedulerCommand } from "../../core/playback/scheduler.js";
+import type { AudioSupport } from "../mediabunny/decoder-support.js";
 
 /**
  * A resolved file policy's limits, as plain data: a `FilePolicy` holds
@@ -54,7 +55,8 @@ export interface MediaWorkerContract {
       readonly limits: PolicyLimits;
       readonly probe: VideoProbe;
     };
-    readonly output: undefined;
+    /** Whether the file's sound can be played here (docs/adr/0008). */
+    readonly output: AudioSupport;
   };
   /**
    * Decodes a probed file's audio and builds its waveform peaks, or `null`

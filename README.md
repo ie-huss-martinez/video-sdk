@@ -117,7 +117,7 @@ try {
 | Opening | MP4, MOV, WebM and Matroska, recognised by signature, never by name | Whatever the browser's WebCodecs decodes, such as H.264, VP8, VP9, AV1, AAC and Opus |
 | Exporting | MP4, or WebM | H.264 with AAC, or with Opus where the browser has no AAC encoder; VP9 or VP8 with Opus in WebM |
 
-Decoding and encoding are the browser's own, in workers, so support varies by browser: the SDK asks the one it runs in, and a file it can't decode fails with `UNSUPPORTED_CODEC`. [`docs/capabilities.md`](docs/capabilities.md) shows what Chromium, Firefox and WebKit offer in the test image. Encrypted files, files with several edits in an edit list and files without a video track are refused, with a reason ([ADR 0001](docs/adr/0001-video-engines.md)).
+Decoding and encoding are the browser's own, in workers, so support varies by browser: the SDK asks the one it runs in, and a file whose picture it can't decode fails with `UNSUPPORTED_CODEC`. A file whose sound it can't decode opens without sound, with a warning; and where it can't encode sound, an export fails with `UNSUPPORTED_CODEC` for the audio track, and `session.export({ audio: "omit" })` makes it without sound. [`docs/capabilities.md`](docs/capabilities.md) shows what Chromium, Firefox and WebKit offer in the test image. Encrypted files, files with several edits in an edit list and files without a video track are refused, with a reason ([ADR 0001](docs/adr/0001-video-engines.md)).
 
 ### Limits
 
@@ -142,7 +142,7 @@ Every failure is a `VideoError` with a stable `code` and structured `details`; `
 |---|---|
 | `INVALID_VIDEO` | A file is malformed, its headers disagree with its packets, or it decodes to more than its probe allows |
 | `UNSUPPORTED_FORMAT` | A container the SDK doesn't read, an encrypted file, an edit list it refuses, or no video track |
-| `UNSUPPORTED_CODEC` | A codec the browser can't decode, or nothing it can encode for an export |
+| `UNSUPPORTED_CODEC` | A video codec the browser can't decode, or nothing it can encode for an export; `details.track` says whether it's the picture or the sound |
 | `DECODE_FAILED`, `ENCODE_FAILED` | The browser failed on a file or an export it claimed to support |
 | `FILE_TOO_LARGE`, `FRAME_TOO_LARGE`, `DURATION_TOO_LONG` and the other limit codes | A file, the plan or an export exceeds a limit; `details` name it, with its maximum and the actual value |
 | `INVALID_COMMAND`, `INVALID_DOCUMENT` | A command or a stored plan that doesn't apply, with a `details.reason` |
