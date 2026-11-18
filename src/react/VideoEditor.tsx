@@ -84,7 +84,9 @@ function Root({ className }: { readonly className?: string | undefined }): React
   const { run } = useVideoTools();
   return (
     <section
-      className={["hm-video-editor", className].filter(Boolean).join(" ")}
+      // hm-text gives the editor's own text ui's type and colour, whatever
+      // the host page sets around it (ui ADR 0010).
+      className={["hm-text", "hm-video-editor", className].filter(Boolean).join(" ")}
       aria-label={messages.t("editor.label")}
       onKeyDown={(event) => {
         // The registry skips handled keys, fields, and a control's own keys.
