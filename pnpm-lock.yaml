@@ -186,11 +186,11 @@ catalogs:
       specifier: ^0.8.0
       version: 0.8.0
     '@hussmartinez/sdk-core':
-      specifier: ^0.4.3
-      version: 0.4.3
+      specifier: ^0.4.4
+      version: 0.4.4
     '@hussmartinez/ui':
-      specifier: ^0.7.0
-      version: 0.7.0
+      specifier: ^0.11.0
+      version: 0.11.0
     '@microsoft/api-extractor':
       specifier: ^7.60.1
       version: 7.60.1
@@ -273,10 +273,10 @@ importers:
     dependencies:
       '@hussmartinez/sdk-core':
         specifier: 'catalog:'
-        version: 0.4.3
+        version: 0.4.4
       '@hussmartinez/ui':
         specifier: 'catalog:'
-        version: 0.7.0(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
+        version: 0.11.0(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
     devDependencies:
       '@arethetypeswrong/cli':
         specifier: 'catalog:'
@@ -388,7 +388,7 @@ importers:
     dependencies:
       '@hussmartinez/ui':
         specifier: 'catalog:'
-        version: 0.7.0(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
+        version: 0.11.0(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       '@hussmartinez/video-sdk':
         specifier: workspace:*
         version: link:../..
@@ -419,7 +419,7 @@ importers:
     dependencies:
       '@hussmartinez/ui':
         specifier: 'catalog:'
-        version: 0.7.0(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
+        version: 0.11.0(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       '@hussmartinez/video-sdk':
         specifier: workspace:*
         version: link:../..
@@ -823,11 +823,11 @@ packages:
       vitest:
         optional: true
 
-  '@hussmartinez/sdk-core@0.4.3':
-    resolution: {integrity: sha512-puZ85/wdRbRFthI3WPH4ivFh9YVHVI3RqpydE+IT4nUoo3GEoPIGMYHlUlR5wDTDHUN2nZgwMTJrqO4gMuxyGQ==}
+  '@hussmartinez/sdk-core@0.4.4':
+    resolution: {integrity: sha512-WT8DUW1MTWk2mbMhF2uTBb4dYI1AFuBMAW8rI4ADtLi2zr+OsN5aSErmHUlrMNmqjw963PyPIPDd4dvDxw2VuQ==}
 
-  '@hussmartinez/ui@0.7.0':
-    resolution: {integrity: sha512-GsWxaQJXR0e/KFZ8glsD3Ou9MJTk0WUfJ7eayWaby3XNS4geHaYLIzaAuCiVsJAH+GnG5t7G6ddv2/zFybfdRQ==}
+  '@hussmartinez/ui@0.11.0':
+    resolution: {integrity: sha512-jkEbKqbb5D+aMi3eOv985ERjcNxoJTSS8pdZPK4i39kcvCHmj2Etso8sPuXZnZwgCfKHtfXe9d7aKcsxZYxdUg==}
     peerDependencies:
       react: '>=18.3'
       react-dom: '>=18.3'
@@ -1287,6 +1287,7 @@ packages:
   '@secretlint/secretlint-rule-preset-recommend@13.1.0':
     resolution: {integrity: sha512-dPnplMyjJYpVCJDNTjpUA8c/AfoHbWANJJJWKroK50DGGhAB4Oumzk+XinBMyMMAwgOsjU9CB9lUHXDvObMVCg==}
     engines: {node: '>=22.0.0'}
+    deprecated: Built into secretlint v14 and later. Remove this package; the rule id still works. https://github.com/secretlint/secretlint/blob/HEAD/docs/rules/preset-recommend.md
 
   '@secretlint/source-creator@13.1.0':
     resolution: {integrity: sha512-XTix5etCEZmF88YPQdmGP9n9Z2h/ESvVJ/Ueel7XcCQrjPXtZVXKaiHpcSUClK0Qdth1UQg7Bd2oZfXZJjozgA==}
@@ -3041,11 +3042,11 @@ snapshots:
       typescript: 6.0.3
       vitest: 5.1.0(@types/node@24.19.2)(@vitest/browser-playwright@5.1.0)(@vitest/ui@5.1.0)(vite@8.3.8(@types/node@24.19.2)(jiti@2.7.0)(yaml@2.9.1))
 
-  '@hussmartinez/sdk-core@0.4.3': {}
+  '@hussmartinez/sdk-core@0.4.4': {}
 
-  '@hussmartinez/ui@0.7.0(react-dom@19.3.1(react@19.3.1))(react@19.3.1)':
+  '@hussmartinez/ui@0.11.0(react-dom@19.3.1(react@19.3.1))(react@19.3.1)':
     dependencies:
-      '@hussmartinez/sdk-core': 0.4.3
+      '@hussmartinez/sdk-core': 0.4.4
     optionalDependencies:
       react: 19.3.1
       react-dom: 19.3.1(react@19.3.1)
