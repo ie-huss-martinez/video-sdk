@@ -372,6 +372,25 @@ describe("the video output's page side", () => {
     expect(context.close).toHaveBeenCalled();
   });
 
+  it("reads a steady audio clock every 25 ms but posts to the worker only every 250 ms", async () => {
+    // An audio clock that keeps time with the wall clock.
+    const context = fakeAudioContext(false);
+    const contextTime = () => (Date.now() - 1_700_000_000_000) / 1_000;
+    Object.defineProperty(context, "currentTime", { get: contextTime });
+    const reads = vi.fn(() => ({ contextTime: contextTime(), performanceTime: Date.now() }));
+    context.getOutputTimestamp = reads;
+    const t = setup({ audio: context });
+    t.output.load(planOf(300));
+    await t.output.play();
+    const sent = t.commands.length;
+    const read = reads.mock.calls.length;
+    await vi.advanceTimersByTimeAsync(1_000);
+    // Forty reads, and four posts: one each 250 ms, none for the reads between.
+    expect(reads.mock.calls.length - read).toBeGreaterThanOrEqual(40);
+    expect(t.commands.length - sent).toBe(4);
+    await t.output.destroy();
+  });
+
   it("sends a stall in the audio clock to the worker within a frame, not up to 250 ms later", async () => {
     // An audio clock that runs with wall-clock time, except while it's stalled.
     const context = fakeAudioContext(false);
