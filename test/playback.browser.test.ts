@@ -146,6 +146,34 @@ async function noFramesOpen(): Promise<void> {
   );
 }
 
+/**
+ * Readers opened and released now, summed over every worker the test
+ * started: the engine's and the output's both run the test worker.
+ */
+async function readersNow(
+  plans = 0,
+): Promise<{ readonly opened: number; readonly released: number; readonly plans: number }> {
+  let total = { opened: 0, released: 0, plans: 0 };
+  await vi.waitFor(
+    async () => {
+      ledgers = [];
+      for (const port of ports) port.postMessage({ type: "ledger" });
+      await sleep(20);
+      expect(ledgers).toHaveLength(ports.length);
+      total = {
+        opened: ledgers.reduce((sum, ledger) => sum + ledger.readersOpened, 0),
+        released: ledgers.reduce((sum, ledger) => sum + ledger.readersReleased, 0),
+        plans: ledgers.reduce((sum, ledger) => sum + ledger.plansLoaded, 0),
+      };
+      // The ledger travels on its own port: wait until the worker has taken
+      // the plans sent before it.
+      expect(total.plans).toBeGreaterThanOrEqual(plans);
+    },
+    { timeout: 15_000, interval: 50 },
+  );
+  return total;
+}
+
 const harness: VideoOutputHarness = {
   async create() {
     const { output, source } = await setup();
@@ -248,6 +276,99 @@ describe("drawing what the plan places at the clock", () => {
     output.seek(90);
     // The end shows the last frame.
     expect(await shown()).toBe(29);
+    await noFramesOpen();
+  });
+
+  it("keeps playing through many plans that change only the sound, drawing every frame from the same decoder", async () => {
+    const real = await setup();
+    output = real.output;
+    const base = planOf(clipOf("a", real.source, 0, 120));
+    output.load(base);
+    await shown();
+    await output.play();
+    await vi.waitFor(() => expect(drawn.length).toBeGreaterThan(3), { timeout: 15_000 });
+    // Every failure, even one a later load clears from the snapshot.
+    const failures: string[] = [];
+    const unsubscribe = output.subscribe(() => {
+      const error = output?.getSnapshot().error;
+      if (error) failures.push(`${error.code} ${JSON.stringify(error.details)}`);
+    });
+    // A volume slider dragged while playing: a plan every 50 ms, picture unchanged.
+    const clip = base.clips[0] as VideoPlan["clips"][number];
+    for (let step = 0; step < 20; step += 1) {
+      output.load({ ...base, clips: [{ ...clip, volumeDb: -step }] });
+      await sleep(50);
+    }
+    // Still drawing, frame after frame.
+    const count = drawn.length;
+    await vi.waitFor(() => expect(drawn.length).toBeGreaterThan(count + 3), { timeout: 15_000 });
+    unsubscribe();
+    expect(failures).toEqual([]);
+    expect(output.getSnapshot().state).toBe("playing");
+    output.pause();
+    await noFramesOpen();
+  });
+
+  it("opens no reader again and releases none for plans that change only the sound, at the worker's boundary", async () => {
+    const real = await setup();
+    output = real.output;
+    const base = planOf(clipOf("a", real.source, 0, 120));
+    output.load(base);
+    await shown();
+    await output.play();
+    // The reader is in use: frames are being decoded from it.
+    await vi.waitFor(() => expect(drawn.length).toBeGreaterThan(3), { timeout: 15_000 });
+    const before = await readersNow();
+    expect(before.opened).toBeGreaterThan(0);
+    const clip = base.clips[0] as VideoPlan["clips"][number];
+    const changes: VideoPlan["clips"][number][] = [
+      { ...clip, muted: true },
+      { ...clip, volumeDb: -12 },
+      { ...clip, fadeIn: { duration: 500_000, curve: "equalPower" } },
+    ];
+    // Each crosses to the worker as a message, which clones the source's Blob.
+    for (const change of changes) output.load({ ...base, clips: [change] });
+    // Counted when the worker takes each plan, not when a read happens to
+    // fail: the same answer wherever the loads land between packet reads.
+    expect(await readersNow(before.plans + changes.length)).toEqual({
+      opened: before.opened,
+      released: before.released,
+      plans: before.plans + changes.length,
+    });
+    // A plan without the source does release its reader.
+    output.load(planOf());
+    await vi.waitFor(
+      async () => expect((await readersNow()).released).toBeGreaterThan(before.released),
+      {
+        timeout: 15_000,
+      },
+    );
+    output.pause();
+    await noFramesOpen();
+  });
+
+  it("keeps playing after a mute while playing, from the same decoder", async () => {
+    const real = await setup();
+    output = real.output;
+    const base = planOf(clipOf("a", real.source, 0, 120));
+    output.load(base);
+    await shown();
+    await output.play();
+    await vi.waitFor(() => expect(drawn.length).toBeGreaterThan(3), { timeout: 15_000 });
+    const failures: string[] = [];
+    const unsubscribe = output.subscribe(() => {
+      const error = output?.getSnapshot().error;
+      if (error) failures.push(`${error.code} ${JSON.stringify(error.details)}`);
+    });
+    const clip = base.clips[0] as VideoPlan["clips"][number];
+    output.load({ ...base, clips: [{ ...clip, muted: true }] });
+    const count = drawn.length;
+    // Frames keep coming: the decoder wasn't stopped by the new plan.
+    await vi.waitFor(() => expect(drawn.length).toBeGreaterThan(count + 10), { timeout: 15_000 });
+    unsubscribe();
+    expect(failures).toEqual([]);
+    expect(output.getSnapshot().state).toBe("playing");
+    output.pause();
     await noFramesOpen();
   });
 
