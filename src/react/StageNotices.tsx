@@ -1,7 +1,8 @@
-import { CloseIcon, IconButton, useAnnounce } from "@hussmartinez/ui/react";
+import { CloseIcon, IconButton } from "@hussmartinez/ui/react";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import type { VideoWarning } from "../core/model/warnings.js";
 import { videoWarningText } from "../messages/text.js";
+import { useJoinedAnnounce } from "./announce.js";
 import { useVideoEditor, useVideoSession } from "./context.js";
 
 /** A warning's identity: its kind, its limit and its source, so a dismissal holds for that one. */
@@ -21,7 +22,7 @@ function warningKey(warning: VideoWarning): string {
 export function StageNotices(): ReactNode {
   const { messages } = useVideoEditor();
   const { snapshot } = useVideoSession();
-  const announce = useAnnounce();
+  const announce = useJoinedAnnounce();
   const [dismissed, setDismissed] = useState<ReadonlySet<string>>(() => new Set());
 
   const items = snapshot.warnings
