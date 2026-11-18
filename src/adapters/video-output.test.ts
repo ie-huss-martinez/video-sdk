@@ -372,6 +372,49 @@ describe("the video output's page side", () => {
     expect(context.close).toHaveBeenCalled();
   });
 
+  it("sends a stall in the audio clock to the worker within a frame, not up to 250 ms later", async () => {
+    // An audio clock that runs with wall-clock time, except while it's stalled.
+    const context = fakeAudioContext(false);
+    let lost = 0;
+    let stalledSince: number | undefined;
+    const contextTime = () => {
+      const stalled = stalledSince === undefined ? 0 : Date.now() - stalledSince;
+      return (Date.now() - 1_700_000_000_000 - lost - stalled) / 1_000;
+    };
+    Object.defineProperty(context, "currentTime", { get: contextTime });
+    context.getOutputTimestamp = () => ({
+      contextTime: contextTime(),
+      performanceTime: Date.now(),
+    });
+    const t = setup({ audio: context });
+    t.output.load(planOf(300));
+    await t.output.play();
+    const plays = () => t.commands.filter((command) => command.mode === "play");
+    // Just after an anchor every 250 ms, so the next one is 240 ms away.
+    await vi.advanceTimersByTimeAsync(260);
+    const before = plays().length;
+    // The sound stalls: the device stops playing while the wall clock goes on.
+    stalledSince = Date.now();
+    let waited = 0;
+    while (plays().length === before && waited < 300) {
+      await vi.advanceTimersByTimeAsync(5);
+      waited += 5;
+    }
+    lost += Date.now() - stalledSince;
+    stalledSince = undefined;
+    // Sent once the clock is a frame (33 ms) behind, at the next 25 ms check.
+    expect(waited).toBeLessThanOrEqual(1_000 / 30 + 25);
+    // The anchor it sent puts the heard time behind the wall clock by the stall so far.
+    const sent = plays().at(-1) as Extract<SchedulerCommand, { mode: "play" }>;
+    const first = plays()[0] as Extract<SchedulerCommand, { mode: "play" }>;
+    const behind =
+      first.anchor.media +
+      (Date.now() - first.anchor.at) * 1_000 -
+      (sent.anchor.media + (Date.now() - sent.anchor.at) * 1_000);
+    expect(behind).toBeGreaterThan(1_000_000 / 30);
+    await t.output.destroy();
+  });
+
   it("goes on silently from where the clock is when the audio stops keeping time", async () => {
     // A context that says it's running, but whose time never moves.
     const context = fakeAudioContext(false);

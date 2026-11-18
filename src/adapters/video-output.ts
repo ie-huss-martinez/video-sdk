@@ -50,6 +50,14 @@ export interface VideoOutputOptions {
 /** How often the page sends the anchor while playing, and learns of dropped frames and failures (docs/adr/0006). */
 const ANCHOR_INTERVAL = 250;
 
+/**
+ * How often the page reads the audio clock while playing, to send a new
+ * anchor at once when the clock has moved more than an output frame from the
+ * one the worker has, as when the audio stalls (docs/adr/0006). Reading it is
+ * cheap; it's sent only then, and every {@link ANCHOR_INTERVAL} otherwise.
+ */
+const CLOCK_CHECK_INTERVAL = 25;
+
 /** The playback worker, as the output uses it. */
 type PlaybackCall = <Method extends "resize" | "audio" | "load" | "control">(
   method: Method,
@@ -305,22 +313,44 @@ export function createOutput(environment: OutputEnvironment): VideoOutput {
   const hasAudio = () =>
     plan?.clips.some((clip) => environment.source(clip.source)?.probe.audio) ?? false;
 
-  /** Runs the clock from `anchor`: the end, and the anchor every 250 ms, read again from the audio clock. */
+  /**
+   * Runs the clock from `anchor`: the end, and the anchor, read again from
+   * the audio clock every 25 ms. It's sent every 250 ms, and at once when the
+   * audio clock has moved more than an output frame from the anchor the
+   * worker has, so the picture follows a stall in the sound within a frame,
+   * not up to 250 ms later.
+   */
   const runClock = (from: PlaybackAnchor) => {
     anchor = from;
     watchEnd();
     clearInterval(anchorTimer);
+    let sentAt = environment.now();
+    let checkedAt = sentAt;
     anchorTimer = setInterval(() => {
       if (!anchor) return;
-      if (player?.stalled()) {
+      const now = environment.now();
+      // Whether the audio stopped keeping time is checked every 250 ms,
+      // however often a moving clock sends an anchor in between.
+      let stalled = false;
+      if (now - checkedAt >= ANCHOR_INTERVAL) {
+        checkedAt = now;
+        stalled = player?.stalled() ?? false;
+      }
+      if (stalled) {
         // The audio stopped keeping time: go on silently from where the clock is.
-        player.stop();
+        player?.stop();
         update({ audio: "blocked" });
       } else {
-        anchor = player?.anchor() ?? anchor;
+        const fresh = player?.anchor();
+        const moved =
+          fresh !== undefined &&
+          Math.abs(mediaTimeAt(fresh, now) - mediaTimeAt(anchor, now)) > frameTime(1, rate());
+        if (now - sentAt < ANCHOR_INTERVAL && !moved) return;
+        anchor = fresh ?? anchor;
       }
+      sentAt = now;
       if (!environment.visibility?.hidden()) void send(command());
-    }, ANCHOR_INTERVAL);
+    }, CLOCK_CHECK_INTERVAL);
   };
 
   /**

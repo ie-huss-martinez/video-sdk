@@ -161,6 +161,8 @@ function setup(
     },
     /** The clock now, in timeline microseconds. */
     media: () => mediaNow(),
+    /** The fake wall clock, in milliseconds. */
+    now: () => now,
     /** Plays from a timeline time, in microseconds. */
     play(media: number) {
       anchor = { media, at: now };
@@ -503,7 +505,48 @@ describe("the frame scheduler", () => {
     await t.scheduler.settled();
   });
 
-  it("follows a corrected anchor within a frame without restarting, and restarts on a jump", async () => {
+  it("follows an audio stall's correction without restarting: the picture waits for the sound", async () => {
+    const t = setup();
+    t.scheduler.load(planOf(clip("a", "s", 0, 300)), new Map([["s", 0]]));
+    t.play(0);
+    await t.advance(1_000);
+    const decodes = t.decodes.length;
+    const shown = t.drawn.at(-1)?.frame as number;
+    // The sound stalled for 150 ms: the clock is moved back by as much.
+    t.control({ mode: "play", anchor: { media: t.media() - 150_000, at: t.now() } });
+    expect(t.decodes).toHaveLength(decodes);
+    // The frames after the one shown wait for the corrected clock: none is drawn early.
+    await t.advance(140);
+    expect(t.drawn.at(-1)?.frame).toBe(shown);
+    await t.advance(500);
+    expect(t.decodes).toHaveLength(decodes);
+    for (const entry of t.drawn)
+      expect(entry.frame).toBeLessThanOrEqual(Math.round(entry.at / FRAME));
+    const frames = t.drawn.map((entry) => entry.frame);
+    expect(frames).toEqual([...frames].sort((a, b) => a - b));
+    t.scheduler.dispose();
+    await t.scheduler.settled();
+  });
+
+  it("follows a clock moved forward without restarting, dropping the frames now late", async () => {
+    const t = setup();
+    t.scheduler.load(planOf(clip("a", "s", 0, 300)), new Map([["s", 0]]));
+    t.play(0);
+    await t.advance(500);
+    const decodes = t.decodes.length;
+    const dropped = t.scheduler.dropped;
+    t.control({ mode: "play", anchor: { media: t.media() + 300_000, at: t.now() } });
+    await t.advance(500);
+    expect(t.decodes).toHaveLength(decodes);
+    expect(t.scheduler.dropped).toBeGreaterThan(dropped);
+    // On time again.
+    const last = t.drawn.at(-1) as (typeof t.drawn)[0];
+    expect(Math.round(last.at / FRAME) - last.frame).toBeLessThanOrEqual(1);
+    t.scheduler.dispose();
+    await t.scheduler.settled();
+  });
+
+  it("follows a small correction without restarting, and restarts on a jump of more than a second", async () => {
     const t = setup();
     t.scheduler.load(planOf(clip("a", "s", 0, 300)), new Map([["s", 0]]));
     t.play(0);
@@ -515,10 +558,10 @@ describe("the frame scheduler", () => {
     expect(t.decodes).toHaveLength(decodes);
     const frames = t.drawn.map((entry) => entry.frame);
     expect(frames).toEqual([...frames].sort((a, b) => a - b));
-    // A jump of a second is a seek.
+    // A jump of more than a second is a seek.
     t.control({
       mode: "play",
-      anchor: { media: t.media() + 1_000_000, at: 1_700_000_000_000 + 1_000 },
+      anchor: { media: t.media() + 2_000_000, at: 1_700_000_000_000 + 1_000 },
     });
     await t.advance(REFRESH * 2);
     expect(t.decodes.length).toBeGreaterThan(decodes);
