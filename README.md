@@ -57,6 +57,7 @@ import {
   createVideoOutput,
   createVideoProcessor,
   createVideoSession,
+  videoErrorText,
   videoMessages,
   videoWarningText,
 } from "@hussmartinez/video-sdk";
@@ -99,7 +100,7 @@ try {
   if (clippedFrames > 0) warnTooLoud(peakDb); // the sound was clamped at full scale, by this much
   for (const warning of session.getSnapshot().warnings) show(videoWarningText(messages, warning));
 } catch (error) {
-  showError(messages.error(error)); // text by code, never the error's message
+  showError(videoErrorText(messages, error)); // text by code and reason, never the error's message
 }
 ```
 

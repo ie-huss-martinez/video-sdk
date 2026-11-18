@@ -8,7 +8,7 @@ import { Applied } from '@hussmartinez/sdk-core';
 import { FilePolicy } from '@hussmartinez/sdk-core';
 import { FilePolicyOverrides } from '@hussmartinez/sdk-core';
 import { Limits } from '@hussmartinez/sdk-core';
-import type { Messages } from '@hussmartinez/sdk-core';
+import { Messages } from '@hussmartinez/sdk-core';
 import { Reducer } from '@hussmartinez/sdk-core';
 import { SdkCoreErrorCode } from '@hussmartinez/sdk-core';
 import { SdkError } from '@hussmartinez/sdk-core';
@@ -414,6 +414,9 @@ export class VideoError extends SdkError<VideoErrorCode> {
 export type VideoErrorCode = SdkCoreErrorCode | "INVALID_VIDEO" | "UNSUPPORTED_FORMAT" | "UNSUPPORTED_CODEC" | "DECODE_FAILED" | "ENCODE_FAILED" | "INVALID_COMMAND" | "INVALID_DOCUMENT" | "BUSY" | "FRAME_TOO_LARGE" | "FRAME_RATE_TOO_HIGH" | "DURATION_TOO_LONG" | "BITRATE_TOO_HIGH" | "PACKET_TOO_LARGE" | "TOO_MANY_TRACKS" | "INDEX_TOO_LARGE" | "TOO_MANY_CHANNELS" | "SAMPLE_RATE_TOO_HIGH" | "SESSION_TOO_LARGE" | "TOO_MANY_CLIPS";
 
 // @public
+export function videoErrorText(messages: Messages<VideoMessageCatalogue>, error: unknown): string;
+
+// @public
 export type VideoExportContainer = "mp4" | "webm";
 
 // @public
@@ -761,6 +764,11 @@ export const videoMessages: {
         readonly one: "A video can have {maximum} clip. Join or delete clips, and try again.";
         readonly other: "A video can have up to {maximum, number} clips. Join or delete clips, and try again.";
     };
+    readonly "errors.FRAME_TOO_LARGE.output": "That output size has {actual, number} pixels, which is more than the {maximum, number} a picture can have. Choose a smaller size.";
+    readonly "errors.FRAME_RATE_TOO_HIGH.output": "That output has {actual, number} frames per second, which is more than the limit of {maximum, number}.";
+    readonly "errors.TOO_MANY_CHANNELS.output": "That output has {actual, number} sound channels, which is over the {maximum, number}-channel limit.";
+    readonly "errors.SAMPLE_RATE_TOO_HIGH.output": "That output's sound quality is {actual, number} Hz, which is over the {maximum, number} Hz limit.";
+    readonly "errors.DURATION_TOO_LONG.plan-too-long": "This would make the video {actual, duration} long, which is over the {maximum, duration} limit.";
     readonly "warnings.audioUndecodable": "This browser can't play this video's sound, so it opened without sound. Its sound won't be in your export. Try another browser to keep it.";
     readonly "warnings.maxFramePixels": "This video's picture is large, and may play slowly on some devices.";
     readonly "warnings.maxFrameRate": "This video has {actual, number} frames per second, and may play slowly on some devices.";

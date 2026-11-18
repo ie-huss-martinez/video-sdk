@@ -1,3 +1,4 @@
+import { isVideoError, VideoError } from "../errors/video-error.js";
 import type { VideoFilePolicy, VideoLimitName } from "../errors/video-limits.js";
 import { planFrames, type VideoPlan, type VideoPlanOutput } from "./plan.js";
 import type { VideoProbe } from "./source.js";
@@ -85,10 +86,28 @@ export function checkProbe(
 }
 
 /**
+ * Runs a limit check whose subject isn't a file, and adds `reason` to the
+ * `details` of the `VideoError` it throws, so its text can say what was
+ * over the limit: the output, or the edited video's length, rather than a
+ * file the user opened (ADR 0004).
+ */
+function checkingFor<T>(reason: string, check: () => T): T {
+  try {
+    return check();
+  } catch (error) {
+    if (!isVideoError(error)) throw error;
+    throw new VideoError(error.code, error.message, {
+      details: { ...error.details, reason },
+    });
+  }
+}
+
+/**
  * Checks an output against the limits that apply to what an export encodes
  * (ADR 0004): its frame size, frame rate, channels and sample rate. Throws
- * `VideoError` with the limit's code on the first one exceeded, and returns
- * a warning for each limit at or above its warning threshold.
+ * `VideoError` with the limit's code on the first one exceeded, with
+ * `details.reason` `"output"`, and returns a warning for each limit at or
+ * above its warning threshold.
  *
  * @public
  */
@@ -103,16 +122,18 @@ export function checkOutput(
     ["maxSampleRate", output.sampleRate],
   ];
   const warnings: VideoLimitWarning[] = [];
-  for (const [limit, actual] of checks) {
-    if (policy.check(limit, actual) === "warning") warnings.push(limitWarning(limit, actual));
-  }
+  checkingFor("output", () => {
+    for (const [limit, actual] of checks) {
+      if (policy.check(limit, actual) === "warning") warnings.push(limitWarning(limit, actual));
+    }
+  });
   return warnings;
 }
 
 /**
  * Checks a plan's length against `maxDuration` (ADR 0004). Throws
- * `DURATION_TOO_LONG` over it, and returns its warning when it's at or
- * above the threshold.
+ * `DURATION_TOO_LONG` over it, with `details.reason` `"plan-too-long"`, and
+ * returns its warning when it's at or above the threshold.
  *
  * @public
  */
@@ -121,7 +142,6 @@ export function checkPlanLength(
   plan: VideoPlan,
 ): VideoLimitWarning | undefined {
   const milliseconds = Math.ceil(frameTime(planFrames(plan), plan.output.frameRate) / 1_000);
-  return policy.check("maxDuration", milliseconds) === "warning"
-    ? limitWarning("maxDuration", milliseconds)
-    : undefined;
+  const result = checkingFor("plan-too-long", () => policy.check("maxDuration", milliseconds));
+  return result === "warning" ? limitWarning("maxDuration", milliseconds) : undefined;
 }

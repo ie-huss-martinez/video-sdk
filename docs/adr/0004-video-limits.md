@@ -2,7 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-11-12
-- **Amended:** 2026-11-18: a warning carries its limit's value and, for a file's limits, its source, in the family's shape ([ADR 0008](0008-audio-editing.md)). Earlier, 2026-11-12, when decoding was built: `maxDecodedSize` counts the decoders' alignment padding. Then, on `sdk-core` 0.3.0: `maxBitrate` uses its `bitsPerSecond` unit.
+- **Amended:** 2026-11-19: a refusal of the output, or of an edit that would make the video too long, carries a `details.reason`, with its own text. Earlier, 2026-11-18: a warning carries its limit's value and, for a file's limits, its source, in the family's shape ([ADR 0008](0008-audio-editing.md)). Earlier, 2026-11-12, when decoding was built: `maxDecodedSize` counts the decoders' alignment padding. Then, on `sdk-core` 0.3.0: `maxBitrate` uses its `bitsPerSecond` unit.
 
 ## Context
 
@@ -118,6 +118,7 @@ Alongside the limit codes and `sdk-core`'s own (`ABORTED`, `TIMEOUT`, `WORKER_*`
 ### Text
 
 - **Error and warning text:** each code has text under `errors.<CODE>`, and each warning under `warnings.<limit>`, in `src/messages/en.ts` ([ADR 0019](https://github.com/ie-huss-martinez/sdk-core/blob/main/docs/adr/0019-message-catalogues.md)). A type check fails if any limit's code or warning is missing.
+- **Refusals that aren't about a file:** the same limit codes refuse an output and an edited video, which the user didn't open as a file. `checkOutput` adds `details.reason: "output"` to what it throws, and `checkPlanLength` adds `"plan-too-long"`, as audio-sdk's session does. Their text is under `errors.<CODE>.<reason>`, and `videoErrorText(messages, error)` picks it, falling back to `messages.error(error)` for a reason without text, as audio-sdk's `audioErrorText` does, until `sdk-core`'s `messages.error()` looks up reasons for the family. A file's own refusals carry no reason and keep their code's text.
 - **Formatting:**
   - durations use `sdk-core`'s `{name, duration}` format ([ADR 0032](https://github.com/ie-huss-martinez/sdk-core/blob/main/docs/adr/0032-duration-format-and-hertz-unit.md));
   - frame sizes are shown as width × height, and as megapixels when there's no width and height;
