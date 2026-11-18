@@ -66,6 +66,10 @@
 
   /* The notice area: the warnings, then a failure, at the foot of the stage over the clips. */
   .hm-video-stage-foot {
+    /* Above the canvas, which WebKit paints on a layer of its own once it's
+       transferred to the worker, over anything that only follows it. */
+    position: relative;
+    z-index: var(--hm-z-raised);
     grid-area: 1 / 1;
     align-self: end;
     display: grid;
