@@ -254,7 +254,7 @@ export function createEngine(environment: EngineEnvironment): VideoEngine {
         // worker checks the file again before mediabunny reads it, under the
         // same policy and processing time as a probe.
         const media = await worker();
-        await withProcessingTime(
+        const support = await withProcessingTime(
           policy,
           (timed) =>
             media.call(
@@ -266,9 +266,13 @@ export function createEngine(environment: EngineEnvironment): VideoEngine {
         );
         throwIfAborted(options.signal);
         if (sources.has(id)) throw new TypeError(`The source "${id}" is already open.`);
+        // Sound this browser can't decode: the file opens with its picture,
+        // and playback, peaks and export read it as having none (docs/adr/0008).
+        const unplayable = support.audio === "undecodable" ? { codec: support.codec } : undefined;
+        const usable = unplayable ? { ...opened, audio: null } : opened;
         openings += 1;
-        sources.set(id, { id, opening: openings, file, probe: opened, limits: policy.limits });
-        return sourceInfo(id, opened);
+        sources.set(id, { id, opening: openings, file, probe: usable, limits: policy.limits });
+        return sourceInfo(id, opened, unplayable);
       });
     },
     peaks(id, options = {}) {

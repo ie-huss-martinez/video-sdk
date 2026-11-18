@@ -93,7 +93,11 @@ export {
   microsecondsToSeconds,
   secondsToMicroseconds,
 } from "./core/model/time.js";
-export type { VideoLimitWarning, VideoWarning } from "./core/model/warnings.js";
+export type {
+  VideoAudioUndecodableWarning,
+  VideoLimitWarning,
+  VideoWarning,
+} from "./core/model/warnings.js";
 export type {
   DeleteRangeCommand,
   InsertClipsCommand,

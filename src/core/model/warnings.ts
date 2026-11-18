@@ -25,7 +25,21 @@ export interface VideoLimitWarning {
  *
  * @public
  */
-export type VideoWarning = VideoLimitWarning;
+export type VideoWarning = VideoLimitWarning | VideoAudioUndecodableWarning;
+
+/**
+ * A file whose sound this browser can't decode, which opened with its
+ * picture and no sound (docs/adr/0008).
+ *
+ * @public
+ */
+export interface VideoAudioUndecodableWarning {
+  readonly type: "audioUndecodable";
+  /** The source it's about. */
+  readonly source: string;
+  /** The sound's codec, as a WebCodecs codec string, such as `"mp4a.40.2"`. */
+  readonly codec: string;
+}
 
 /**
  * A limit's warning.

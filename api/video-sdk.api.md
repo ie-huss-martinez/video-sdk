@@ -280,7 +280,9 @@ export interface SetVolumeCommand {
 export function snapFrameRate(framesPerSecond: number): FrameRate;
 
 // @public
-export function sourceInfo(id: string, probe: VideoProbe): VideoSourceInfo;
+export function sourceInfo(id: string, probe: VideoProbe, unplayableAudio?: {
+    readonly codec: string;
+}): VideoSourceInfo;
 
 // @public
 export interface SplitClipCommand {
@@ -320,6 +322,14 @@ export interface VideoAssetReference {
     readonly asset: string;
     readonly mediaType: string;
     readonly size: number;
+}
+
+// @public
+export interface VideoAudioUndecodableWarning {
+    readonly codec: string;
+    readonly source: string;
+    // (undocumented)
+    readonly type: "audioUndecodable";
 }
 
 // @public
@@ -408,6 +418,7 @@ export type VideoExportContainer = "mp4" | "webm";
 
 // @public
 export interface VideoExportJob {
+    readonly audio?: "include" | "omit";
     readonly container?: VideoExportContainer;
     // (undocumented)
     readonly plan: VideoPlan;
@@ -716,6 +727,9 @@ export const videoMessages: {
     readonly "export.largeFile": "This file is getting large. Very large files may be slow to save and share.";
     readonly "export.ready": "Your {container} video is ready: {size, fileSize}.";
     readonly "export.cancelled": "Export stopped.";
+    readonly "export.noSoundEncoder": "This browser can't save this video's sound. You can export it without sound, or try another browser to keep the sound.";
+    readonly "export.withoutSound": "Export without sound";
+    readonly "export.noSound": "No sound: this browser can't save it";
     readonly "export.clipped": "Some of the sound was louder than a file can hold, by up to {db, number} dB, so it was cut off at full volume. Lower the volume of the loudest clips and export again to avoid it.";
     readonly "export.download": "Download";
     readonly "export.done": "Done";
@@ -746,6 +760,7 @@ export const videoMessages: {
         readonly one: "A video can have {maximum} clip. Join or delete clips, and try again.";
         readonly other: "A video can have up to {maximum, number} clips. Join or delete clips, and try again.";
     };
+    readonly "warnings.audioUndecodable": "This browser can't play this video's sound, so it opened without sound. Its sound won't be in your export. Try another browser to keep it.";
     readonly "warnings.maxFramePixels": "This video's picture is large, and may play slowly on some devices.";
     readonly "warnings.maxFrameRate": "This video has {actual, number} frames per second, and may play slowly on some devices.";
     readonly "warnings.maxDuration": "This video is long, and may be slow to open and save.";
@@ -991,6 +1006,7 @@ export interface VideoSessionEvent {
 
 // @public
 export interface VideoSessionExportOptions extends VideoExportOptions {
+    readonly audio?: "include" | "omit";
     readonly container?: VideoExportContainer;
     readonly quality?: VideoExportQuality;
 }
@@ -1040,6 +1056,9 @@ export interface VideoSourceInfo {
     readonly duration: number;
     // (undocumented)
     readonly id: string;
+    readonly unplayableAudio?: {
+        readonly codec: string;
+    };
     // (undocumented)
     readonly video: {
         readonly codec: string;
@@ -1082,7 +1101,7 @@ export interface VideoTransform {
 }
 
 // @public
-export type VideoWarning = VideoLimitWarning;
+export type VideoWarning = VideoLimitWarning | VideoAudioUndecodableWarning;
 
 // @public
 export function videoWarningText(messages: Messages<VideoMessageCatalogue>, warning: VideoWarning): string;

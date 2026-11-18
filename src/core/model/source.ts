@@ -103,14 +103,26 @@ export interface VideoSourceInfo {
     readonly frameRate: number;
   };
   readonly audio: AudioTrackProbe | null;
+  /**
+   * A sound track the file has but this browser can't decode, by its codec.
+   * Such a file opens with its picture and no sound: `audio` is `null`, and
+   * the session warns (docs/adr/0008). Absent otherwise, so a host's own
+   * engine needn't set it.
+   */
+  readonly unplayableAudio?: { readonly codec: string };
 }
 
 /**
- * A source's summary for the session, from its id and its probe.
+ * A source's summary for the session, from its id and its probe, and the
+ * sound the browser can't decode, if any: then `audio` is `null`.
  *
  * @public
  */
-export function sourceInfo(id: string, probe: VideoProbe): VideoSourceInfo {
+export function sourceInfo(
+  id: string,
+  probe: VideoProbe,
+  unplayableAudio?: { readonly codec: string },
+): VideoSourceInfo {
   return {
     id,
     container: probe.container,
@@ -122,7 +134,8 @@ export function sourceInfo(id: string, probe: VideoProbe): VideoSourceInfo {
       rotation: probe.video.rotation,
       frameRate: probe.video.frameRate,
     },
-    audio: probe.audio,
+    audio: unplayableAudio ? null : probe.audio,
+    ...(unplayableAudio ? { unplayableAudio } : {}),
   };
 }
 

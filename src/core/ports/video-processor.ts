@@ -44,6 +44,13 @@ export interface VideoExportJob {
   readonly container?: VideoExportContainer;
   /** Defaults to `medium`. */
   readonly quality?: VideoExportQuality;
+  /**
+   * `"omit"` exports without sound: no sound track is written. For a
+   * browser that can't encode sound, whose export of a plan with sound fails
+   * with `UNSUPPORTED_CODEC` and `details.track: "audio"` (ADR 0008). Sound
+   * is never left out otherwise. Defaults to `"include"`.
+   */
+  readonly audio?: "include" | "omit";
 }
 
 /**

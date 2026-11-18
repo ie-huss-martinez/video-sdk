@@ -5,19 +5,34 @@ import { familyOf, openInput, pickTracks } from "./tracks.js";
 import { decodeVideoFrames } from "./video-decoder.js";
 
 /**
+ * Whether a file's sound can be played here: `"none"` without an audio
+ * track, `"decodable"`, or `"undecodable"`, with its codec, when this browser
+ * has no `AudioDecoder` in workers or can't decode the track's codec
+ * (docs/adr/0008).
+ *
+ * @internal
+ */
+export type AudioSupport =
+  | { readonly audio: "none" | "decodable" }
+  | { readonly audio: "undecodable"; readonly codec: string };
+
+/**
  * Checks that this browser can decode the tracks the SDK uses from a file
  * that has passed the front check (ADR 0001, ADR 0002): WebCodecs'
- * `VideoDecoder` and `AudioDecoder` must exist where this runs, a worker, and
- * each track's decoder configuration must be supported. Then the first video
- * frame is decoded, checked against the probe and closed, because a browser
- * can claim a codec it then fails to decode.
+ * `VideoDecoder` must exist where this runs, a worker, and the video track's
+ * decoder configuration must be supported. Then the first video frame is
+ * decoded, checked against the probe and closed, because a browser can
+ * claim a codec it then fails to decode.
+ *
+ * Sound the browser can't decode doesn't stop a file opening: it opens with
+ * its picture, and this says so, with the codec (docs/adr/0008).
  *
  * Throws `VideoError`: `UNSUPPORTED_ENVIRONMENT` with `details.feature`
- * without WebCodecs, `UNSUPPORTED_CODEC` with `details.codec` and
- * `details.track` for a track the browser can't decode, `DECODE_FAILED` when
- * it claims a codec but its first frame doesn't decode, and `INVALID_VIDEO`
- * if mediabunny can't give a decoder configuration or the frame breaks the
- * probe's bounds.
+ * without `VideoDecoder`, `UNSUPPORTED_CODEC` with `details.codec` and
+ * `details.track: "video"` for a video track the browser can't decode,
+ * `DECODE_FAILED` when it claims a codec but its first frame doesn't
+ * decode, and `INVALID_VIDEO` if mediabunny can't give a decoder
+ * configuration or the frame breaks the probe's bounds.
  *
  * @internal
  */
@@ -25,9 +40,9 @@ export async function checkDecoderSupport(
   file: Blob,
   probe: VideoProbe,
   signal?: AbortSignal,
-): Promise<void> {
+): Promise<AudioSupport> {
   const { container } = probe;
-  for (const feature of ["VideoDecoder", "AudioDecoder"] as const) {
+  for (const feature of ["VideoDecoder"] as const) {
     if (typeof globalThis[feature] !== "function") {
       throw new VideoError(
         "UNSUPPORTED_ENVIRONMENT",
@@ -54,14 +69,17 @@ export async function checkDecoderSupport(
         details: { codec: videoCodec },
       });
     }
-    if (audio) {
-      const audioConfig = await audio.getDecoderConfig();
-      if (audioConfig === null || !(await AudioDecoder.isConfigSupported(audioConfig)).supported) {
-        throw new VideoError("UNSUPPORTED_CODEC", "This browser can't decode the audio track.", {
-          details: { codec: audioConfig?.codec ?? "unknown", track: "audio" },
-        });
-      }
+    if (!audio || probe.audio === null) return { audio: "none" };
+    const audioConfig = await audio.getDecoderConfig();
+    const codec = audioConfig?.codec ?? probe.audio.codec;
+    if (
+      typeof AudioDecoder !== "function" ||
+      audioConfig === null ||
+      !(await AudioDecoder.isConfigSupported(audioConfig)).supported
+    ) {
+      return { audio: "undecodable", codec };
     }
+    return { audio: "decodable" };
   } catch (error) {
     if (isVideoError(error)) throw error;
     throw new VideoError("INVALID_VIDEO", "The file couldn't be read.", {

@@ -107,7 +107,7 @@ Alongside the limit codes and `sdk-core`'s own (`ABORTED`, `TIMEOUT`, `WORKER_*`
 |---|---|
 | `INVALID_VIDEO` | A file is malformed, its headers disagree with its packets, or it decodes to more than the probe allows ([ADR 0001](0001-video-engines.md)) |
 | `UNSUPPORTED_FORMAT` | A container the front check doesn't recognise, an edit list or encryption the SDK refuses, or a file with no video track |
-| `UNSUPPORTED_CODEC` | A codec the browser can't decode, or no container and codecs it can encode for an export |
+| `UNSUPPORTED_CODEC` | A video codec the browser can't decode, or no container and codecs it can encode for an export, with `details.track` saying whether it's the picture or the sound |
 | `DECODE_FAILED` | The browser failed to decode a probed and supported file |
 | `ENCODE_FAILED` | The browser failed to encode during an export |
 | `INVALID_COMMAND` | A command that doesn't apply to the plan ([ADR 0003](0003-clip-plan-document-model.md)) |
