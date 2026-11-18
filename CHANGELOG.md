@@ -1,5 +1,11 @@
 # @hussmartinez/video-sdk
 
+## 0.2.1
+
+### Patch Changes
+
+- [#77](https://github.com/ie-huss-martinez/video-sdk/pull/77) [`06528b3`](https://github.com/ie-huss-martinez/video-sdk/commit/06528b3e41437b03e9d50ae760189cfa63ce731a) Thanks [@hussmartinez](https://github.com/hussmartinez)! - Changing a clip's sound while the video plays no longer pauses playback. In 0.2.0, a mute, a volume change, a fade, or a drag of the inspector's volume slider while playing could stop playback after a moment, in every browser, because the preview's worker closed the file the picture was being decoded from. Playback now goes on, and the change is heard.
+
 ## 0.2.0
 
 ### Minor Changes
