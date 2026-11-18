@@ -249,12 +249,20 @@ describe("drawing what the plan places at the clock", () => {
       expect(place, `${where}: drawn after a later one`).toBeGreaterThan(previous);
       previous = place;
     }
-    // Drawn in the plan's order, across the cut.
     const order = playing.map((record) => `${record.clip}${record.number}`);
-    expect(order.indexOf("b0")).toBeGreaterThan(order.indexOf("a89"));
-    // Every frame was drawn or counted dropped.
+    const dropped = output.getSnapshot().droppedFrames ?? 0;
+    // Every frame was drawn or counted dropped. Checked first, so a failure
+    // below still shows whether a frame missing at the cut was counted.
     const distinct = new Set(order).size;
-    expect(distinct + (output.getSnapshot().droppedFrames ?? 0)).toBeGreaterThanOrEqual(88);
+    expect(distinct + dropped, `${distinct} drawn, ${dropped} dropped`).toBeGreaterThanOrEqual(88);
+    // Across the cut, in the plan's order: something of clip b, after the
+    // last of clip a. Not b0 itself, which the late-frame rule may drop for a
+    // later frame when the restart at the cut runs late (docs/adr/0006).
+    const firstOfB = order.findIndex((each) => each.startsWith("b"));
+    const lastOfA = order.reduce((last, each, index) => (each.startsWith("a") ? index : last), -1);
+    const around = `${order.slice(Math.max(0, lastOfA - 1), lastOfA + 3).join(",")}; ${dropped} dropped`;
+    expect(firstOfB, `nothing of clip b drawn: ${around}`).toBeGreaterThanOrEqual(0);
+    expect(firstOfB, `clip b drawn before the end of clip a: ${around}`).toBeGreaterThan(lastOfA);
     await noFramesOpen();
   });
 
