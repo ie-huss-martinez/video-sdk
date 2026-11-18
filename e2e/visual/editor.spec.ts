@@ -11,7 +11,7 @@ import { video } from "../targets.js";
  * |---|---|
  * | `empty` | The drop zone, before a video is open |
  * | `open` | Two clips on the timeline, the first frame on the stage, the transport, the toolbar and the inspector |
- * | `selection` | The second clip selected, with its tools enabled, and its sound in the inspector |
+ * | `selection` | Both clips selected, by a click and a Shift-click, with their tools enabled, and their sound in the inspector. Opening already selects the new clip, so one clip would look like `open` |
  * | `paused` | Paused at 1 s, frame 31: the playhead, the stage and the time there |
  * | `output` | No clip selected: the inspector's settings for the exported video, and its details |
  * | `export-summary` | The export dialog's summary and choices |
@@ -67,11 +67,11 @@ const STATES: Readonly<Record<string, State>> = {
   selection: {
     reach: async (page) => {
       await opened(page);
-      await page.getByRole("option", { name: /^Clip 2 of 2/ }).click();
-      await expect(page.getByRole("option", { name: /^Clip 2 of 2/ })).toHaveAttribute(
-        "aria-selected",
-        "true",
-      );
+      await page.getByRole("option", { name: /^Clip 1 of 2/ }).click();
+      await page.getByRole("option", { name: /^Clip 2 of 2/ }).click({ modifiers: ["Shift"] });
+      for (const name of [/^Clip 1 of 2/, /^Clip 2 of 2/]) {
+        await expect(page.getByRole("option", { name })).toHaveAttribute("aria-selected", "true");
+      }
       await expect(
         page.getByRole("button", { name: "Delete the selected clips" }),
       ).not.toHaveAttribute("aria-disabled");
