@@ -6,7 +6,7 @@ import {
   Slider,
   ToggleButton,
 } from "@hussmartinez/ui/react";
-import { type ReactNode, useCallback, useId, useMemo, useRef } from "react";
+import { type ReactNode, useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import {
   type VideoClip,
   type VideoFadeCurve,
@@ -21,7 +21,6 @@ import {
 } from "../features/clip-audio/clip-audio.js";
 import { clipPictureState } from "../features/clip-picture/clip-picture.js";
 import { useVideoEditor, useVideoOutput, useVideoSession } from "./context.js";
-import { useGestureValue } from "./gesture.js";
 import { OutputControls } from "./OutputControls.js";
 import { PictureControls } from "./PictureControls.js";
 import { useVideoTools } from "./tools.js";
@@ -58,7 +57,7 @@ const PREVIEW_INTERVAL = 100;
  * and shape; then a quarter turn, how the picture fills the frame, and one
  * clip's crop. A
  * change applies to every selected clip, as one undo step; a drag of the
- * volume slider, or a run of its keys, is one step too, and is
+ * volume slider, or a key held down on it, is one step too, and is
  * heard as it moves while the video plays. With no clip
  * selected it says what to select, and before a video is open it renders
  * nothing.
@@ -170,7 +169,20 @@ function SoundControls({
     },
     [playing, session, keys, setPreview],
   );
-  const slider = useGestureValue(state.volumeDb ?? lead.volumeDb, setVolume, endPreview);
+  // The slider shows its value as it moves; ui's Slider says when the
+  // gesture ends, a drag let go, a key let go or focus leaving, and that's
+  // one command, so one undo step (ui 0.13).
+  const committed = state.volumeDb ?? lead.volumeDb;
+  const [draft, setDraft] = useState<number | null>(null);
+  const shown = draft ?? committed;
+  // A change from elsewhere, such as an undo, shows at once.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: the committed value is the trigger
+  useEffect(() => setDraft(null), [committed]);
+  const commitVolume = (volumeDb: number) => {
+    setDraft(null);
+    endPreview();
+    if (volumeDb !== committed) setVolume(volumeDb);
+  };
 
   const decibels = (db: number) => messages.t("inspector.decibels", { db });
   const mixed =
@@ -227,16 +239,16 @@ function SoundControls({
           ) : null}
           <Field label={messages.t("inspector.volume")}>
             <Slider
-              ref={slider.ref}
               min={SLIDER_RANGE.min}
               max={SLIDER_RANGE.max}
               step={1}
               largeStep={6}
-              value={Math.min(Math.max(slider.value, SLIDER_RANGE.min), SLIDER_RANGE.max)}
+              value={Math.min(Math.max(shown, SLIDER_RANGE.min), SLIDER_RANGE.max)}
               onValueChange={(value) => {
-                slider.change(value);
+                setDraft(value);
                 previewVolume(value);
               }}
+              onValueCommit={commitVolume}
               formatValue={decibels}
             />
           </Field>
@@ -246,7 +258,7 @@ function SoundControls({
               max={VOLUME_RANGE.max}
               step={1}
               largeStep={6}
-              value={slider.value}
+              value={shown}
               onValueChange={setVolume}
             />
           </Field>

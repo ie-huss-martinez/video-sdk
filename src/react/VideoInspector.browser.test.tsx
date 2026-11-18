@@ -12,7 +12,6 @@ import type { VideoPlan } from "../core/model/plan.js";
 import type { VideoOutput } from "../core/ports/video-output.js";
 import type { VideoSession } from "../core/session/session.js";
 import { useVideoEditor, VideoEditorProvider } from "./context.js";
-import { KEY_RUN } from "./gesture.js";
 import { VideoInspector } from "./VideoInspector.js";
 import { VideoStage } from "./VideoStage.js";
 import { VideoTimeline } from "./VideoTimeline.js";
@@ -195,29 +194,31 @@ describe("the inspector's clip panel", () => {
     expect(result.violations.map((violation) => `${violation.id}: ${violation.help}`)).toEqual([]);
   });
 
-  it("sets the volume from a run of the slider's keys, as one undo step", async () => {
+  it("sets the volume once for each key let go, and once for a key held down", async () => {
     const view = await inspectorWith(1);
     await select(view, 1);
     const slider = byLabel(view, "Volume");
     slider.focus();
-    // A real key moves the slider, as the browser's own range input does.
+    // A press and its release: one gesture, one step (ui's Slider, 0.13).
     await userEvent.keyboard("{ArrowLeft}");
+    await eventually(() => expect(planClips()[0]?.volumeDb).toBe(-1));
+    // Held, it repeats: shown as it moves, in the plan when it's let go.
+    await userEvent.keyboard("{ArrowLeft>3}");
+    await eventually(() => expect(slider.getAttribute("aria-valuetext")).toBe("-4 dB"));
+    expect(planClips()[0]?.volumeDb).toBe(-1);
+    await userEvent.keyboard("{/ArrowLeft}");
+    await eventually(() => expect(planClips()[0]?.volumeDb).toBe(-4));
+    expect(byLabel(view, "Volume in decibels").value).toBe("-4");
+    // Two gestures, two steps.
+    act(() => {
+      (session as VideoSession).undo();
+    });
+    expect(planClips()[0]?.volumeDb).toBe(-1);
     await eventually(() => expect(slider.getAttribute("aria-valuetext")).toBe("-1 dB"));
-    // Then the rest of the run, as a held key repeats: each step's input
-    // event within one task, so a slow machine can't put KEY_RUN between
-    // them. Each key the test runner sends is a round trip to the browser,
-    // which a loaded machine can stretch past KEY_RUN.
-    slide(slider, -2);
-    slide(slider, -3);
-    // Shown at once; in the plan when the run of keys ends.
-    expect(slider.getAttribute("aria-valuetext")).toBe("-3 dB");
-    await eventually(() => expect(planClips()[0]?.volumeDb).toBe(-3), KEY_RUN + 5_000);
-    expect(byLabel(view, "Volume in decibels").value).toBe("-3");
     act(() => {
       (session as VideoSession).undo();
     });
     expect(planClips()[0]?.volumeDb).toBe(0);
-    await eventually(() => expect(slider.getAttribute("aria-valuetext")).toBe("0 dB"));
   });
 
   it("sets the volume once when a drag of the slider ends, and when focus leaves mid-run", async () => {
@@ -230,17 +231,19 @@ describe("the inspector's clip panel", () => {
     slide(slider, -4);
     slide(slider, -9);
     // Nothing is in the plan while the thumb is held, however long.
-    await new Promise((resolve) => setTimeout(resolve, KEY_RUN + 100));
+    await new Promise((resolve) => setTimeout(resolve, 500));
     expect(planClips()[0]?.volumeDb).toBe(0);
     expect(slider.getAttribute("aria-valuetext")).toBe("-9 dB");
     act(() => {
       slider.dispatchEvent(new Event("change", { bubbles: true }));
     });
     expect(planClips()[0]?.volumeDb).toBe(-9);
-    // Keys, then focus leaves before the run's pause: committed at once.
+    // A key held down, then focus leaves before it's let go: committed then.
     slider.focus();
-    await userEvent.keyboard("{ArrowRight}");
+    await userEvent.keyboard("{ArrowRight>1}");
+    await eventually(() => expect(slider.getAttribute("aria-valuetext")).toBe("-8 dB"));
     act(() => slider.blur());
+    await userEvent.keyboard("{/ArrowRight}");
     expect(planClips()[0]?.volumeDb).toBe(-8);
     act(() => {
       (session as VideoSession).undo();
