@@ -38,28 +38,35 @@ import { defaultVideoToolbar, type VideoTool, videoTools } from "../features/too
 import { videoMessages } from "../messages/en.js";
 
 /**
- * The editor's catalogue: the SDK's, and `ui`'s for its own components, as
- * one catalogue for one `Messages` object (sdk-core ADR 0046). A host
- * overrides `ui`'s text, such as `fileDropZone.choose`, through the same
- * `messages` prop.
+ * The shape of the editor's catalogue: the SDK's messages, and `ui`'s for
+ * its own components, as one catalogue for one `Messages` object (sdk-core
+ * ADR 0046).
+ *
+ * @public
+ */
+export type VideoEditorCatalogue = typeof videoMessages & typeof uiMessages;
+
+/**
+ * The editor's catalogue. A host overrides `ui`'s text, such as
+ * `fileDropZone.choose`, through the same `messages` prop.
  *
  * @internal
  */
-export const editorCatalogue = { ...videoMessages, ...uiMessages };
+export const editorCatalogue: VideoEditorCatalogue = { ...videoMessages, ...uiMessages };
 
 /**
  * The text the editor uses: the SDK's catalogue with `ui`'s.
  *
  * @public
  */
-export type VideoEditorMessages = Messages<typeof editorCatalogue>;
+export type VideoEditorMessages = Messages<VideoEditorCatalogue>;
 
 /**
  * A host's overrides of the editor's text, keyed as in `videoMessages`.
  *
  * @public
  */
-export type VideoEditorMessageOverrides = MessageOverrides<typeof editorCatalogue>;
+export type VideoEditorMessageOverrides = MessageOverrides<VideoEditorCatalogue>;
 
 /**
  * Props of {@link VideoEditorProvider}.
@@ -332,14 +339,22 @@ export function useVideoEditor(): EditorContext {
 }
 
 /**
+ * What {@link useVideoSession} returns.
+ *
+ * @public
+ */
+export interface UseVideoSessionResult {
+  readonly session: VideoSession;
+  /** The session's snapshot, which changes with every edit. */
+  readonly snapshot: VideoSessionSnapshot;
+}
+
+/**
  * The editing session and its snapshot, which changes with every edit.
  *
  * @public
  */
-export function useVideoSession(): {
-  readonly session: VideoSession;
-  readonly snapshot: VideoSessionSnapshot;
-} {
+export function useVideoSession(): UseVideoSessionResult {
   const { session } = useVideoEditor();
   const snapshot = useSyncExternalStore(
     session.subscribe,
@@ -353,15 +368,23 @@ const noSubscription = () => () => {};
 const noSnapshot = () => null;
 
 /**
+ * What {@link useVideoOutput} returns.
+ *
+ * @public
+ */
+export interface UseVideoOutputResult {
+  /** The preview's output, or `null` before the stage has mounted one. */
+  readonly output: VideoOutput | null;
+  readonly snapshot: VideoOutputSnapshot | null;
+}
+
+/**
  * The preview's output and its snapshot, or `null` before the stage has
  * mounted one.
  *
  * @public
  */
-export function useVideoOutput(): {
-  readonly output: VideoOutput | null;
-  readonly snapshot: VideoOutputSnapshot | null;
-} {
+export function useVideoOutput(): UseVideoOutputResult {
   const { output } = useVideoEditor();
   const snapshot = useSyncExternalStore(
     output ? output.subscribe : noSubscription,
