@@ -155,7 +155,7 @@ for (const target of targets) {
         inspector.getByRole("group", { name: "Sound of the selected clip" }),
       ).toBeVisible();
 
-      // Volume, from the slider's keys: shown at once, and one undo step.
+      // Volume, from the slider's keys: shown at once, a step for each press.
       const volume = inspector.getByRole("slider", { name: "Volume" });
       await volume.focus();
       await page.keyboard.press("ArrowLeft");
@@ -209,6 +209,9 @@ for (const target of targets) {
       for (let step = 0; step < 3; step += 1) await undo.click();
       await expect(volume).toHaveAttribute("aria-valuetext", "-2 dB");
       await expect(fadeIn).toHaveValue("0");
+      // Each press of an arrow key was its own step, as ui's Slider ends a gesture.
+      await undo.click();
+      await expect(volume).toHaveAttribute("aria-valuetext", "-1 dB");
       await undo.click();
       await expect(volume).toHaveAttribute("aria-valuetext", "0 dB");
 
