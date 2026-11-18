@@ -7,6 +7,7 @@
 import { exposeWorker } from "@hussmartinez/sdk-core";
 import type { MediaWorkerContract } from "../../src/adapters/media-worker/contract.js";
 import { mediaWorkerHandlers } from "../../src/adapters/media-worker/handlers.js";
+import { readerLedger } from "../../src/adapters/media-worker/readers.js";
 import { audioDataLedger } from "../../src/adapters/mediabunny/audio-decoder.js";
 import { videoFrameLedger } from "../../src/adapters/mediabunny/video-decoder.js";
 import { schedulerLedger } from "../../src/core/playback/scheduler.js";
@@ -35,6 +36,11 @@ export interface LedgerRecord {
   readonly held: number;
   /** Decoded audio chunks not yet closed. */
   readonly audio: number;
+  /** Readers of sources this worker has opened and released, since it started. */
+  readonly readersOpened: number;
+  readonly readersReleased: number;
+  /** Plans this worker has taken. */
+  readonly plansLoaded: number;
 }
 
 /** How late this worker's timers ran over an interval: its thread's noise under load. */
@@ -87,37 +93,52 @@ self.addEventListener("message", (event: MessageEvent<Partial<TestPortMessage>>)
       open: videoFrameLedger.open,
       held: schedulerLedger.held,
       audio: audioDataLedger.open,
+      readersOpened: readerLedger.opened,
+      readersReleased: readerLedger.released,
+      plansLoaded,
     } satisfies LedgerRecord);
   });
   port.start();
 });
 
+/** Plans this worker has taken, so a test can wait for its loads before reading the ledger. */
+let plansLoaded = 0;
+
+const handlers = mediaWorkerHandlers({
+  afterDraw({ context, clip, sourceTime, clock }) {
+    const { canvas } = context;
+    // The centre of each eighth of the width, across the middle row: the
+    // output fills the width whenever the canvas is as wide or wider.
+    const row = context.getImageData(0, canvas.height / 2, canvas.width, 1).data;
+    const blocks = 8;
+    const width = canvas.width / blocks;
+    let number = 0;
+    for (let block = 0; block < blocks; block += 1) {
+      const x = Math.floor(block * width + width / 2);
+      number = number * 2 + ((row[x * 4] as number) > 128 ? 1 : 0);
+    }
+    port?.postMessage({
+      type: "drawn",
+      number,
+      clip: clip.key,
+      sourceTime,
+      clock,
+      wall: performance.timeOrigin + performance.now(),
+      width: canvas.width,
+      height: canvas.height,
+    } satisfies DrawnRecord);
+  },
+});
+const counted: typeof handlers = {
+  ...handlers,
+  load(...args: Parameters<typeof handlers.load>) {
+    plansLoaded += 1;
+    return handlers.load(...args);
+  },
+};
+
 exposeWorker<MediaWorkerContract>(
-  mediaWorkerHandlers({
-    afterDraw({ context, clip, sourceTime, clock }) {
-      const { canvas } = context;
-      // The centre of each eighth of the width, across the middle row: the
-      // output fills the width whenever the canvas is as wide or wider.
-      const row = context.getImageData(0, canvas.height / 2, canvas.width, 1).data;
-      const blocks = 8;
-      const width = canvas.width / blocks;
-      let number = 0;
-      for (let block = 0; block < blocks; block += 1) {
-        const x = Math.floor(block * width + width / 2);
-        number = number * 2 + ((row[x * 4] as number) > 128 ? 1 : 0);
-      }
-      port?.postMessage({
-        type: "drawn",
-        number,
-        clip: clip.key,
-        sourceTime,
-        clock,
-        wall: performance.timeOrigin + performance.now(),
-        width: canvas.width,
-        height: canvas.height,
-      } satisfies DrawnRecord);
-    },
-  }),
+  counted,
   // The SDK's clients refuse a worker that doesn't announce their version.
   { packageVersion: PACKAGE_VERSION },
 );

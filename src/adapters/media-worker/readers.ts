@@ -25,6 +25,14 @@ export interface ReaderCache {
 }
 
 /**
+ * How many readers this worker has opened and released, for the tests that
+ * prove a new plan leaves the open readers alone (docs/adr/0006).
+ *
+ * @internal
+ */
+export const readerLedger = { opened: 0, released: 0 };
+
+/**
  * Creates a reader cache.
  *
  * @internal
@@ -38,6 +46,7 @@ export function createReaderCache(): ReaderCache {
   const release = (id: string) => {
     const open = readers.get(id);
     readers.delete(id);
+    if (open) readerLedger.released += 1;
     void open?.reader.then(
       (reader) => reader.dispose(),
       () => {},
@@ -49,6 +58,7 @@ export function createReaderCache(): ReaderCache {
       if (!source) return Promise.reject(new TypeError(`The source "${id}" isn't loaded.`));
       const open = readers.get(id);
       if (open && open.opening === source.opening) return open.reader;
+      readerLedger.opened += 1;
       const reader = (async () => {
         // The same front check as a probe, before mediabunny reads the file.
         await frontCheck(source.file, videoLimits.resolve(source.limits));

@@ -146,6 +146,34 @@ async function noFramesOpen(): Promise<void> {
   );
 }
 
+/**
+ * Readers opened and released now, summed over every worker the test
+ * started: the engine's and the output's both run the test worker.
+ */
+async function readersNow(
+  plans = 0,
+): Promise<{ readonly opened: number; readonly released: number; readonly plans: number }> {
+  let total = { opened: 0, released: 0, plans: 0 };
+  await vi.waitFor(
+    async () => {
+      ledgers = [];
+      for (const port of ports) port.postMessage({ type: "ledger" });
+      await sleep(20);
+      expect(ledgers).toHaveLength(ports.length);
+      total = {
+        opened: ledgers.reduce((sum, ledger) => sum + ledger.readersOpened, 0),
+        released: ledgers.reduce((sum, ledger) => sum + ledger.readersReleased, 0),
+        plans: ledgers.reduce((sum, ledger) => sum + ledger.plansLoaded, 0),
+      };
+      // The ledger travels on its own port: wait until the worker has taken
+      // the plans sent before it.
+      expect(total.plans).toBeGreaterThanOrEqual(plans);
+    },
+    { timeout: 15_000, interval: 50 },
+  );
+  return total;
+}
+
 const harness: VideoOutputHarness = {
   async create() {
     const { output, source } = await setup();
@@ -277,6 +305,44 @@ describe("drawing what the plan places at the clock", () => {
     unsubscribe();
     expect(failures).toEqual([]);
     expect(output.getSnapshot().state).toBe("playing");
+    output.pause();
+    await noFramesOpen();
+  });
+
+  it("opens no reader again and releases none for plans that change only the sound, at the worker's boundary", async () => {
+    const real = await setup();
+    output = real.output;
+    const base = planOf(clipOf("a", real.source, 0, 120));
+    output.load(base);
+    await shown();
+    await output.play();
+    // The reader is in use: frames are being decoded from it.
+    await vi.waitFor(() => expect(drawn.length).toBeGreaterThan(3), { timeout: 15_000 });
+    const before = await readersNow();
+    expect(before.opened).toBeGreaterThan(0);
+    const clip = base.clips[0] as VideoPlan["clips"][number];
+    const changes: VideoPlan["clips"][number][] = [
+      { ...clip, muted: true },
+      { ...clip, volumeDb: -12 },
+      { ...clip, fadeIn: { duration: 500_000, curve: "equalPower" } },
+    ];
+    // Each crosses to the worker as a message, which clones the source's Blob.
+    for (const change of changes) output.load({ ...base, clips: [change] });
+    // Counted when the worker takes each plan, not when a read happens to
+    // fail: the same answer wherever the loads land between packet reads.
+    expect(await readersNow(before.plans + changes.length)).toEqual({
+      opened: before.opened,
+      released: before.released,
+      plans: before.plans + changes.length,
+    });
+    // A plan without the source does release its reader.
+    output.load(planOf());
+    await vi.waitFor(
+      async () => expect((await readersNow()).released).toBeGreaterThan(before.released),
+      {
+        timeout: 15_000,
+      },
+    );
     output.pause();
     await noFramesOpen();
   });
