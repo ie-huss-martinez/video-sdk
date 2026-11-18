@@ -171,6 +171,44 @@ describe("the video editor", () => {
     expect(view.querySelector(".hm-video-stage-error")?.getAttribute("role")).toBe("alert");
   });
 
+  it("shows the session's warnings over the stage, announces each once, and dismisses it", async () => {
+    const handle = createRef<VideoEditorHandle>();
+    // Any video is "long" with a 1 ms warning, so opening the fixture warns.
+    const view = render(
+      <VideoEditor
+        ref={handle}
+        filePolicy={{ maxDuration: { maximum: 3 * 60 * 60 * 1000, warning: 1 } }}
+      />,
+    );
+    await act(async () => {
+      await (handle.current as VideoEditorHandle).insert(await fixture());
+    });
+    const notices = () => view.querySelector(".hm-video-stage-notices");
+    await vi.waitFor(() => expect(notices()).not.toBeNull(), { timeout: 15_000 });
+    const text = "This video is long, and may be slow to open and save.";
+    expect(notices()?.getAttribute("aria-label")).toBe("Notices");
+    expect(notices()?.textContent).toContain(text);
+    // At the foot of the stage, with no failure there.
+    expect(view.querySelector(".hm-video-stage-foot")?.contains(notices())).toBe(true);
+    expect(view.querySelector(".hm-video-stage-error")).toBeNull();
+    const announced = [...view.querySelectorAll(".hm-announcer [aria-live]")]
+      .map((each) => each.textContent)
+      .join(" ");
+    expect(announced).toContain(text);
+    expect(await violations(view)).toEqual([]);
+
+    await userEvent.click(
+      notices()?.querySelector("button[aria-label='Dismiss']") as HTMLButtonElement,
+    );
+    expect(notices()).toBeNull();
+    // An edit keeps the warning in the snapshot; dismissed, it stays hidden.
+    await act(async () => {
+      (handle.current as VideoEditorHandle).undo();
+      (handle.current as VideoEditorHandle).redo();
+    });
+    expect(notices()).toBeNull();
+  });
+
   it("keeps one canvas through StrictMode's second mount, and removes it on unmount", async () => {
     const view = render(
       <StrictMode>

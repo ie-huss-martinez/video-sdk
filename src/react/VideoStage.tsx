@@ -6,6 +6,7 @@ import { planFrames } from "../core/model/plan.js";
 import { videoErrorText } from "../messages/text.js";
 import { useVideoEditor, useVideoOutput, useVideoPlayhead, useVideoSession } from "./context.js";
 import { ACCEPT } from "./files.js";
+import { StageNotices } from "./StageNotices.js";
 
 /**
  * Props of {@link VideoStage}.
@@ -157,8 +158,13 @@ export function VideoStage(props: VideoStageProps): ReactNode {
           <Button onClick={cancelInsert}>{messages.t("insert.cancel")}</Button>
         </div>
       ) : null}
-      {/* Over the clips, a failure is a banner at the foot of the stage. */}
-      {empty && snapshot.inserting === 0 ? null : error}
+      {/* Over the clips, the warnings and a failure are banners at the foot of the stage. */}
+      {empty && snapshot.inserting === 0 ? null : (
+        <div className="hm-video-stage-foot">
+          <StageNotices />
+          {error}
+        </div>
+      )}
     </div>
   );
 }

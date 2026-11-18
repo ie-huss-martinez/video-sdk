@@ -13,6 +13,8 @@ export const videoOwnMessages = /* @__PURE__ */ defineMessages({
   "stage.label": "Video preview, frame {frame, number} of {frames, number}",
   "stage.empty": "Add a video to start editing.",
   "stage.unavailable": "The preview isn't available with this engine.",
+  "stage.notices": "Notices",
+  "stage.dismiss": "Dismiss",
   "insert.progress": /* @__PURE__ */ plural("count", {
     one: "Adding a video",
     other: "Adding {count, number} videos",

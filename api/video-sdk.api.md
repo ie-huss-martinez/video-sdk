@@ -584,6 +584,8 @@ export const videoMessages: {
     readonly "stage.label": "Video preview, frame {frame, number} of {frames, number}";
     readonly "stage.empty": "Add a video to start editing.";
     readonly "stage.unavailable": "The preview isn't available with this engine.";
+    readonly "stage.notices": "Notices";
+    readonly "stage.dismiss": "Dismiss";
     readonly "insert.progress": {
         readonly $plural: "count";
     } & {
