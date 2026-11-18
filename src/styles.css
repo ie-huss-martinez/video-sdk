@@ -14,10 +14,17 @@
      from the hm-text class on the root (ui ADR 0010), not from rules here. */
   .hm-video-editor {
     display: grid;
+    /* The second column is the inspector's, in a wide container; it's empty,
+       and so has no width, in a narrow one and before a video is open. */
+    grid-template-columns: minmax(0, 1fr) auto;
     grid-template-rows: auto minmax(calc(var(--hm-space-12) * 2), 1fr) auto auto;
-    gap: var(--hm-gap-normal);
+    row-gap: var(--hm-gap-normal);
     min-block-size: calc(var(--hm-space-12) * 3);
     container-type: inline-size;
+  }
+
+  .hm-video-editor > * {
+    grid-column: 1;
   }
 
   .hm-video-stage {
@@ -182,6 +189,56 @@
     background: var(--hm-color-danger);
     pointer-events: none;
     z-index: var(--hm-z-raised);
+  }
+
+  /* The inspector (docs/adr/0007): under the timeline in a narrow
+     container, and a column beside the other regions in a wide one. */
+  .hm-video-inspector {
+    min-inline-size: 0;
+  }
+
+  .hm-video-inspector-group {
+    display: grid;
+    gap: var(--hm-gap-tight);
+    align-content: start;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    min-inline-size: 0;
+  }
+
+  .hm-video-inspector-legend {
+    padding: 0;
+    margin-block-end: var(--hm-gap-tight);
+    font-weight: var(--hm-field-label-font-weight);
+  }
+
+  /* A segmented control's visible name, as a ui Field shows its label. */
+  .hm-video-inspector-label {
+    color: var(--hm-field-label-fg);
+    font-weight: var(--hm-field-label-font-weight);
+  }
+
+  .hm-video-inspector-note {
+    margin: 0;
+    color: var(--hm-color-text-muted);
+  }
+
+  .hm-video-inspector-mute {
+    justify-self: start;
+  }
+
+  @container (inline-size >= 720px) {
+    .hm-video-inspector {
+      grid-column: 2;
+      grid-row: 1 / span 4;
+      inline-size: calc(var(--hm-space-12) * 3);
+      min-block-size: 0;
+      margin-inline-start: var(--hm-gap-normal);
+      padding-inline-start: var(--hm-gap-normal);
+      border-inline-start: var(--hm-border-width) solid var(--hm-color-border);
+      overflow-y: auto;
+    }
   }
 
   .hm-video-export-summary,

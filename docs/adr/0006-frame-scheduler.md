@@ -3,6 +3,7 @@
 - **Status:** Accepted
 - **Date:** 2026-11-12
 - **Amended:** 2026-11-12, when audio playback was built: the output timestamp's latency, stamps that aren't believed, corrections without restarts, an audio clock that stops, the start of playback, and audio windows. Earlier, when video playback was built: the clock reads wall-clock time, a late frame is dropped only when a later one is due, and timestamps within a millisecond of the frame grid are on it. Then, the canvas's size follows the stage's.
+- **Amended:** 2026-11-18, with the inspector ([ADR 0007](0007-editor-shell.md)): a new plan that shows the same picture keeps the decoders.
 
 ## Context
 
@@ -77,6 +78,7 @@ Both sides compute media time the same way, `M + (now − P) × 1,000` microseco
 - **Seeking** aborts the running decoders, whose frames the decoder then closes ([ADR 0001](0001-video-engines.md)). It decodes from the key packet before the target, through `decodeVideoFrames`' range, and draws the latest frame at or before the target as soon as it's decoded. If playing, the clock's anchor moves to the target, and playback continues from there.
 - **Seeks are coalesced.** A seek that arrives while another decodes replaces it: the earlier one is aborted, and only the latest target is drawn. Scrubbing is a stream of such seeks, and silent ([ADR 0005](0005-playback-and-export.md)).
 - **An edit during playback** loads the new plan, then seeks to the current position under it. A playhead past the new plan's end moves to the end ([ADR 0003](0003-clip-plan-document-model.md)).
+  - **A new plan that shows the same picture stops nothing.** When the output's size and frame rate, and every clip's key, source, range and transform, are as they were, only sound or metadata changed. The scheduler takes the new plan and keeps its decoders, the frames it holds, its clock and its count of dropped frames, playing or paused. So a change of volume, mute or a fade while playing doesn't decode from a key frame again or drop a frame, and a volume slider can load a plan on every move ([ADR 0007](0007-editor-shell.md)). `samePicture` is the one definition, and a test changes each of those fields in turn and expects a restart.
 
 ### The canvas's size
 

@@ -7,6 +7,7 @@ import {
   type PlaybackAnchor,
   PREROLL,
   sameAnchor,
+  samePicture,
 } from "./timeline.js";
 
 /**
@@ -110,6 +111,8 @@ export interface FrameScheduler {
   /**
    * Sets the plan, and the time each source's timestamps count from (its
    * probe's `start`). Stops what's running: the page follows with a command.
+   * A plan that shows the same picture as the one loaded, differing only in
+   * sound or metadata, stops nothing.
    */
   load(plan: VideoPlan, starts: ReadonlyMap<string, number>): void;
   /**
@@ -356,6 +359,18 @@ export function createFrameScheduler<Frame extends SchedulerFrame>(
 
   return {
     load(next, nextStarts) {
+      // A plan that shows the same picture, such as one whose volume
+      // changed, takes the place of the one running: the decoders, the
+      // frames held and the clock go on as they are (docs/adr/0006).
+      if (
+        plan &&
+        samePicture(plan, next) &&
+        nextStarts.size === sourceStarts.size &&
+        [...nextStarts].every(([source, start]) => sourceStarts.get(source) === start)
+      ) {
+        plan = next;
+        return;
+      }
       plan = next;
       starts = clipStarts(next);
       sourceStarts = nextStarts;

@@ -573,6 +573,31 @@ export const videoMessages: {
     readonly "timeline.trimStart": "Trim the clip's start to the playhead";
     readonly "timeline.trimEnd": "Trim the clip's end to the playhead";
     readonly "timeline.snap": "Snap to clip edges and the playhead";
+    readonly "inspector.label": "Inspector";
+    readonly "inspector.empty": "Select a clip to change its sound.";
+    readonly "inspector.sound": {
+        readonly $plural: "count";
+    } & {
+        readonly one: "Sound of the selected clip";
+        readonly other: "Sound of the {count, number} selected clips";
+    };
+    readonly "inspector.noSound": {
+        readonly $plural: "count";
+    } & {
+        readonly one: "This clip has no sound.";
+        readonly other: "These clips have no sound.";
+    };
+    readonly "inspector.mixed": "The selected clips have different settings. A change applies to all of them.";
+    readonly "inspector.volume": "Volume";
+    readonly "inspector.volumeExact": "Volume in decibels";
+    readonly "inspector.decibels": "{db, number} dB";
+    readonly "inspector.mute": "Mute";
+    readonly "inspector.fadeIn": "Fade in, in seconds";
+    readonly "inspector.fadeOut": "Fade out, in seconds";
+    readonly "inspector.fadeInShape": "Fade in shape";
+    readonly "inspector.fadeOutShape": "Fade out shape";
+    readonly "inspector.curves.linear": "Straight";
+    readonly "inspector.curves.equalPower": "Smooth";
     readonly "toolbar.label": "Editing tools";
     readonly "toolbar.file": "File";
     readonly "toolbar.history": "History";

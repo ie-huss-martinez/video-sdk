@@ -4,6 +4,7 @@ import type { VideoSourceInfo } from "../core/model/source.js";
 import { useVideoEditor, VideoEditorProvider, type VideoEditorProviderProps } from "./context.js";
 import { useVideoTools } from "./tools.js";
 import { VideoExportDialog } from "./VideoExportDialog.js";
+import { VideoInspector } from "./VideoInspector.js";
 import { VideoStage } from "./VideoStage.js";
 import { VideoTimeline } from "./VideoTimeline.js";
 import { VideoToolbar } from "./VideoToolbar.js";
@@ -100,6 +101,7 @@ function Root({ className }: { readonly className?: string | undefined }): React
       <VideoStage />
       <VideoTransport />
       <VideoTimeline />
+      <VideoInspector />
       <VideoExportDialog />
     </section>
   );
@@ -107,10 +109,9 @@ function Root({ className }: { readonly className?: string | undefined }): React
 
 /**
  * The video editor (docs/adr/0007): the toolbar, the preview, its playback
- * controls and the timeline, over one editing session, with the tools'
- * keyboard shortcuts while focus is in it. The `tools` and `toolbar` props
- * choose the tools, as plain data. The inspector and export join it in later
- * releases.
+ * controls, the timeline and the inspector, over one editing session, with
+ * the tools' keyboard shortcuts while focus is in it. The `tools` and
+ * `toolbar` props choose the tools, as plain data.
  *
  * @example
  * ```tsx
