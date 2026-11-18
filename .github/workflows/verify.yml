@@ -50,6 +50,11 @@ jobs:
       # The job runs in the browser test image, so the visual tests run
       # directly rather than through Docker (sdk-core ADR 0048).
       HM_VISUAL_CONTAINER: "1"
+      # Playwright's browser log: launches, exits and what the browsers print
+      # to stderr. A page that crashes leaves only "the page crashed" in
+      # vitest's output; this keeps the browser's own account of it, here
+      # where most runs happen.
+      DEBUG: pw:browser
     steps:
       - uses: ie-huss-martinez/sdk-ci/verify@ace414beadabbad28a5e2609ebdf731a2cac473b # v2.1.0
 
