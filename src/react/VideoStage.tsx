@@ -158,13 +158,14 @@ export function VideoStage(props: VideoStageProps): ReactNode {
           <Button onClick={cancelInsert}>{messages.t("insert.cancel")}</Button>
         </div>
       ) : null}
-      {/* Over the clips, the warnings and a failure are banners at the foot of the stage. */}
-      {empty && snapshot.inserting === 0 ? null : (
-        <div className="hm-video-stage-foot">
-          <StageNotices />
-          {error}
-        </div>
-      )}
+      {/* Over the clips, the warnings and a failure are banners at the foot of the stage.
+          The notices stay mounted while the stage is empty, as after undoing the only
+          insert, so what was dismissed or announced is remembered when a redo brings
+          the clips back. */}
+      <div className="hm-video-stage-foot">
+        <StageNotices hidden={empty && snapshot.inserting === 0} />
+        {empty && snapshot.inserting === 0 ? null : error}
+      </div>
     </div>
   );
 }

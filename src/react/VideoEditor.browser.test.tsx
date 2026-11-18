@@ -199,6 +199,8 @@ describe("the video editor", () => {
     await vi.waitFor(() => expect(notices()).not.toBeNull(), { timeout: 15_000 });
     expect(notices()?.getAttribute("aria-label")).toBe("Notices");
     expect(notices()?.textContent).toContain(text);
+    // The file is long and so is the video it makes: two warnings of one kind, one notice.
+    expect(notices()?.querySelectorAll("li")).toHaveLength(1);
     // At the foot of the stage, with no failure there.
     expect(view.querySelector(".hm-video-stage-foot")?.contains(notices())).toBe(true);
     expect(view.querySelector(".hm-video-stage-error")).toBeNull();
@@ -208,7 +210,7 @@ describe("the video editor", () => {
     await userEvent.click(
       notices()?.querySelector("button[aria-label='Dismiss']") as HTMLButtonElement,
     );
-    expect(notices()).toBeNull();
+    await vi.waitFor(() => expect(notices()).toBeNull());
     // Undone and redone, the warning is in the snapshot again: dismissed, it
     // stays hidden, and it's never said again.
     await act(async () => {
