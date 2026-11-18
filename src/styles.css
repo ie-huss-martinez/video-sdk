@@ -224,8 +224,29 @@
     color: var(--hm-color-text-muted);
   }
 
-  .hm-video-inspector-mute {
+  .hm-video-inspector-mute,
+  .hm-video-inspector-action {
     justify-self: start;
+  }
+
+  /* One group after another, such as the sound's and the picture's. */
+  .hm-video-inspector {
+    display: grid;
+    gap: var(--hm-gap-normal);
+    align-content: start;
+  }
+
+  /* A name, its value and the buttons that change it, on one line. */
+  .hm-video-inspector-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--hm-gap-tight);
+  }
+
+  .hm-video-inspector-value {
+    margin-inline-end: auto;
+    font-variant-numeric: tabular-nums;
   }
 
   @container (inline-size >= 720px) {
@@ -233,7 +254,11 @@
       grid-column: 2;
       grid-row: 1 / span 4;
       inline-size: calc(var(--hm-space-12) * 3);
-      min-block-size: 0;
+      /* It takes no height of its own, so the other regions set the rows,
+         then fills them and scrolls: a long inspector never stretches the
+         editor. */
+      block-size: 0;
+      min-block-size: 100%;
       margin-inline-start: var(--hm-gap-normal);
       padding-inline-start: var(--hm-gap-normal);
       border-inline-start: var(--hm-border-width) solid var(--hm-color-border);

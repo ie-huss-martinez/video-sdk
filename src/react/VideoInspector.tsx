@@ -19,8 +19,10 @@ import {
   clipAudioState,
   fadeCommands,
 } from "../features/clip-audio/clip-audio.js";
+import { clipPictureState } from "../features/clip-picture/clip-picture.js";
 import { useVideoEditor, useVideoOutput, useVideoSession } from "./context.js";
 import { useGestureValue } from "./gesture.js";
+import { PictureControls } from "./PictureControls.js";
 import { useVideoTools } from "./tools.js";
 
 /**
@@ -50,8 +52,10 @@ const MICROSECONDS = 1_000_000;
 const PREVIEW_INTERVAL = 100;
 
 /**
- * The inspector (docs/adr/0007, docs/adr/0008): the selected clips' sound.
- * Volume, mute, and a fade in and out, each with its length and shape. A
+ * The inspector (docs/adr/0007, docs/adr/0008): the selected clips' sound
+ * and picture. Volume, mute, and a fade in and out, each with its length
+ * and shape; then a quarter turn, how the picture fills the frame, and one
+ * clip's crop. A
  * change applies to every selected clip, as one undo step; a drag of the
  * volume slider, or a run of its keys, is one step too, and is
  * heard as it moves while the video plays. With no clip
@@ -66,6 +70,11 @@ export function VideoInspector(props: VideoInspectorProps): ReactNode {
   const { plan, sources } = snapshot;
   const state = useMemo(
     () => clipAudioState(plan, sources, selectedClips),
+    [plan, sources, selectedClips],
+  );
+
+  const picture = useMemo(
+    () => clipPictureState(plan, sources, selectedClips),
     [plan, sources, selectedClips],
   );
 
@@ -96,6 +105,7 @@ export function VideoInspector(props: VideoInspectorProps): ReactNode {
       {/* A new selection is a new set of controls, so a volume drag that's
           still pending is committed to the clips it was made on. */}
       <SoundControls key={keys.join("\u0000")} plan={plan} state={state} execute={execute} />
+      <PictureControls plan={plan} sources={sources} state={picture} execute={execute} />
     </section>
   );
 }
