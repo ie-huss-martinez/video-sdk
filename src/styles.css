@@ -64,11 +64,22 @@
     min-inline-size: min(calc(var(--hm-space-12) * 3), 100%);
   }
 
-  /* An alert: the danger colours, at the foot of the stage over the clips. */
-  .hm-video-stage-error {
+  /* The notice area: the warnings, then a failure, at the foot of the stage over the clips. */
+  .hm-video-stage-foot {
+    /* Above the canvas, which WebKit paints on a layer of its own once it's
+       transferred to the worker, over anything that only follows it. */
+    position: relative;
+    z-index: var(--hm-z-raised);
     grid-area: 1 / 1;
     align-self: end;
+    display: grid;
+    gap: var(--hm-gap-tight);
     margin: var(--hm-inset-normal);
+  }
+
+  /* An alert: the danger colours. Inside the drop zone, it's part of its content. */
+  .hm-video-stage-error {
+    margin: 0;
     padding: var(--hm-inset-tight) var(--hm-inset-normal);
     color: var(--hm-color-danger-text);
     background: var(--hm-color-danger-subtle);
@@ -76,9 +87,28 @@
     border-radius: var(--hm-radius-control);
   }
 
-  /* Inside the drop zone, it's part of its content, centred as the rest is. */
-  .hm-video-stage-drop .hm-video-stage-error {
-    align-self: center;
+  /* A warning: the warning colours, each with its dismiss button. */
+  .hm-video-stage-notices ul {
+    display: grid;
+    gap: var(--hm-gap-tight);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .hm-video-stage-notices li {
+    display: flex;
+    align-items: center;
+    gap: var(--hm-gap-tight);
+    padding: var(--hm-inset-tight) var(--hm-inset-normal);
+    color: var(--hm-color-warning-text);
+    background: var(--hm-color-warning-subtle);
+    border: var(--hm-border-width) solid var(--hm-color-warning);
+    border-radius: var(--hm-radius-control);
+  }
+
+  .hm-video-stage-notices p {
+    flex: 1;
     margin: 0;
   }
 

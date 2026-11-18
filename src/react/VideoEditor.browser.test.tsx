@@ -171,6 +171,60 @@ describe("the video editor", () => {
     expect(view.querySelector(".hm-video-stage-error")?.getAttribute("role")).toBe("alert");
   });
 
+  it("shows the session's warnings over the stage, announces each once, and dismisses it", async () => {
+    const handle = createRef<VideoEditorHandle>();
+    // Any video is "long" with a 1 ms warning, so opening the fixture warns.
+    const view = render(
+      <VideoEditor
+        ref={handle}
+        filePolicy={{ maxDuration: { maximum: 3 * 60 * 60 * 1000, warning: 1 } }}
+      />,
+    );
+    // Every message the polite region says, as a screen reader hears it: ui's
+    // announcer keeps only the latest of a frame, so spying on announce()
+    // wouldn't show a warning that another message replaced.
+    const said: string[] = [];
+    const region = document.querySelector(".hm-announcer [aria-live=polite]") as Element;
+    const observer = new MutationObserver(() => {
+      if (region.textContent) said.push(region.textContent);
+    });
+    observer.observe(region, { childList: true, characterData: true, subtree: true });
+    const text = "This video is long, and may be slow to open and save.";
+    const warnings = () => said.filter((each) => each.includes(text));
+
+    await act(async () => {
+      await (handle.current as VideoEditorHandle).insert(await fixture());
+    });
+    const notices = () => view.querySelector(".hm-video-stage-notices");
+    await vi.waitFor(() => expect(notices()).not.toBeNull(), { timeout: 15_000 });
+    expect(notices()?.getAttribute("aria-label")).toBe("Notices");
+    expect(notices()?.textContent).toContain(text);
+    // The file is long and so is the video it makes: two warnings of one kind, one notice.
+    expect(notices()?.querySelectorAll("li")).toHaveLength(1);
+    // At the foot of the stage, with no failure there.
+    expect(view.querySelector(".hm-video-stage-foot")?.contains(notices())).toBe(true);
+    expect(view.querySelector(".hm-video-stage-error")).toBeNull();
+    await vi.waitFor(() => expect(warnings()).toHaveLength(1));
+    expect(await violations(view)).toEqual([]);
+
+    await userEvent.click(
+      notices()?.querySelector("button[aria-label='Dismiss']") as HTMLButtonElement,
+    );
+    await vi.waitFor(() => expect(notices()).toBeNull());
+    // Undone and redone, the warning is in the snapshot again: dismissed, it
+    // stays hidden, and it's never said again.
+    await act(async () => {
+      (handle.current as VideoEditorHandle).undo();
+    });
+    await act(async () => {
+      (handle.current as VideoEditorHandle).redo();
+    });
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+    expect(notices()).toBeNull();
+    expect(warnings()).toHaveLength(1);
+    observer.disconnect();
+  });
+
   it("keeps one canvas through StrictMode's second mount, and removes it on unmount", async () => {
     const view = render(
       <StrictMode>
