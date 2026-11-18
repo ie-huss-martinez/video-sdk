@@ -122,12 +122,85 @@ for (const target of targets) {
       expect(problems.foreignRequests).toEqual([]);
     });
 
-    test("has no accessibility violations, empty and with a video open", async ({ page }) => {
+    test("has no accessibility violations, empty, with a video open and with a clip selected", async ({
+      page,
+    }) => {
       await page.goto(target.url);
       await expect(page.getByRole("button", { name: "Choose files" })).toBeVisible();
       await noViolations(page);
       await open(page);
       await noViolations(page);
+      // The inspector's controls for the selected clip.
+      await page.getByRole("option", { name: /^Clip 1 of 1/ }).click();
+      await expect(page.getByRole("slider", { name: "Volume" })).toBeVisible();
+      await noViolations(page);
+    });
+
+    test("changes the selected clip's sound from the inspector, by keyboard, under the page's policy", async ({
+      page,
+    }) => {
+      const origin = new URL(target.url).origin;
+      const problems = watch(page, origin);
+      await page.goto(target.url);
+      await open(page);
+      // Select the clip with the timeline's own keys: selection follows focus.
+      await page.getByRole("option", { name: /^Clip 1 of 1/ }).focus();
+      await page.keyboard.press("Home");
+      await expect(page.getByRole("option", { name: /^Clip 1 of 1/ })).toHaveAttribute(
+        "aria-selected",
+        "true",
+      );
+      const inspector = page.getByRole("region", { name: "Inspector" });
+      await expect(
+        inspector.getByRole("group", { name: "Sound of the selected clip" }),
+      ).toBeVisible();
+
+      // Volume, from the slider's keys: shown at once, and one undo step.
+      const volume = inspector.getByRole("slider", { name: "Volume" });
+      await volume.focus();
+      await page.keyboard.press("ArrowLeft");
+      await page.keyboard.press("ArrowLeft");
+      await expect(volume).toHaveAttribute("aria-valuetext", "-2 dB");
+      const exact = inspector.getByRole("spinbutton", { name: "Volume in decibels" });
+      await expect(exact).toHaveValue("-2");
+
+      // Mute, by its key from anywhere in the editor, shows on the button and the clip.
+      await page.keyboard.press("Tab");
+      await page.keyboard.press("Tab");
+      await expect(inspector.getByRole("button", { name: "Mute" })).toBeFocused();
+      await page.keyboard.press("Enter");
+      await expect(inspector.getByRole("button", { name: "Mute" })).toHaveAttribute(
+        "aria-pressed",
+        "true",
+      );
+      await expect(page.getByRole("option", { name: /, muted$/ })).toBeVisible();
+
+      // A fade in of half a second, smoothly.
+      const fadeIn = inspector.getByRole("spinbutton", { name: "Fade in, in seconds" });
+      await fadeIn.fill("0.5");
+      await page.keyboard.press("Enter");
+      await expect(fadeIn).toHaveValue("0.5");
+      await inspector
+        .getByRole("radiogroup", { name: "Fade in shape" })
+        .getByRole("radio", { name: "Smooth" })
+        .click();
+      await expect(
+        inspector.getByRole("radiogroup", { name: "Fade in shape" }).getByRole("radio", {
+          name: "Smooth",
+        }),
+      ).toBeChecked();
+
+      // Undo takes each back, a step at a time: the shape, the fade, the mute, the volume.
+      const undo = page.getByRole("button", { name: /^Undo/ });
+      for (let step = 0; step < 3; step += 1) await undo.click();
+      await expect(volume).toHaveAttribute("aria-valuetext", "-2 dB");
+      await expect(fadeIn).toHaveValue("0");
+      await undo.click();
+      await expect(volume).toHaveAttribute("aria-valuetext", "0 dB");
+
+      expect(problems.errors).toEqual([]);
+      expect(problems.console).toEqual([]);
+      expect(problems.foreignRequests).toEqual([]);
     });
   });
 }

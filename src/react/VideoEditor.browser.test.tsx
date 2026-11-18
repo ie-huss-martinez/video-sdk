@@ -209,6 +209,27 @@ describe("the video editor", () => {
     expect(shown.color).not.toBe("rgb(1, 2, 3)");
   });
 
+  it("puts the inspector under the timeline in a narrow container, and beside the regions in a wide one", async () => {
+    const view = render(<VideoEditor initialFiles={[await fixture()]} />);
+    await vi.waitFor(() => expect(view.querySelector(".hm-video-inspector")).not.toBeNull(), {
+      timeout: 15_000,
+    });
+    const box = (selector: string) =>
+      (view.querySelector(selector) as HTMLElement).getBoundingClientRect();
+    // 640 px, under the 720 px of docs/adr/0007.
+    expect(box(".hm-video-inspector").top).toBeGreaterThanOrEqual(box(".hm-video-timeline").bottom);
+    expect(box(".hm-video-inspector").width).toBeCloseTo(box(".hm-video-timeline").width, 0);
+    view.style.inlineSize = "960px";
+    await vi.waitFor(() =>
+      expect(box(".hm-video-inspector").left).toBeGreaterThanOrEqual(
+        box(".hm-video-timeline").right,
+      ),
+    );
+    expect(box(".hm-video-inspector").top).toBeCloseTo(box(".hm-video-toolbar").top, 0);
+    // The other regions keep the first column to themselves.
+    expect(box(".hm-video-stage").right).toBeLessThanOrEqual(box(".hm-video-inspector").left);
+  });
+
   it("renders on a server, with no canvas", () => {
     const html = renderToString(<VideoEditor />);
     expect(html).toContain("hm-video-editor");

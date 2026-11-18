@@ -2,6 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-11-12
+- **Amended:** 2026-11-18, with the inspector's clip panel as built: see "The inspector".
 
 ## Context
 
@@ -34,6 +35,23 @@ Below a container width of 720 px the inspector moves under the timeline. Sizes 
 - **Inserting:** a Progress per file in the timeline's place for it, which can be cancelled.
 - **Error:** the catalogue's text for the code, where the action was, with the next step. An insert that fails leaves nothing behind ([ADR 0003](0003-clip-plan-document-model.md)).
 - **Audio blocked:** when the output's `audio` is `"blocked"` ([ADR 0006](0006-frame-scheduler.md)), a notice by the transport says sound needs a click on play.
+
+### The inspector
+
+**As built** (the clip panel's first release, [ADR 0008](0008-audio-editing.md)):
+
+- **`<VideoInspector>` is a building block,** a region named "Inspector", last in the editor's order. Before a video is open it renders nothing. With no clip selected it says what to select.
+- **With clips selected, it shows their sound,** in a group named for them, such as "Sound of the 2 selected clips":
+  - **Volume:** a `ui` Slider from −60 to +12 dB, whose value text is "−6 dB", and a NumberField beside it for the model's whole range, −96 to +24 dB.
+  - **Mute:** a ToggleButton with the `video.mute` tool's keys.
+  - **Fade in and fade out:** each a NumberField in seconds, and a SegmentedControl for its shape, "Straight" or "Smooth". A fade can't be longer than the clip has left beside its other fade; the field's maximum and the command are both kept within it.
+- **A change applies to every selected clip, as one undo step.** Where the clips differ, a control shows the first clip's value, and a line says they differ.
+- **A drag of the slider, or a run of its keys, is one undo step.** The slider shows the value as it moves; the command is executed once, when the pointer lets go, 400 ms after the last key, or when focus leaves. A gesture that spans events records one step when it ends ([sdk-core ADR 0010](https://github.com/ie-huss-martinez/sdk-core/blob/main/docs/adr/0010-edits-as-commands.md)), and the session has no `group()` yet, which this record's context assumed.
+  - **The cost:** the new volume is heard when the gesture ends, not while it moves.
+- **A clip without sound** gets a line saying so, and no controls.
+- **Layout:** under the timeline below a container width of 720 px, and a column beside the other regions from there.
+- **The logic is headless,** in `src/features/clip-audio/`: what the selected clips share, and the commands for a fade. The React layer renders it.
+- **Still to come:** rotation, crop and fit, and the output and metadata with no clip selected.
 
 ### The stage's canvas
 

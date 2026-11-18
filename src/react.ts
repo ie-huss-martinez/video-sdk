@@ -31,6 +31,8 @@ export type {
   VideoExportResult,
 } from "./react/VideoExportDialog.js";
 export { VideoExportDialog } from "./react/VideoExportDialog.js";
+export type { VideoInspectorProps } from "./react/VideoInspector.js";
+export { VideoInspector } from "./react/VideoInspector.js";
 export type { VideoStageProps } from "./react/VideoStage.js";
 export { VideoStage } from "./react/VideoStage.js";
 export type { VideoTimelineProps } from "./react/VideoTimeline.js";

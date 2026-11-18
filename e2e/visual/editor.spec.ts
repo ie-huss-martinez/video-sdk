@@ -10,8 +10,8 @@ import { video } from "../targets.js";
  * | State | What it shows |
  * |---|---|
  * | `empty` | The drop zone, before a video is open |
- * | `open` | Two clips on the timeline, the first frame on the stage, the transport and toolbar |
- * | `selection` | The second clip selected, with its tools enabled |
+ * | `open` | Two clips on the timeline, the first frame on the stage, the transport, the toolbar and the inspector |
+ * | `selection` | The second clip selected, with its tools enabled, and its sound in the inspector |
  * | `paused` | Paused at 1 s, frame 31: the playhead, the stage and the time there |
  * | `export-summary` | The export dialog's summary and choices |
  * | `export-done` | The export dialog's result, with Download focused |

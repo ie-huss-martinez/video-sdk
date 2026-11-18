@@ -4,7 +4,7 @@ A client-side video SDK: trim, split, arrange, rotate, crop and export videos en
 
 This repository publishes **[`@hussmartinez/video-sdk`](https://www.npmjs.com/package/@hussmartinez/video-sdk)**. It follows the family standards in [`sdk-core`'s `STANDARDS.md`](https://github.com/ie-huss-martinez/sdk-core/blob/main/STANDARDS.md), and in particular the decisions on [hostile input and no network](https://github.com/ie-huss-martinez/sdk-core/blob/main/docs/adr/0012-hostile-input-and-no-network.md), [workers and assets](https://github.com/ie-huss-martinez/sdk-core/blob/main/docs/adr/0011-worker-messaging-and-assets.md) and [ports and adapters](https://github.com/ie-huss-martinez/sdk-core/blob/main/docs/adr/0008-ports-adapters-and-session.md).
 
-> Status: pre-1.0. The headless core and the React editor are published. The editor has no inspector yet, so a clip's volume, fades, rotation and crop are set through commands; the `<hm-video-editor>` element and audio tracks come later ([ADR 0008](docs/adr/0008-audio-editing.md) has the order). The API may change between minor versions until 1.0.
+> Status: pre-1.0. The headless core and the React editor are published. The editor's inspector sets a clip's volume, mute and fades; its rotation and crop are set through commands for now; the `<hm-video-editor>` element and audio tracks come later ([ADR 0008](docs/adr/0008-audio-editing.md) has the order). The API may change between minor versions until 1.0.
 
 ## Install
 
@@ -39,11 +39,11 @@ export function Editor() {
 }
 ```
 
-It renders a toolbar, the preview with its transport, and the timeline: add videos, trim, split, move, mute and delete clips, undo and redo, play, and export through a dialog that shows what the file will contain before the download. Every action has keys, listed in [ADR 0007](docs/adr/0007-editor-shell.md).
+It renders a toolbar, the preview with its transport, the timeline and the inspector: add videos, trim, split, move and delete clips, set their volume, mute and fades, undo and redo, play, and export through a dialog that shows what the file will contain before the download. Every action has keys, listed in [ADR 0007](docs/adr/0007-editor-shell.md).
 
 - **Props:** `initialFiles`, `filePolicy`, `assetsUrl`, `locale` and `messages`, `tools` and `toolbar` to choose the tools, `onEvent`, `engine` and `processor` to supply your own, and `className`.
 - **The ref handle** has `insert(file, at?)`, `undo()`, `redo()`, `play()`, `pause()` and `seek(frame)`.
-- **Building blocks:** `VideoEditorProvider` with `VideoToolbar`, `VideoStage`, `VideoTransport`, `VideoTimeline` and `VideoExportDialog`, and the hooks `useVideoSession`, `useVideoOutput` and `useVideoPlayhead`, for a layout of your own.
+- **Building blocks:** `VideoEditorProvider` with `VideoToolbar`, `VideoStage`, `VideoTransport`, `VideoTimeline`, `VideoInspector` and `VideoExportDialog`, and the hooks `useVideoSession`, `useVideoOutput` and `useVideoPlayhead`, for a layout of your own.
 - **Server rendering:** on a server the editor renders its empty state, with no canvas, engine or worker.
 - **Layout follows the container,** not the viewport: an editor in a narrow column lays out for the column.
 
