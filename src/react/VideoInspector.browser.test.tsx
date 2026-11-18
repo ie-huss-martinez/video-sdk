@@ -198,7 +198,15 @@ describe("the inspector's clip panel", () => {
     await select(view, 1);
     const slider = byLabel(view, "Volume");
     slider.focus();
-    await userEvent.keyboard("{ArrowLeft}{ArrowLeft}{ArrowLeft}");
+    // A real key moves the slider, as the browser's own range input does.
+    await userEvent.keyboard("{ArrowLeft}");
+    await eventually(() => expect(slider.getAttribute("aria-valuetext")).toBe("-1 dB"));
+    // Then the rest of the run, as a held key repeats: each step's input
+    // event within one task, so a slow machine can't put KEY_RUN between
+    // them. Each key the test runner sends is a round trip to the browser,
+    // which a loaded machine can stretch past KEY_RUN.
+    slide(slider, -2);
+    slide(slider, -3);
     // Shown at once; in the plan when the run of keys ends.
     expect(slider.getAttribute("aria-valuetext")).toBe("-3 dB");
     await eventually(() => expect(planClips()[0]?.volumeDb).toBe(-3), KEY_RUN + 5_000);
@@ -272,6 +280,12 @@ describe("the inspector's clip panel", () => {
     release();
     await eventually(() => expect(loads.at(-1)?.clips[0]?.volumeDb).toBe(-4));
 
+    // Every playback failure, even one a later load clears from the snapshot.
+    const failures: string[] = [];
+    const unsubscribe = playing.subscribe(() => {
+      const error = playing.getSnapshot().error;
+      if (error) failures.push(`${error.code} ${JSON.stringify(error.details)}`);
+    });
     // Playing, each move is played, and the session's plan waits for the end.
     await act(async () => {
       await playing.play();
@@ -288,6 +302,9 @@ describe("the inspector's clip panel", () => {
     // Only the selected clip, and nothing but its volume.
     expect(loads.at(-1)?.clips.map((clip) => clip.volumeDb)).toEqual([-12, 0, 0, 0]);
     expect(planClips()[0]?.volumeDb).toBe(-4);
+    // The previews didn't stop playback: no failure, and still playing.
+    unsubscribe();
+    expect(failures).toEqual([]);
     expect(playing.getSnapshot().state).toBe("playing");
     release();
     expect(planClips()[0]?.volumeDb).toBe(-12);

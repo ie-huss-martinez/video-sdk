@@ -43,6 +43,7 @@ function planOf(frames: number): VideoPlan {
 
 const SOURCE: PlaybackSource = {
   id: "s",
+  opening: 1,
   file: new Blob([]),
   probe: { start: 0 } as VideoProbe,
   limits: {} as PlaybackSource["limits"],

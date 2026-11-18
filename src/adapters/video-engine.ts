@@ -171,6 +171,8 @@ export function createEngine(environment: EngineEnvironment): VideoEngine {
   /** Probes this engine made, which `open` can trust without probing again. */
   const trusted = new WeakMap<VideoProbe, Blob>();
   const sources = new Map<string, PlaybackSource>();
+  /** The number of the last `open`, for {@link PlaybackSource.opening}. */
+  let openings = 0;
 
   const assertAlive = () => {
     if (destroyed) throw new Error("The video engine has been destroyed.");
@@ -264,7 +266,8 @@ export function createEngine(environment: EngineEnvironment): VideoEngine {
         );
         throwIfAborted(options.signal);
         if (sources.has(id)) throw new TypeError(`The source "${id}" is already open.`);
-        sources.set(id, { id, file, probe: opened, limits: policy.limits });
+        openings += 1;
+        sources.set(id, { id, opening: openings, file, probe: opened, limits: policy.limits });
         return sourceInfo(id, opened);
       });
     },
