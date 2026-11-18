@@ -28,13 +28,13 @@ export interface ExportRunner {
  * single frame that long, however long the whole export takes.
  */
 function stallSignal(policy: VideoFilePolicy, signal: AbortSignal | undefined) {
-  const controller = new AbortController();
+  const stall = new AbortController();
   const maximum = policy.limits.maxProcessingTime.maximum;
   let timer: ReturnType<typeof setTimeout> | undefined;
   const arm = () => {
     clearTimeout(timer);
     timer = setTimeout(() => {
-      controller.abort(
+      stall.abort(
         new VideoError("PROCESSING_TIME_EXCEEDED", "The export stopped making progress.", {
           details: {
             limit: "maxProcessingTime",
@@ -46,15 +46,16 @@ function stallSignal(policy: VideoFilePolicy, signal: AbortSignal | undefined) {
       );
     }, maximum);
   };
-  const onAbort = () => controller.abort(signal?.reason);
-  signal?.addEventListener("abort", onAbort, { once: true });
   arm();
   return {
-    signal: controller.signal,
+    // The caller's signal, and the stall's. `AbortSignal.any` is aborted at
+    // once when the caller's already is, as when an export is stopped while
+    // its worker code still loads: listening for its "abort" event would miss
+    // that, and the export would run to its end with no one to stop it.
+    signal: signal ? AbortSignal.any([signal, stall.signal]) : stall.signal,
     progressed: arm,
     dispose() {
       clearTimeout(timer);
-      signal?.removeEventListener("abort", onAbort);
     },
   };
 }
