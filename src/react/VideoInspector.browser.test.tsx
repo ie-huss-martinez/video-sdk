@@ -175,7 +175,9 @@ describe("the inspector's clip panel", () => {
       await userEvent.keyboard("{/Control}");
     }
     await eventually(() =>
-      expect(inspector(view)?.textContent).toBe("Select a clip to change its sound and picture."),
+      expect(inspector(view)?.textContent).toContain(
+        "Select a clip to change its sound and picture.",
+      ),
     );
   });
 
@@ -485,5 +487,109 @@ describe("the inspector's clip panel", () => {
       (session as VideoSession).undo();
     });
     expect(transforms().map((t) => t.rotation)).toEqual([90, 0]);
+  });
+
+  describe("with no clip selected", () => {
+    /** An editor with one clip, and nothing selected. */
+    async function nothingSelected() {
+      const view = await inspectorWith(1);
+      const clip = clipsIn(view)[0] as HTMLElement;
+      if (clip.getAttribute("aria-selected") === "true") {
+        await userEvent.keyboard("{Control>}");
+        await userEvent.click(clip);
+        await userEvent.keyboard("{/Control}");
+      }
+      await eventually(() => expect(group(view, "The exported video")).toBeDefined());
+      return view;
+    }
+    const output = () => (session as VideoSession).getSnapshot().plan?.output;
+    const metadata = () => (session as VideoSession).getSnapshot().plan?.metadata;
+    const radio = (view: HTMLElement, groupName: string, label: string) => {
+      const radios = [
+        ...(
+          view.querySelector(`[role="radiogroup"][aria-label="${groupName}"]`) ?? view
+        ).querySelectorAll<HTMLElement>('[role="radio"]'),
+      ];
+      return radios.find((element) => element.textContent === label) as HTMLElement;
+    };
+
+    it("shows the output and the metadata, with no accessibility violations", async () => {
+      const view = await nothingSelected();
+      const { width, height } = output() as { width: number; height: number };
+      expect(byLabel(view, "Width, in pixels").value).toBe(String(width));
+      expect(byLabel(view, "Height, in pixels").value).toBe(String(height));
+      expect(byLabel(view, "Frames per second").value).toBe("30");
+      expect(group(view, "Details in the file").textContent).toContain(
+        "Nothing is copied from your original files.",
+      );
+      const result = await axe.run(inspector(view) as HTMLElement);
+      expect(result.violations.map((violation) => `${violation.id}: ${violation.help}`)).toEqual(
+        [],
+      );
+    });
+
+    it("sets the size in even pixels, and refuses one over the limit, saying why", async () => {
+      const view = await nothingSelected();
+      const before = output();
+      await enter(byLabel(view, "Width, in pixels"), "641");
+      await eventually(() => expect(output()?.width).toBe(640));
+      await enter(byLabel(view, "Width, in pixels"), "100000");
+      await eventually(() =>
+        expect(group(view, "The exported video").textContent).toContain("Choose a smaller size."),
+      );
+      expect(output()?.width).toBe(640);
+      expect((session as VideoSession).getSnapshot().error).toBeNull();
+      act(() => {
+        (session as VideoSession).undo();
+      });
+      expect(output()).toEqual(before);
+    });
+
+    it("snaps the frame rate to an exact one, and sets the sound's quality and channels", async () => {
+      const view = await nothingSelected();
+      await enter(byLabel(view, "Frames per second"), "29.97");
+      await eventually(() => expect(output()?.frameRate).toEqual({ num: 30_000, den: 1_001 }));
+      expect(byLabel(view, "Frames per second").value).toBe("29.97");
+      await userEvent.click(radio(view, "Sound quality", "44.1 kHz"));
+      await eventually(() => expect(output()?.sampleRate).toBe(44_100));
+      await userEvent.click(radio(view, "Sound channels", "Mono"));
+      await eventually(() => expect(output()?.channels).toBe(1));
+      // Every clip stays on the new grid: the session took the commands.
+      expect((session as VideoSession).getSnapshot().error).toBeNull();
+    });
+
+    it("sets a metadata field when it's committed, as one step, and refuses a date that isn't one", async () => {
+      const view = await nothingSelected();
+      const title = byLabel(view, "Title");
+      await userEvent.click(title);
+      await userEvent.keyboard("Take 1");
+      // Typing changes nothing yet.
+      expect(metadata()?.title).toBe("");
+      await userEvent.keyboard("{Enter}");
+      await eventually(() => expect(metadata()?.title).toBe("Take 1"));
+      const date = byLabel(view, "Date");
+      await userEvent.click(date);
+      await userEvent.keyboard("next week");
+      act(() => date.blur());
+      await eventually(() =>
+        expect(group(view, "Details in the file").textContent).toContain(
+          "Enter a date as year-month-day",
+        ),
+      );
+      expect(metadata()?.date).toBe("");
+      await userEvent.clear(date);
+      await userEvent.keyboard("2026-11-18{Tab}");
+      await eventually(() => expect(metadata()?.date).toBe("2026-11-18"));
+      // A long field commits when focus leaves.
+      await userEvent.click(byLabel(view, "Description"));
+      await userEvent.keyboard("Line one{Enter}Line two");
+      act(() => (byLabel(view, "Description") as HTMLElement).blur());
+      await eventually(() => expect(metadata()?.description).toBe("Line one\nLine two"));
+      // Undo puts the field back as it was.
+      act(() => {
+        (session as VideoSession).undo();
+      });
+      await eventually(() => expect(byLabel(view, "Description").value).toBe(""));
+    });
   });
 });

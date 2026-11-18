@@ -4,7 +4,7 @@ A client-side video SDK: trim, split, arrange, rotate, crop and export videos en
 
 This repository publishes **[`@hussmartinez/video-sdk`](https://www.npmjs.com/package/@hussmartinez/video-sdk)**. It follows the family standards in [`sdk-core`'s `STANDARDS.md`](https://github.com/ie-huss-martinez/sdk-core/blob/main/STANDARDS.md), and in particular the decisions on [hostile input and no network](https://github.com/ie-huss-martinez/sdk-core/blob/main/docs/adr/0012-hostile-input-and-no-network.md), [workers and assets](https://github.com/ie-huss-martinez/sdk-core/blob/main/docs/adr/0011-worker-messaging-and-assets.md) and [ports and adapters](https://github.com/ie-huss-martinez/sdk-core/blob/main/docs/adr/0008-ports-adapters-and-session.md).
 
-> Status: pre-1.0. The headless core and the React editor are published. The editor's inspector sets a clip's volume, mute, fades, rotation, fit and crop; the output's size and the metadata are set through commands for now; the `<hm-video-editor>` element and audio tracks come later ([ADR 0008](docs/adr/0008-audio-editing.md) has the order). The API may change between minor versions until 1.0.
+> Status: pre-1.0. The headless core and the React editor are published. The editor's inspector sets a clip's volume, mute, fades, rotation, fit and crop, and, with no clip selected, the exported video's size, frame rate and sound, and its title and other details; the `<hm-video-editor>` element and audio tracks come later ([ADR 0008](docs/adr/0008-audio-editing.md) has the order). The API may change between minor versions until 1.0.
 
 ## Install
 

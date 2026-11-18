@@ -22,6 +22,7 @@ import {
 import { clipPictureState } from "../features/clip-picture/clip-picture.js";
 import { useVideoEditor, useVideoOutput, useVideoSession } from "./context.js";
 import { useGestureValue } from "./gesture.js";
+import { OutputControls } from "./OutputControls.js";
 import { PictureControls } from "./PictureControls.js";
 import { useVideoTools } from "./tools.js";
 
@@ -96,6 +97,7 @@ export function VideoInspector(props: VideoInspectorProps): ReactNode {
     return (
       <section className={className} aria-label={messages.t("inspector.label")}>
         <p className="hm-video-inspector-note">{messages.t("inspector.empty")}</p>
+        <OutputControls plan={plan} execute={execute} />
       </section>
     );
   }
