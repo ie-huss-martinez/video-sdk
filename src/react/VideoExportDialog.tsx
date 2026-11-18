@@ -1,6 +1,7 @@
 import { Button, Dialog, ProgressBar, SegmentedControl, useAnnounce } from "@hussmartinez/ui/react";
 import { type ReactNode, useEffect, useId, useRef, useState } from "react";
 import { isVideoError } from "../core/errors/video-error.js";
+import { metadataDate } from "../core/model/metadata-date.js";
 import { planFrames, type VideoMetadata } from "../core/model/plan.js";
 import { frameTime } from "../core/model/time.js";
 import type {
@@ -189,7 +190,12 @@ export function VideoExportDialog(props: VideoExportDialogProps): ReactNode {
   const rate = new Intl.NumberFormat(locale, { maximumFractionDigits: 3 }).format(
     output.frameRate.num / output.frameRate.den,
   );
-  const kept = FIELDS.filter((field) => plan.metadata[field] !== "");
+  // The date is written only as a real calendar date (ADR 0005): one that
+  // isn't is left out, and the summary says so before anything is written.
+  const unwrittenDate = plan.metadata.date !== "" && !metadataDate(plan.metadata.date);
+  const kept = FIELDS.filter(
+    (field) => plan.metadata[field] !== "" && !(field === "date" && unwrittenDate),
+  );
   const exporting = phase.kind === "exporting";
 
   const footer =
@@ -281,6 +287,7 @@ export function VideoExportDialog(props: VideoExportDialogProps): ReactNode {
                 })}
               </p>
             ) : null}
+            {unwrittenDate ? <p>{messages.t("export.dateNotWritten")}</p> : null}
           </section>
           <fieldset className="hm-video-export-choices" disabled={exporting}>
             {/* A visible name for each group, which names it too (WCAG 2.5.3). */}

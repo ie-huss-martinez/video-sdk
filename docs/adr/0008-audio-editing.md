@@ -2,7 +2,7 @@
 
 - **Status:** Accepted. The audio rows of the timeline depend on an amendment to [ui ADR 0011](https://github.com/ie-huss-martinez/ui/blob/main/docs/adr/0011-timeline.md), in section 10; the headless core and the inspector don't
 - **Date:** 2026-11-18
-- **Amended:** 2026-11-18, with 8b as built: sound that can't be decoded or encoded. Earlier, with item 8 split in three, the export's result as built (8a), and the date rule moved to version 2 of the formats, which sdk-core ADR 0045 requires. Earlier, with the releases as they went out: 0.2.0 after the clip panel, and each later release one number on; the clock's anchor and the element join the plan. Earlier, with the review's rulings: the mix follows [audio-sdk ADR 0006](https://github.com/ie-huss-martinez/audio-sdk/blob/main/docs/adr/0006-multitrack.md) where a user would notice a difference, why `maxAudioTracks` is 8, and `ui`'s lanes are designed for both SDKs.
+- **Amended:** 2026-11-18, with 8c as built: the summary's date, and the writer's own rolled-over dates. Earlier, with 8b as built: sound that can't be decoded or encoded. Earlier, with item 8 split in three, the export's result as built (8a), and the date rule moved to version 2 of the formats, which sdk-core ADR 0045 requires. Earlier, with the releases as they went out: 0.2.0 after the clip panel, and each later release one number on; the clock's anchor and the element join the plan. Earlier, with the review's rulings: the mix follows [audio-sdk ADR 0006](https://github.com/ie-huss-martinez/audio-sdk/blob/main/docs/adr/0006-multitrack.md) where a user would notice a difference, why `maxAudioTracks` is 8, and `ui`'s lanes are designed for both SDKs.
 
 ## Context
 
@@ -99,6 +99,7 @@ They follow ADR 0003's rules: strict, pure, refused with a `details.reason`, nev
 - **Numbers stay exact.** `at` and `by` are frames, times are microseconds, and the volumes are floats that are copied, never computed. `gainAt`'s vectors keep their tolerance.
 - **Version 2 is released once.** The core for sections 2 to 4 merges before any release that writes it.
 - **The date must be a real calendar date in version 2,** `YYYY-MM-DD`, or empty: the schema gives it a pattern, and the reducer refuses another with `INVALID_COMMAND` and `details.reason: "invalid-date"`. It's the only date a container stores, and the export writes nothing for other text. Version 1 accepts any text, and sdk-core ADR 0045 requires a reader to accept exactly what its schema does, so the rule can't tighten version 1: the migration turns a version-1 date that isn't one into "", which no export ever wrote anyway. Until version 2, the inspector refuses one, and the export summary says when a plan's date won't be written (8c).
+- **As built (8c):** building the summary's line found that the writer itself was wrong. It wrote any `YYYY-MM-DD` that `Date` accepted, and `Date` rolls an impossible day over, so 2025-02-31 was written as 3 March. One strict rule, `metadataDate`, now decides for the writer, the inspector and the summary alike: a date is written only as the year, month and day it names. The processor's contract tests it, on the SDK's processor and the fake.
 
 ### 6. Decoding, mixing and encoding
 

@@ -1,4 +1,5 @@
 import { throwIfAborted } from "../../src/core/errors/error-helpers.js";
+import { metadataDate } from "../../src/core/model/metadata-date.js";
 import {
   locateFrame,
   planFrames,
@@ -43,8 +44,11 @@ export function createFakeProcessor(sources: ReadonlyMap<string, VideoSourceInfo
           const clip = at && job.plan.clips[at.index];
           if (at && clip) frames.push({ source: clip.source, time: at.sourceTime });
         }
+        // As the real writer does: a date only as the real calendar date it names.
         const metadata = Object.fromEntries(
-          Object.entries(job.plan.metadata).filter(([, value]) => value !== ""),
+          Object.entries(job.plan.metadata).filter(
+            ([field, value]) => value !== "" && (field !== "date" || metadataDate(value)),
+          ),
         );
         const container = job.container ?? "mp4";
         const file = encodeFakeExport({ container, frames, metadata });

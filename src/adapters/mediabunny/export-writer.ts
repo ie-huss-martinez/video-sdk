@@ -10,6 +10,7 @@ import {
   WebMOutputFormat,
 } from "mediabunny";
 import type { ExportCandidate } from "../../core/export/encoding.js";
+import { metadataDate } from "../../core/model/metadata-date.js";
 import type { VideoMetadata } from "../../core/model/plan.js";
 
 /**
@@ -73,11 +74,10 @@ function tags(metadata: VideoMetadata): MetadataTags {
   if (metadata.description) set.description = metadata.description;
   if (metadata.artist) set.artist = metadata.artist;
   if (metadata.comment) set.comment = metadata.comment;
-  // A date is written only when it's a calendar date, as containers store dates.
-  if (/^\d{4}-\d{2}-\d{2}$/.test(metadata.date)) {
-    const date = new Date(`${metadata.date}T00:00:00Z`);
-    if (!Number.isNaN(date.getTime())) set.date = date;
-  }
+  // A date is written only when it's a real calendar date, as containers
+  // store dates, and never one an impossible day rolled over to.
+  const date = metadataDate(metadata.date);
+  if (date) set.date = date;
   return set;
 }
 

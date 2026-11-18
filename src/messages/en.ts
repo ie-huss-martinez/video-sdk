@@ -139,6 +139,8 @@ export const videoOwnMessages = /* @__PURE__ */ defineMessages({
   "export.field.artist": "artist",
   "export.field.date": "date",
   "export.field.comment": "comment",
+  "export.dateNotWritten":
+    "The date isn't written: it must be a real day, written year-month-day, such as 2026-11-18.",
   "export.container": "File type",
   "export.containers.auto": "Automatic",
   "export.containers.mp4": "MP4",
