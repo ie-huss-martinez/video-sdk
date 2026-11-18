@@ -14,6 +14,9 @@
  */
 
 export type {
+  UseVideoOutputResult,
+  UseVideoSessionResult,
+  VideoEditorCatalogue,
   VideoEditorMessageOverrides,
   VideoEditorMessages,
   VideoEditorProviderProps,

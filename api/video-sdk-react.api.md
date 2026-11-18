@@ -13,24 +13,44 @@ import { ReactNode } from 'react';
 import { RefAttributes } from 'react';
 import { SdkCoreErrorCode } from '@hussmartinez/sdk-core';
 import { SdkError } from '@hussmartinez/sdk-core';
+import { uiMessages } from '@hussmartinez/ui';
 
 // @public
-export function useVideoOutput(): {
+export function useVideoOutput(): UseVideoOutputResult;
+
+// @public
+export interface UseVideoOutputResult {
+    // Warning: (ae-forgotten-export) The symbol "VideoOutput" needs to be exported by the entry point react.d.ts
     readonly output: VideoOutput | null;
+    // Warning: (ae-forgotten-export) The symbol "VideoOutputSnapshot" needs to be exported by the entry point react.d.ts
+    //
+    // (undocumented)
     readonly snapshot: VideoOutputSnapshot | null;
-};
+}
 
 // @public
 export function useVideoPlayhead(): number;
 
 // @public
-export function useVideoSession(): {
+export function useVideoSession(): UseVideoSessionResult;
+
+// @public
+export interface UseVideoSessionResult {
+    // Warning: (ae-forgotten-export) The symbol "VideoSession" needs to be exported by the entry point react.d.ts
+    //
+    // (undocumented)
     readonly session: VideoSession;
+    // Warning: (ae-forgotten-export) The symbol "VideoSessionSnapshot" needs to be exported by the entry point react.d.ts
     readonly snapshot: VideoSessionSnapshot;
-};
+}
 
 // @public
 export const VideoEditor: ForwardRefExoticComponent<VideoEditorProps & RefAttributes<VideoEditorHandle>>;
+
+// Warning: (ae-forgotten-export) The symbol "videoMessages" needs to be exported by the entry point react.d.ts
+//
+// @public
+export type VideoEditorCatalogue = typeof videoMessages & typeof uiMessages;
 
 // @public
 export interface VideoEditorHandle {
@@ -48,13 +68,11 @@ export interface VideoEditorHandle {
     undo(): boolean;
 }
 
-// Warning: (ae-forgotten-export) The symbol "editorCatalogue" needs to be exported by the entry point react.d.ts
-//
 // @public
-export type VideoEditorMessageOverrides = MessageOverrides<typeof editorCatalogue>;
+export type VideoEditorMessageOverrides = MessageOverrides<VideoEditorCatalogue>;
 
 // @public
-export type VideoEditorMessages = Messages<typeof editorCatalogue>;
+export type VideoEditorMessages = Messages<VideoEditorCatalogue>;
 
 // @public
 export interface VideoEditorProps extends Omit<VideoEditorProviderProps, "children"> {
@@ -147,12 +165,5 @@ export interface VideoTransportProps {
     // (undocumented)
     readonly className?: string;
 }
-
-// Warnings were encountered during analysis:
-//
-// temp/types/react/context.d.ts:346:5 - (ae-forgotten-export) The symbol "VideoSession" needs to be exported by the entry point react.d.ts
-// temp/types/react/context.d.ts:347:5 - (ae-forgotten-export) The symbol "VideoSessionSnapshot" needs to be exported by the entry point react.d.ts
-// temp/types/react/context.d.ts:356:5 - (ae-forgotten-export) The symbol "VideoOutput" needs to be exported by the entry point react.d.ts
-// temp/types/react/context.d.ts:357:5 - (ae-forgotten-export) The symbol "VideoOutputSnapshot" needs to be exported by the entry point react.d.ts
 
 ```
