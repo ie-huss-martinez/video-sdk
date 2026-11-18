@@ -712,6 +712,7 @@ export const videoMessages: {
     readonly "export.field.artist": "artist";
     readonly "export.field.date": "date";
     readonly "export.field.comment": "comment";
+    readonly "export.dateNotWritten": "The date isn't written: a file can hold a date only as year-month-day, such as 2026-11-18.";
     readonly "export.container": "File type";
     readonly "export.containers.auto": "Automatic";
     readonly "export.containers.mp4": "MP4";
