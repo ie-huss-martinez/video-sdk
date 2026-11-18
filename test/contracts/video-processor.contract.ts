@@ -95,22 +95,26 @@ export function describeVideoProcessorContract(name: string, harness: VideoProce
       const reason = await harness.unavailable?.();
       if (reason) context.skip(reason);
       const { processor, a, teardown } = await harness.setup();
-      const withDate = (date: string): VideoPlan => ({
-        ...planOf(clipOf("x", a, 0, 10)),
-        metadata: { title: "", description: "", artist: "", date, comment: "" },
-      });
-      const real = await harness.inspect(
-        (await processor.export({ plan: withDate("2024-02-29") })).blob,
-      );
-      expect(real.metadata).toEqual({ date: "2024-02-29" });
-      // A day that doesn't exist: no date, rather than 3 March.
-      for (const date of ["2025-02-31", "next week"]) {
-        const { metadata } = await harness.inspect(
-          (await processor.export({ plan: withDate(date) })).blob,
+      // Torn down whatever fails, so no processor leaks into the next case.
+      try {
+        const withDate = (date: string): VideoPlan => ({
+          ...planOf(clipOf("x", a, 0, 10)),
+          metadata: { title: "", description: "", artist: "", date, comment: "" },
+        });
+        const real = await harness.inspect(
+          (await processor.export({ plan: withDate("2024-02-29") })).blob,
         );
-        expect(metadata, date).toEqual({});
+        expect(real.metadata).toEqual({ date: "2024-02-29" });
+        // A day that doesn't exist: no date, rather than 3 March.
+        for (const date of ["2025-02-31", "next week"]) {
+          const { metadata } = await harness.inspect(
+            (await processor.export({ plan: withDate(date) })).blob,
+          );
+          expect(metadata, date).toEqual({});
+        }
+      } finally {
+        await teardown();
       }
-      await teardown();
     });
 
     it("reports progress that only moves forward and ends at 1", async (context) => {
