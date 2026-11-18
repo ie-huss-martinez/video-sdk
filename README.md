@@ -41,7 +41,7 @@ export function Editor() {
 
 It renders a toolbar, the preview with its transport, the timeline and the inspector: add videos, trim, split, move and delete clips, set their volume, mute and fades, rotate, fit and crop them, undo and redo, play, and export through a dialog that shows what the file will contain before the download. Every action has keys, listed in [ADR 0007](docs/adr/0007-editor-shell.md).
 
-- **Props:** `initialFiles`, `filePolicy`, `assetsUrl`, `locale` and `messages`, `tools` and `toolbar` to choose the tools, `onEvent`, `engine` and `processor` to supply your own, and `className`.
+- **Props:** `initialFiles`, `fileName` (the name an export downloads under, such as the original file's, or the video's title otherwise, cleaned as the family cleans a file name, [pdf-sdk ADR 0009](https://github.com/ie-huss-martinez/pdf-sdk/blob/main/docs/adr/0009-saving-the-document.md)), `filePolicy`, `assetsUrl`, `locale` and `messages`, `tools` and `toolbar` to choose the tools, `onEvent`, `engine` and `processor` to supply your own, and `className`.
 - **The ref handle** has `insert(file, at?)`, `undo()`, `redo()`, `play()`, `pause()` and `seek(frame)`.
 - **Building blocks:** `VideoEditorProvider` with `VideoToolbar`, `VideoStage`, `VideoTransport`, `VideoTimeline`, `VideoInspector` and `VideoExportDialog`, and the hooks `useVideoSession`, `useVideoOutput` and `useVideoPlayhead`, for a layout of your own.
 - **Server rendering:** on a server the editor renders its empty state, with no canvas, engine or worker.
