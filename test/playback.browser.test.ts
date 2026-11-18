@@ -260,13 +260,18 @@ describe("drawing what the plan places at the clock", () => {
     expect(await shown()).toBe(40);
     // 128 × 16 CSS pixels at a ratio of 4.
     output.resize(128, 16, 4);
-    await vi.waitFor(() => expect(drawn.some((record) => record.clock === null)).toBe(true));
+    // The file's own timeout, not the default second: a loaded machine redraws late.
+    await vi.waitFor(() => expect(drawn.some((record) => record.clock === null)).toBe(true), {
+      timeout: 15_000,
+    });
     expect(drawn[0]).toMatchObject({ number: 40, width: 512, height: 64 });
     drawn = [];
     // Taller than the output: letterboxed above and below.
     output.resize(256, 128);
     output.step(1);
-    await vi.waitFor(() => expect(drawn.some((record) => record.number === 41)).toBe(true));
+    await vi.waitFor(() => expect(drawn.some((record) => record.number === 41)).toBe(true), {
+      timeout: 15_000,
+    });
     expect(drawn.at(-1)).toMatchObject({ number: 41, width: 256, height: 128 });
     await noFramesOpen();
   });
@@ -283,9 +288,16 @@ describe("drawing what the plan places at the clock", () => {
       clipOf("y", real.source, 0, 60),
     );
     output.load(edited);
-    await sleep(500);
-    const after = drawn.filter((record) => record.clip === "x" || record.clip === "y");
-    expect(after.length).toBeGreaterThan(5);
+    // How soon the new plan's frames arrive is the machine's speed, not the
+    // scheduler's: under load the decoders restart slowly and frames are
+    // dropped. So this waits for them rather than for a fixed time, and
+    // checks every one that's drawn.
+    const ofEdit = () => drawn.filter((record) => record.clip === "x" || record.clip === "y");
+    await vi.waitFor(() => expect(ofEdit().length).toBeGreaterThan(5), {
+      timeout: 15_000,
+      interval: 50,
+    });
+    const after = ofEdit();
     for (const record of after) {
       const at = frameOf(record.clock as number);
       const matches = BEHIND.some((d) => {
@@ -415,33 +427,77 @@ function toneOnsets(
   return onsets;
 }
 
-/** The wall-clock time a context time is heard, from the context's own output timestamp. */
-/** How {@link heardAt} placed the last tone: by the output timestamp, or the context's own time. */
+/** How {@link clockOffset} read the audio clock last: by the output timestamp, or the context's own time. */
 let heardVia = "";
 
 /**
- * When a context time is heard, by the same rule as the SDK's clock
- * (docs/adr/0006): the output timestamp, unless it's more than
- * {@link PLAUSIBLE_STAMP} ms old or more than {@link FUTURE_STAMP} ms in the
- * future, as WebKit's is; then the context's own time and its reported
- * latency. Placing it by another rule would measure the difference between
- * the two rules, not the SDK's sync.
+ * The audio clock against the page's, now: a context time `t`, in seconds,
+ * is heard at `performance.now()` time `offset + t × 1,000`. Read by the same
+ * rule as the SDK's clock (docs/adr/0006): the output timestamp, unless it's
+ * more than {@link PLAUSIBLE_STAMP} ms old or more than {@link FUTURE_STAMP}
+ * ms in the future, as WebKit's is; then the context's own time and its
+ * reported latency. Reading it by another rule would measure the difference
+ * between the two rules, not the SDK's sync.
  */
-function heardAt(context: AudioContext, time: number): number {
+function clockOffset(context: AudioContext): number {
   const stamp = context.getOutputTimestamp();
   const now = performance.now();
   const age = stamp.performanceTime === undefined ? Number.NaN : now - stamp.performanceTime;
   if (stamp.contextTime && age >= -FUTURE_STAMP && age <= PLAUSIBLE_STAMP) {
     heardVia = `the output timestamp, ${age.toFixed(1)} ms old`;
-    return (
-      performance.timeOrigin +
-      (stamp.performanceTime as number) +
-      (time - (stamp.contextTime as number)) * 1_000
-    );
+    return (stamp.performanceTime as number) - (stamp.contextTime as number) * 1_000;
   }
   const latency = context.outputLatency || context.baseLatency || 0;
   heardVia = `the context's time, with ${(latency * 1_000).toFixed(1)} ms latency (output ${context.outputLatency}, base ${context.baseLatency}); the stamp was ${age.toFixed(0)} ms old`;
-  return performance.timeOrigin + now + (time - context.currentTime + latency) * 1_000;
+  return now - (context.currentTime - latency) * 1_000;
+}
+
+/** One reading of {@link clockOffset}, and the `performance.now()` time it was read at. */
+interface ClockSample {
+  readonly at: number;
+  readonly offset: number;
+}
+
+/** How often the sync test reads the audio clock while it plays, in milliseconds. */
+const CLOCK_SAMPLE_INTERVAL = 20;
+
+/**
+ * How long before a draw the worker's anchor may have been read, in
+ * milliseconds: the SDK sends a new one every 250 ms (docs/adr/0006), and a
+ * loaded page sends it late.
+ */
+const ANCHOR_AGE = 300;
+
+/**
+ * When a context time was heard, as a wall-clock time, by the reading of the
+ * audio clock made nearest to that moment. The clock isn't steady under
+ * load: when the audio thread is starved, the context's time stops while the
+ * page's goes on, so a reading made after playback places every earlier
+ * tone late by all the stalls since.
+ */
+function heardAt(samples: readonly ClockSample[], time: number): number {
+  let best = samples[0] as ClockSample;
+  for (const sample of samples) {
+    const distance = Math.abs(sample.at - (sample.offset + time * 1_000));
+    if (distance < Math.abs(best.at - (best.offset + time * 1_000))) best = sample;
+  }
+  return performance.timeOrigin + best.offset + time * 1_000;
+}
+
+/**
+ * How far the audio clock moved against the page's over the
+ * {@link ANCHOR_AGE} before a wall-clock time, in milliseconds: near 0 on a
+ * quiet machine. The worker draws by an anchor up to that old, so a stall of
+ * the audio clock since then puts the picture ahead of the sound by as much,
+ * until the next anchor. That's the design (docs/adr/0006), and a stall is
+ * heard as a dropout anyway, so the sync check allows what it measured.
+ */
+function clockStall(samples: readonly ClockSample[], wall: number): number {
+  const at = wall - performance.timeOrigin;
+  const near = samples
+    .filter((sample) => sample.at >= at - ANCHOR_AGE && sample.at <= at + CLOCK_SAMPLE_INTERVAL)
+    .map((sample) => sample.offset);
+  return near.length > 1 ? Math.max(...near) - Math.min(...near) : 0;
 }
 
 describe("audio as the clock", () => {
@@ -499,13 +555,26 @@ describe("audio as the clock", () => {
     output.load(plan);
     await shown();
     const since = performance.timeOrigin + performance.now();
-    const pageLag = await runnerLag(async () => {
-      await playFromGesture(output as VideoOutput);
-      expect(output?.getSnapshot().audio).toBe("ready");
-      await vi.waitFor(() => expect(output?.getSnapshot().state).toBe("stopped"), {
-        timeout: 10_000,
+    // The audio clock, read while it plays: each tone is placed by the
+    // reading nearest to it, not by one made after the playback.
+    const clock: ClockSample[] = [];
+    const sampler = setInterval(() => {
+      const context = windows[0]?.context;
+      if (context) clock.push({ at: performance.now(), offset: clockOffset(context) });
+    }, CLOCK_SAMPLE_INTERVAL);
+    let pageLag: number;
+    try {
+      pageLag = await runnerLag(async () => {
+        await playFromGesture(output as VideoOutput);
+        expect(output?.getSnapshot().audio).toBe("ready");
+        await vi.waitFor(() => expect(output?.getSnapshot().state).toBe("stopped"), {
+          timeout: 10_000,
+        });
       });
-    });
+    } finally {
+      clearInterval(sampler);
+    }
+    expect(clock.length, "readings of the audio clock").toBeGreaterThan(0);
     // The draw times come from the worker's thread, so its lag counts too:
     // the larger of the page's and the workers', over the playback.
     const lag = Math.max(pageLag, ...(await workerLags(since)));
@@ -522,10 +591,7 @@ describe("audio as the clock", () => {
     let measured = 0;
     for (const [index, flash] of [75, 105, 15, 45].entries()) {
       const onset = onsets[index] as { sample: number; window: ScheduledWindow };
-      const heard = heardAt(
-        onset.window.context,
-        onset.window.at + (onset.sample - onset.window.from) / rate,
-      );
+      const heard = heardAt(clock, onset.window.at + (onset.sample - onset.window.from) / rate);
       const drawnAt = drawn.find((record) => record.clock !== null && record.number === flash);
       if (drawnAt === undefined) {
         // A loaded runner drops frames, which the output counts: a flash it
@@ -535,10 +601,13 @@ describe("audio as the clock", () => {
       }
       measured += 1;
       const apart = drawnAt.wall - heard;
+      // What the audio clock itself stalled while the worker's anchor was in
+      // use: measured, and near 0 unless the machine starved the audio.
+      const stall = clockStall(clock, drawnAt.wall);
       expect(
         Math.abs(apart),
-        `flash ${flash}: ${apart.toFixed(1)} ms from its tone, allowing ${allowance.toFixed(1)} ms with the runner's ${lag.toFixed(1)} ms lag; heard by ${heardVia}`,
-      ).toBeLessThanOrEqual(allowance);
+        `flash ${flash}: ${apart.toFixed(1)} ms from its tone, allowing ${(allowance + stall).toFixed(1)} ms with the runner's ${lag.toFixed(1)} ms lag and the audio clock's ${stall.toFixed(1)} ms stall; heard by ${heardVia}`,
+      ).toBeLessThanOrEqual(allowance + stall);
     }
     // Most flashes are drawn and measured even under heavy load; every one
     // that's drawn is within one output frame of its tone.
