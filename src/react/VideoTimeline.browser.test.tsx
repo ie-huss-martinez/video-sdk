@@ -210,6 +210,33 @@ describe("the timeline", () => {
     await eventually(() => expect(names(view)[0]).toBe("Clip 1 of 2, 0:00.00 to 0:01.43"));
   });
 
+  it("enables Zoom out in the same commit that widens the track", async () => {
+    const { view } = await editorWith(2);
+    const track = view.querySelector(".hm-video-timeline-track") as HTMLElement;
+    const zoomOut = button(view, "Zoom out");
+    expect(zoomOut.getAttribute("aria-disabled")).toBe("true");
+    // Each callback is one commit's mutations: the width and the flag must arrive together.
+    const commits: { width: boolean; flag: boolean }[] = [];
+    const observer = new MutationObserver((records) => {
+      const width = records.some(
+        (record) => track.contains(record.target as Node) && record.attributeName === "style",
+      );
+      const flag = records.some(
+        (record) => record.target === zoomOut && record.attributeName === "aria-disabled",
+      );
+      if (width || flag) commits.push({ width, flag });
+    });
+    observer.observe(view, {
+      attributes: true,
+      subtree: true,
+      attributeFilter: ["style", "aria-disabled"],
+    });
+    await userEvent.click(button(view, "Zoom in"));
+    await eventually(() => expect(zoomOut.getAttribute("aria-disabled")).toBeNull());
+    observer.disconnect();
+    expect(commits[0]).toEqual({ width: true, flag: true });
+  });
+
   it("zooms in and out, and fits the whole video", async () => {
     const { view } = await editorWith(2);
     const track = view.querySelector(".hm-video-timeline-track") as HTMLElement;

@@ -26,8 +26,9 @@ export interface VideoTools {
 
 /**
  * The editor's tools, bound to its session, output and view (docs/adr/0007).
- * The playhead is read on animation frames, but the flags are only replaced
- * when a tool's availability changes, so a toolbar doesn't re-render every
+ * The flags follow the session, the output and the view in the same render
+ * as everything else. The playhead is read on animation frames, and renders
+ * again only when it changes a flag, so a toolbar doesn't re-render every
  * frame while playing.
  *
  * @internal
@@ -78,21 +79,22 @@ export function useVideoTools(): VideoTools {
     [tools],
   );
 
-  const [flags, setFlags] = useState(() => flagsAt(stateAt(output?.position() ?? 0)));
-  const signature = useRef("");
+  // The flags are worked out while rendering, from the same state the rest of
+  // the editor renders from, so a zoom widens the track and enables Zoom out
+  // in one commit. Only the playhead changes nothing React sees, so it's read
+  // on animation frames, and a change it makes to a flag renders again.
+  const [, setPlayheadTick] = useState(0);
+  const computed = flagsAt(stateAt(output?.position() ?? 0));
+  const key = JSON.stringify([...computed]);
+  // The same Map while nothing changes, so a toolbar doesn't render for nothing.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: by value, through the key
+  const flags = useMemo(() => computed, [key]);
+  const rendered = useRef(key);
+  rendered.current = key;
   useEffect(() => {
-    const update = () => {
-      const next = flagsAt(stateAt(output?.position() ?? 0));
-      const key = JSON.stringify([...next]);
-      if (key !== signature.current) {
-        signature.current = key;
-        setFlags(next);
-      }
-    };
-    update();
-    // The playhead changes no snapshot, so it's read on animation frames.
     let pending = requestAnimationFrame(function read() {
-      update();
+      const next = JSON.stringify([...flagsAt(stateAt(output?.position() ?? 0))]);
+      if (next !== rendered.current) setPlayheadTick((tick) => tick + 1);
       pending = requestAnimationFrame(read);
     });
     return () => cancelAnimationFrame(pending);
