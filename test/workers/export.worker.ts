@@ -3,6 +3,7 @@
 // can prove everything is closed on every path.
 import { exposeWorker } from "@hussmartinez/sdk-core";
 import {
+  type ExportOutcome,
   type ExportRequest,
   exportLedger,
   exportPlan,
@@ -14,7 +15,7 @@ import type { VideoLimitName } from "../../src/core/errors/video-limits.js";
 export interface ExportTestContract {
   readonly export: {
     readonly input: ExportRequest;
-    readonly output: Blob;
+    readonly output: ExportOutcome;
     readonly progress: number | { readonly warning: VideoLimitName };
   };
   readonly ledger: {

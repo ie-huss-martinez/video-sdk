@@ -2,7 +2,7 @@
 
 - **Status:** Accepted. The audio rows of the timeline depend on an amendment to [ui ADR 0011](https://github.com/ie-huss-martinez/ui/blob/main/docs/adr/0011-timeline.md), in section 10; the headless core and the inspector don't
 - **Date:** 2026-11-18
-- **Amended:** 2026-11-18, with the releases as they went out: 0.2.0 after the clip panel, and each later release one number on; the clock's anchor and the element join the plan. Earlier, with the review's rulings: the mix follows [audio-sdk ADR 0006](https://github.com/ie-huss-martinez/audio-sdk/blob/main/docs/adr/0006-multitrack.md) where a user would notice a difference, why `maxAudioTracks` is 8, and `ui`'s lanes are designed for both SDKs.
+- **Amended:** 2026-11-18, with item 8 split in three, the export's result as built (8a), and the date rule moved to version 2 of the formats, which sdk-core ADR 0045 requires. Earlier, with the releases as they went out: 0.2.0 after the clip panel, and each later release one number on; the clock's anchor and the element join the plan. Earlier, with the review's rulings: the mix follows [audio-sdk ADR 0006](https://github.com/ie-huss-martinez/audio-sdk/blob/main/docs/adr/0006-multitrack.md) where a user would notice a difference, why `maxAudioTracks` is 8, and `ui`'s lanes are designed for both SDKs.
 
 ## Context
 
@@ -98,6 +98,7 @@ They follow ADR 0003's rules: strict, pure, refused with a `details.reason`, nev
 - **Both schemas ship,** `v1.schema.json` beside `v2.schema.json`. The version-1 vectors stay and run through the migration; version 2 gets its own, with hand-written cases for every new reason and generated ones for the time-axis edits, whose inverse must restore the plan.
 - **Numbers stay exact.** `at` and `by` are frames, times are microseconds, and the volumes are floats that are copied, never computed. `gainAt`'s vectors keep their tolerance.
 - **Version 2 is released once.** The core for sections 2 to 4 merges before any release that writes it.
+- **The date must be a real calendar date in version 2,** `YYYY-MM-DD`, or empty: the schema gives it a pattern, and the reducer refuses another with `INVALID_COMMAND` and `details.reason: "invalid-date"`. It's the only date a container stores, and the export writes nothing for other text. Version 1 accepts any text, and sdk-core ADR 0045 requires a reader to accept exactly what its schema does, so the rule can't tighten version 1: the migration turns a version-1 date that isn't one into "", which no export ever wrote anyway. Until version 2, the inspector refuses one, and the export summary says when a plan's date won't be written (8c).
 
 ### 6. Decoding, mixing and encoding
 
@@ -106,7 +107,9 @@ They follow ADR 0003's rules: strict, pure, refused with a `details.reason`, nev
   - **Tracks sum at unity,** with no scaling by their number: adding an empty track mustn't change how the others sound.
   - **The order of the sum is fixed:** the video track's clips first, then the audio tracks from the top, each track's clips in time order, added in double precision. So every engine and every port adds in the same order, as audio-sdk's mix does.
   - **Clipping: clamp, measure and say so,** which is audio-sdk's policy. The sum is clamped to full scale, −1…1, in playback and export alike. Nothing limits or normalises on its own: a limiter changes the sound without being asked, and carries state from window to window, so windows made separately would no longer join.
-  - **The export reports what it clamped.** `VideoProcessor.export` and `session.export` resolve `{ blob, peakDb, clippedFrames }` instead of a `Blob`, with audio-sdk's names: the mix's peak before clamping, and how many sample frames were clamped. The export dialog shows it when anything clipped, with how far over the peak was. That's a breaking change to both calls.
+  - **The export reports what it clamped.** `VideoProcessor.export` and `session.export` resolve `{ blob, container, size, peakDb, clippedFrames }` instead of a `Blob`, with audio-sdk's names: the mix's peak before clamping, `-Infinity` for silence, and how many sample frames had a sample over full scale. The export dialog shows it when anything clipped, with how far over the peak was. That's a breaking change to both calls.
+  - **As built (8a):** the clamp is in `mixWindow`, so playback and export clamp alike, and an export meters its windows as it mixes them. `session.export(options)` exports the plan as it is when the call starts, through the session's `processor`, which `createVideoSession` now takes, as audio-sdk's does; without one it throws `TypeError`, as audio-sdk's does, rather than the `UNSUPPORTED_ENVIRONMENT` first proposed, because a missing processor is the host's mistake, not the browser's. The editor's session exports through the editor's own processor, made on the first export. An export emits an `export` event with its outcome.
+  - **The session's warnings take the family's shape** in the same release, as audio-sdk's do: `{ type: "limit", limit, actual, source? }`, with `videoWarningText(messages, warning)` for their text. Warnings that aren't limits, such as a file whose sound couldn't be decoded (8b), are other `type`s.
   - **A sample that isn't finite counts as silence,** so one bad sample from a decoder can't spoil a window or the peak.
   - **Mute** means what it does in audio-sdk: a muted clip or track isn't heard and isn't exported, and it's part of the plan, undone like any edit. There's no solo in this version. If one is added, it takes audio-sdk's rule: a track is audible when it isn't muted and either no track is soloed or it is.
 - **Encoding:** unchanged. One mixed track, AAC or Opus by ADR 0001's order, proved by encoding before the export starts.
@@ -195,7 +198,9 @@ Each line is one pull request. A release is cut where shown.
 | 5 | `feat:` the inspector's clip panel: volume, mute and fades, heard as a drag moves | **0.2.0:** a clip's sound can be edited |
 | 6 | `feat:` the inspector's rotation, crop and fit, then the output and the metadata | |
 | 7 | `fix:` `fileName` reaches the export dialog from `VideoEditor` | |
-| 8 | `fix!:` audio encoder and decoder failures, the clamp, the export's clipping report and `session.export`, as section 6 says | |
+| 8a | `fix!:` `session.export`, the clamp, the export's clipping report, and the family's warning shape | |
+| 8b | `fix:` audio encoder and decoder failures, and an export without sound where it can't be encoded, as section 6 says | |
+| 8c | `fix:` the export summary says when the plan's date won't be written | |
 | 9 | `fix:` the clock's anchor is renewed at once when the audio clock's offset jumps, amending [ADR 0006](0006-frame-scheduler.md) | **0.3.0:** the whole inspector, and exports that say what they did to the sound |
 | 10 | `refactor:` `VideoTimeline` on `ui`'s `Timeline`, with the same keys | |
 | 11 | `feat:` the waveform lane | **0.4.0:** the shared timeline |

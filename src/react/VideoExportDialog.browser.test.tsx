@@ -8,9 +8,10 @@ import { userEvent } from "vitest/browser";
 import landscapeVp8 from "../../test/fixtures/video/landscape-vp8.webm?url";
 import { DEV_WORKER_START_TIMEOUT } from "../../test/support/load.js";
 import { createVideoEngine } from "../adapters/video-engine.js";
+import type { VideoExportResult } from "../core/ports/video-processor.js";
 import { useVideoSession, VideoEditorProvider } from "./context.js";
 import { VideoEditor, type VideoEditorHandle } from "./VideoEditor.js";
-import { VideoExportDialog, type VideoExportResult } from "./VideoExportDialog.js";
+import { VideoExportDialog } from "./VideoExportDialog.js";
 import { VideoToolbar } from "./VideoToolbar.js";
 
 // Real decoding, playback and export run in workers, and a heavily loaded
@@ -271,6 +272,29 @@ describe("the export dialog", () => {
     } finally {
       click.mockRestore();
     }
+  });
+
+  it("says when the sound was louder than a file holds, and by how much", async () => {
+    const { view } = await editor();
+    // +24 dB on the clip, from the inspector's exact volume field.
+    await userEvent.click(view.querySelector('[role="option"]') as HTMLElement);
+    const label = await eventually(() => {
+      const found = [...view.querySelectorAll("label")].find(
+        (each) => each.textContent === "Volume in decibels",
+      );
+      expect(found).toBeDefined();
+      return found as HTMLLabelElement;
+    });
+    const field = view.querySelector(`#${CSS.escape(label.htmlFor)}`) as HTMLInputElement;
+    await userEvent.clear(field);
+    await userEvent.type(field, "24{Enter}");
+    await userEvent.click(exportTool(view));
+    await userEvent.click(button(view, "Export") as HTMLButtonElement);
+    await eventually(() => expect(button(view, "Download")).toBeDefined(), 60_000);
+    const note = [...dialogOf(view).querySelectorAll('[role="status"]')]
+      .map((each) => each.textContent)
+      .join(" ");
+    expect(note).toMatch(/louder than a file can hold, by up to \d+(\.\d)? dB/);
   });
 
   it("stops an export, says so, and keeps the dialog open at its summary", async () => {

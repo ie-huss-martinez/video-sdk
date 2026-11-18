@@ -17,6 +17,19 @@ export interface SourceSamples {
   readonly channels: readonly Float32Array[];
 }
 
+/**
+ * What clamping did to a mix (docs/adr/0008), counted across the windows
+ * that share it, as audio-sdk's export counts it: the largest absolute
+ * sample before clamping, and how many sample frames had a sample over full
+ * scale.
+ *
+ * @internal
+ */
+export interface MixMeter {
+  peak: number;
+  clippedFrames: number;
+}
+
 /** Where each clip starts on the timeline, in samples at `rate`, and where the plan ends. */
 export function clipSampleStarts(plan: VideoPlan, rate: number): readonly number[] {
   return clipStarts(plan).map((time) => Math.round((time * rate) / 1_000_000));
@@ -63,6 +76,11 @@ export function sourceSpan(
  * The same plan and window always give the same samples, and windows join
  * without a seam, so playback and export can make them separately.
  *
+ * The mix is clamped to full scale, −1 to 1, and a sample that isn't a
+ * finite number is silence, so one bad sample from a decoder can't spoil
+ * a window (docs/adr/0008). Nothing limits or normalises it. A `meter`, when
+ * given, adds what clamping did, measured before it.
+ *
  * @internal
  */
 export function mixWindow(
@@ -71,6 +89,7 @@ export function mixWindow(
   from: number,
   count: number,
   samplesFor: (index: number) => SourceSamples | null,
+  meter?: MixMeter,
 ): Float32Array[] {
   const outputs = plan.output.channels;
   const mixed = Array.from({ length: outputs }, () => new Float32Array(count));
@@ -102,5 +121,33 @@ export function mixWindow(
       }
     }
   }
+  clamp(mixed, count, meter);
   return mixed;
+}
+
+/** Clamps a mix to full scale in place, silences what isn't finite, and meters it. */
+function clamp(mixed: readonly Float32Array[], count: number, meter: MixMeter | undefined): void {
+  let peak = 0;
+  let clippedFrames = 0;
+  for (let k = 0; k < count; k += 1) {
+    let clipped = false;
+    for (const channel of mixed) {
+      const sample = channel[k] as number;
+      if (!Number.isFinite(sample)) {
+        channel[k] = 0;
+        continue;
+      }
+      const size = Math.abs(sample);
+      if (size > peak) peak = size;
+      if (size > 1) {
+        clipped = true;
+        channel[k] = sample > 0 ? 1 : -1;
+      }
+    }
+    if (clipped) clippedFrames += 1;
+  }
+  if (meter) {
+    meter.peak = Math.max(meter.peak, peak);
+    meter.clippedFrames += clippedFrames;
+  }
 }

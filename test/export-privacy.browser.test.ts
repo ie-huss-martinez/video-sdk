@@ -35,7 +35,7 @@ async function exportOf(url: string, plan: (source: Parameters<typeof clipOf>[1]
   const source = await engine.open("s", file, await engine.probe(file));
   const processor = createVideoProcessor({ engine });
   try {
-    return await processor.export({ plan: plan(source) });
+    return (await processor.export({ plan: plan(source) })).blob;
   } finally {
     await processor.destroy();
     await engine.destroy();

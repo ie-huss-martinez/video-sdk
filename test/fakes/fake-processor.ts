@@ -46,9 +46,17 @@ export function createFakeProcessor(sources: ReadonlyMap<string, VideoSourceInfo
         const metadata = Object.fromEntries(
           Object.entries(job.plan.metadata).filter(([, value]) => value !== ""),
         );
-        const file = encodeFakeExport({ container: job.container ?? "mp4", frames, metadata });
+        const container = job.container ?? "mp4";
+        const file = encodeFakeExport({ container, frames, metadata });
         options?.onProgress?.(1);
-        return file;
+        // The fake writes no sound: silence, as the real processor reports it.
+        return {
+          blob: file,
+          container,
+          size: file.size,
+          peakDb: Number.NEGATIVE_INFINITY,
+          clippedFrames: 0,
+        };
       } finally {
         busy = false;
       }

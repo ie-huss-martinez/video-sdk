@@ -2,6 +2,7 @@ import type { VideoFilePolicy, VideoLimitName } from "../errors/video-limits.js"
 import { planFrames, type VideoPlan, type VideoPlanOutput } from "./plan.js";
 import type { VideoProbe } from "./source.js";
 import { frameTime } from "./time.js";
+import { limitWarning, type VideoLimitWarning } from "./warnings.js";
 
 /** Decoded frames waiting to be drawn or encoded (ADR 0002). */
 const QUEUED_FRAMES = 4;
@@ -48,15 +49,18 @@ export function decodingBound(probe: VideoProbe): number {
 /**
  * Checks a probe against every limit that applies to one file (ADR 0004),
  * before anything decodes it. Throws `VideoError` with the limit's code on
- * the first one exceeded, and returns the names of the limits at or above
- * their warnings.
+ * the first one exceeded, and returns a warning for each limit at or above
+ * its warning threshold, with the value it found.
  *
  * `maxFileSize` is checked on the file itself, with `checkFile`, and
  * `maxFiles`, `maxSessionSize` and `maxClips` by the session.
  *
  * @public
  */
-export function checkProbe(policy: VideoFilePolicy, probe: VideoProbe): readonly VideoLimitName[] {
+export function checkProbe(
+  policy: VideoFilePolicy,
+  probe: VideoProbe,
+): readonly VideoLimitWarning[] {
   const checks: readonly (readonly [VideoLimitName, number])[] = [
     ["maxIndexSize", probe.indexSize],
     ["maxTracks", probe.tracks],
@@ -73,9 +77,9 @@ export function checkProbe(policy: VideoFilePolicy, probe: VideoProbe): readonly
         ] as const)),
     ["maxDecodedSize", decodingBound(probe)],
   ];
-  const warnings: VideoLimitName[] = [];
+  const warnings: VideoLimitWarning[] = [];
   for (const [limit, actual] of checks) {
-    if (policy.check(limit, actual) === "warning") warnings.push(limit);
+    if (policy.check(limit, actual) === "warning") warnings.push(limitWarning(limit, actual));
   }
   return warnings;
 }
@@ -84,35 +88,40 @@ export function checkProbe(policy: VideoFilePolicy, probe: VideoProbe): readonly
  * Checks an output against the limits that apply to what an export encodes
  * (ADR 0004): its frame size, frame rate, channels and sample rate. Throws
  * `VideoError` with the limit's code on the first one exceeded, and returns
- * the names of the limits at or above their warnings.
+ * a warning for each limit at or above its warning threshold.
  *
  * @public
  */
 export function checkOutput(
   policy: VideoFilePolicy,
   output: VideoPlanOutput,
-): readonly VideoLimitName[] {
+): readonly VideoLimitWarning[] {
   const checks: readonly (readonly [VideoLimitName, number])[] = [
     ["maxFramePixels", output.width * output.height],
     ["maxFrameRate", output.frameRate.num / output.frameRate.den],
     ["maxChannels", output.channels],
     ["maxSampleRate", output.sampleRate],
   ];
-  const warnings: VideoLimitName[] = [];
+  const warnings: VideoLimitWarning[] = [];
   for (const [limit, actual] of checks) {
-    if (policy.check(limit, actual) === "warning") warnings.push(limit);
+    if (policy.check(limit, actual) === "warning") warnings.push(limitWarning(limit, actual));
   }
   return warnings;
 }
 
 /**
  * Checks a plan's length against `maxDuration` (ADR 0004). Throws
- * `DURATION_TOO_LONG` over it, and returns whether it's at or above the
- * warning.
+ * `DURATION_TOO_LONG` over it, and returns its warning when it's at or
+ * above the threshold.
  *
  * @public
  */
-export function checkPlanLength(policy: VideoFilePolicy, plan: VideoPlan): boolean {
+export function checkPlanLength(
+  policy: VideoFilePolicy,
+  plan: VideoPlan,
+): VideoLimitWarning | undefined {
   const milliseconds = Math.ceil(frameTime(planFrames(plan), plan.output.frameRate) / 1_000);
-  return policy.check("maxDuration", milliseconds) === "warning";
+  return policy.check("maxDuration", milliseconds) === "warning"
+    ? limitWarning("maxDuration", milliseconds)
+    : undefined;
 }

@@ -154,6 +154,8 @@ export const videoOwnMessages = /* @__PURE__ */ defineMessages({
   "export.largeFile": "This file is getting large. Very large files may be slow to save and share.",
   "export.ready": "Your {container} video is ready: {size, fileSize}.",
   "export.cancelled": "Export stopped.",
+  "export.clipped":
+    "Some of the sound was louder than a file can hold, by up to {db, number} dB, so it was cut off at full volume. Lower the volume of the loudest clips and export again to avoid it.",
   "export.download": "Download",
   "export.done": "Done",
   "export.unavailable": "Exporting isn't available with this engine.",

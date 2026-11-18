@@ -65,7 +65,7 @@ export function describeVideoProcessorContract(name: string, harness: VideoProce
         clipOf("y", b, 0, 9),
         clipOf("z", a, 1_500_000, 3),
       );
-      const { frames } = await harness.inspect(await processor.export({ plan }));
+      const { frames } = await harness.inspect((await processor.export({ plan })).blob);
       const want = expected(plan);
       expect(frames).toHaveLength(want.length);
       for (const [index, frame] of frames.entries()) {
@@ -86,7 +86,7 @@ export function describeVideoProcessorContract(name: string, harness: VideoProce
         ...planOf(clipOf("x", a, 0, 10)),
         metadata: { title: "Harbour", description: "", artist: "Ana", date: "", comment: "" },
       };
-      const { metadata } = await harness.inspect(await processor.export({ plan }));
+      const { metadata } = await harness.inspect((await processor.export({ plan })).blob);
       expect(metadata).toEqual({ title: "Harbour", artist: "Ana" });
       await teardown();
     });
@@ -112,8 +112,8 @@ export function describeVideoProcessorContract(name: string, harness: VideoProce
       const plan = planOf(clipOf("x", a, 0, 40));
       const first = processor.export({ plan });
       expect(isVideoError(await rejection(processor.export({ plan })), "BUSY")).toBe(true);
-      await expect(first).resolves.toBeInstanceOf(Blob);
-      await expect(processor.export({ plan })).resolves.toBeInstanceOf(Blob);
+      await expect(first).resolves.toMatchObject({ blob: expect.any(Blob) });
+      await expect(processor.export({ plan })).resolves.toMatchObject({ blob: expect.any(Blob) });
       await teardown();
     });
 
@@ -131,7 +131,7 @@ export function describeVideoProcessorContract(name: string, harness: VideoProce
         { signal: controller.signal, onProgress: (fraction) => fraction > 0 && controller.abort() },
       );
       expect(isVideoError(await rejection(running), "ABORTED")).toBe(true);
-      await expect(processor.export({ plan })).resolves.toBeInstanceOf(Blob);
+      await expect(processor.export({ plan })).resolves.toMatchObject({ blob: expect.any(Blob) });
       await teardown();
     });
 

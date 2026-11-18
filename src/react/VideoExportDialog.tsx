@@ -3,21 +3,14 @@ import { type ReactNode, useEffect, useId, useRef, useState } from "react";
 import { isVideoError } from "../core/errors/video-error.js";
 import { planFrames, type VideoMetadata } from "../core/model/plan.js";
 import { frameTime } from "../core/model/time.js";
-import type { VideoExportContainer, VideoExportQuality } from "../core/ports/video-processor.js";
+import type {
+  VideoExportContainer,
+  VideoExportQuality,
+  VideoExportResult,
+} from "../core/ports/video-processor.js";
 import { exportFileName } from "../features/export-name/export-name.js";
 import { useVideoEditor, useVideoSession } from "./context.js";
 import { formatTimecode } from "./timecode.js";
-
-/**
- * What an export produced, for a host's `onExport`.
- *
- * @public
- */
-export interface VideoExportResult {
-  /** `mp4` or `webm`, as the browser could encode it. */
-  readonly container: VideoExportContainer;
-  readonly size: number;
-}
 
 /**
  * Props of {@link VideoExportDialog}.
@@ -47,7 +40,7 @@ type Choice = "auto" | VideoExportContainer;
 type Phase =
   | { readonly kind: "choose" }
   | { readonly kind: "exporting"; readonly progress: number; readonly large: boolean }
-  | { readonly kind: "done"; readonly blob: Blob; readonly container: VideoExportContainer };
+  | { readonly kind: "done"; readonly result: VideoExportResult };
 
 const CHOICES: readonly Choice[] = ["auto", "mp4", "webm"];
 const QUALITIES: readonly VideoExportQuality[] = ["low", "medium", "high"];
@@ -58,9 +51,6 @@ const FIELDS: readonly (keyof VideoMetadata)[] = [
   "date",
   "comment",
 ];
-
-const containerOf = (blob: Blob): VideoExportContainer =>
-  blob.type.includes("webm") ? "webm" : "mp4";
 
 /**
  * The export dialog (docs/adr/0007). Export is irreversible, so it shows a
@@ -78,8 +68,8 @@ const containerOf = (blob: Blob): VideoExportContainer =>
  */
 export function VideoExportDialog(props: VideoExportDialogProps): ReactNode {
   const { onExport, fileName } = props;
-  const { messages, locale, dialog, setDialog, processor } = useVideoEditor();
-  const { snapshot } = useVideoSession();
+  const { messages, locale, dialog, setDialog } = useVideoEditor();
+  const { session, snapshot } = useVideoSession();
   const announce = useAnnounce();
   const [choice, setChoice] = useState<Choice>("auto");
   const [quality, setQuality] = useState<VideoExportQuality>("medium");
@@ -137,30 +127,29 @@ export function VideoExportDialog(props: VideoExportDialogProps): ReactNode {
     controller.current = running;
     setPhase({ kind: "exporting", progress: 0, large: false });
     try {
-      const blob = await processor().export(
-        { plan, quality, ...(choice === "auto" ? {} : { container: choice }) },
-        {
-          signal: running.signal,
-          onProgress: (progress) =>
-            setPhase((now) => (now.kind === "exporting" ? { ...now, progress } : now)),
-          onWarning: (limit) => {
-            if (limit !== "maxFileSize") return;
-            setPhase((now) => (now.kind === "exporting" ? { ...now, large: true } : now));
-          },
+      // The session exports with the editor's processor (ADR 0005).
+      const result = await session.export({
+        quality,
+        ...(choice === "auto" ? {} : { container: choice }),
+        signal: running.signal,
+        onProgress: (progress) =>
+          setPhase((now) => (now.kind === "exporting" ? { ...now, progress } : now)),
+        onWarning: (limit) => {
+          if (limit !== "maxFileSize") return;
+          setPhase((now) => (now.kind === "exporting" ? { ...now, large: true } : now));
         },
-      );
+      });
       // Closed while it ran: the result belongs to no one.
       if (controller.current !== running) return;
       controller.current = null;
-      const container = containerOf(blob);
-      const containerName = messages.t(`export.containers.${container}`);
-      announce(messages.t("export.ready", { container: containerName, size: blob.size }));
+      const containerName = messages.t(`export.containers.${result.container}`);
+      announce(messages.t("export.ready", { container: containerName, size: result.size }));
       if (onExport) {
-        onExport(blob, { container, size: blob.size });
+        onExport(result.blob, result);
         close();
         return;
       }
-      setPhase({ kind: "done", blob, container });
+      setPhase({ kind: "done", result });
     } catch (reason) {
       // Closed while it ran: the reset dialog shows nothing of it.
       if (controller.current !== running) return;
@@ -179,10 +168,10 @@ export function VideoExportDialog(props: VideoExportDialogProps): ReactNode {
   const download = () => {
     if (phase.kind !== "done") return;
     if (objectUrl.current) URL.revokeObjectURL(objectUrl.current);
-    objectUrl.current = URL.createObjectURL(phase.blob);
+    objectUrl.current = URL.createObjectURL(phase.result.blob);
     const link = document.createElement("a");
     link.href = objectUrl.current;
-    link.download = `${exportFileName(fileName, snapshot.plan?.metadata.title ?? "")}.${phase.container}`;
+    link.download = `${exportFileName(fileName, snapshot.plan?.metadata.title ?? "")}.${phase.result.container}`;
     link.click();
   };
 
@@ -230,12 +219,22 @@ export function VideoExportDialog(props: VideoExportDialogProps): ReactNode {
       className={["hm-video-export", props.className].filter(Boolean).join(" ")}
     >
       {phase.kind === "done" ? (
-        <p className="hm-video-export-result">
-          {messages.t("export.ready", {
-            container: messages.t(`export.containers.${phase.container}`),
-            size: phase.blob.size,
-          })}
-        </p>
+        <>
+          <p className="hm-video-export-result">
+            {messages.t("export.ready", {
+              container: messages.t(`export.containers.${phase.result.container}`),
+              size: phase.result.size,
+            })}
+          </p>
+          {/* The sound was clamped: say by how much, and what to do about it. */}
+          {phase.result.clippedFrames > 0 ? (
+            <p className="hm-video-export-note" role="status">
+              {messages.t("export.clipped", {
+                db: Math.round(phase.result.peakDb * 10) / 10,
+              })}
+            </p>
+          ) : null}
+        </>
       ) : (
         <>
           <section className="hm-video-export-summary" aria-label={messages.t("export.summary")}>

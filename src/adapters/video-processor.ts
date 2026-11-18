@@ -60,7 +60,7 @@ export interface ProcessorEnvironment {
  * @example
  * ```ts
  * const processor = createVideoProcessor({ engine });
- * const file = await processor.export({ plan }, { onProgress, signal });
+ * const { blob, peakDb } = await processor.export({ plan }, { onProgress, signal });
  * ```
  *
  * @public
@@ -119,7 +119,7 @@ export function createProcessor(environment: ProcessorEnvironment): VideoProcess
       busy = true;
       try {
         runner ??= environment.loadRunner();
-        return await (await runner).run(
+        const outcome = await (await runner).run(
           {
             plan: job.plan,
             sources: [...sources.values()],
@@ -129,6 +129,14 @@ export function createProcessor(environment: ProcessorEnvironment): VideoProcess
           environment.policy,
           options,
         );
+        return {
+          blob: outcome.file,
+          container: outcome.container,
+          size: outcome.file.size,
+          // -Infinity for silence, as audio-sdk reports it.
+          peakDb: 20 * Math.log10(outcome.peak),
+          clippedFrames: outcome.clippedFrames,
+        };
       } finally {
         busy = false;
       }

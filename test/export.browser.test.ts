@@ -107,7 +107,7 @@ describe("an export's file", () => {
     const reason = await unreadable();
     if (reason) context.skip(reason);
     const { processor, a, teardown } = await setup();
-    const file = await processor.export({ plan: smallPlan(clipOf("x", a, 0, 30)) });
+    const { blob: file } = await processor.export({ plan: smallPlan(clipOf("x", a, 0, 30)) });
     const read = await inspector.call("inspect", file);
     expect(read.container).toBe("mp4");
     expect(file.type).toBe("video/mp4");
@@ -121,11 +121,41 @@ describe("an export's file", () => {
     await teardown();
   });
 
+  it("reports what clamping did to the sound: nothing at its own level, and how far over at +24 dB", async (context) => {
+    const reason = await unreadable();
+    if (reason) context.skip(reason);
+    const { processor, a, teardown } = await setup();
+    const quiet = await processor.export({ plan: smallPlan(clipOf("x", a, 0, 15)) });
+    expect(quiet.clippedFrames).toBe(0);
+    expect(quiet.peakDb).toBeLessThanOrEqual(0);
+    expect(quiet.peakDb).toBeGreaterThan(Number.NEGATIVE_INFINITY);
+    expect(quiet.size).toBe(quiet.blob.size);
+    expect(["mp4", "webm"]).toContain(quiet.container);
+    const loud = smallPlan(clipOf("x", a, 0, 15));
+    const boosted = {
+      ...loud,
+      clips: loud.clips.map((clip) => ({ ...clip, volumeDb: 24 })),
+    };
+    const clipped = await processor.export({ plan: boosted });
+    expect(clipped.clippedFrames).toBeGreaterThan(0);
+    // 24 dB louder, measured before the clamp, within the encoders' rounding.
+    expect(clipped.peakDb).toBeCloseTo(quiet.peakDb + 24, 0);
+    // A muted plan is silence.
+    const muted = {
+      ...loud,
+      clips: loud.clips.map((clip) => ({ ...clip, muted: true })),
+    };
+    const silent = await processor.export({ plan: muted });
+    expect(silent.peakDb).toBe(Number.NEGATIVE_INFINITY);
+    expect(silent.clippedFrames).toBe(0);
+    await teardown();
+  });
+
   it("writes WebM when asked, with VP9 or VP8 and Opus", async (context) => {
     const reason = await unreadable("webm");
     if (reason) context.skip(reason);
     const { processor, b, teardown } = await setup();
-    const file = await processor.export({
+    const { blob: file } = await processor.export({
       plan: smallPlan(clipOf("x", b, 1_000_000, 15)),
       container: "webm",
     });

@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { createFakeEngine, type FakeEngine } from "../../../test/fakes/fake-engine.js";
+import { createFakeProcessor } from "../../../test/fakes/fake-processor.js";
 import { encodeFakeVideo, type FakeVideoSpec } from "../../../test/fakes/fake-video.js";
 import { isVideoError, type VideoErrorCode } from "../errors/video-error.js";
 import type { VideoFilePolicyOverrides } from "../errors/video-limits.js";
 import { clipFrames, planFrames } from "../model/plan.js";
 import { decodingBound } from "../model/probe-limits.js";
+import type { VideoExportJob } from "../ports/video-processor.js";
 import { createVideoSession, type VideoSessionEvent } from "./session.js";
 
 const CLIP: FakeVideoSpec = {
@@ -332,5 +334,105 @@ describe("the video session", () => {
     expect(engine.sources.size).toBe(0);
     expect(session.getSnapshot()).toMatchObject({ status: "empty", sources: [] });
     await expect(session.insert(file())).rejects.toThrow();
+  });
+});
+
+describe("warnings", () => {
+  it("names the limit, its value and the file a file's warning is about, and the plan's without a file", async () => {
+    // Warn from one second, and from 720p frames; the clip is 2 s of 1280 × 720.
+    const { session } = setup({
+      maxDuration: { maximum: 60_000, warning: 1_000 },
+      maxFramePixels: { maximum: 3840 * 2160, warning: 1280 * 720 },
+    });
+    const info = await session.insert(file());
+    const { warnings } = session.getSnapshot();
+    expect(warnings).toContainEqual({
+      type: "limit",
+      limit: "maxDuration",
+      actual: 2_000,
+      source: info.id,
+    });
+    expect(warnings).toContainEqual({
+      type: "limit",
+      limit: "maxFramePixels",
+      actual: 1280 * 720,
+      source: info.id,
+    });
+    // The output's and the plan's own warnings name no file.
+    expect(warnings).toContainEqual({ type: "limit", limit: "maxFramePixels", actual: 1280 * 720 });
+    expect(warnings).toContainEqual({ type: "limit", limit: "maxDuration", actual: 2_000 });
+    // One per limit and file.
+    expect(warnings).toHaveLength(4);
+    // An edit keeps only what it comes near: the plan and the output.
+    const key = session.getSnapshot().plan?.clips[0]?.key as string;
+    session.execute({ type: "video.setMuted", keys: [key], muted: true });
+    expect(session.getSnapshot().warnings.every((warning) => warning.source === undefined)).toBe(
+      true,
+    );
+  });
+});
+
+describe("exporting through the session", () => {
+  /** A session with the fake processor, over the fake engine's sources. */
+  function withProcessor() {
+    const engine = createFakeEngine();
+    const processor = createFakeProcessor(engine.sources);
+    const events: VideoSessionEvent[] = [];
+    const exported: VideoExportJob[] = [];
+    const session = createVideoSession({
+      engine,
+      onEvent: (event) => events.push(event),
+      processor: {
+        export(job, options) {
+          exported.push(job);
+          return processor.export(job, options);
+        },
+        destroy: () => processor.destroy(),
+      },
+    });
+    return { session, events, exported };
+  }
+
+  it("exports the plan as it is when the call starts, with the job's options, and says so", async () => {
+    const { session, events, exported } = withProcessor();
+    await session.insert(file());
+    const progress: number[] = [];
+    const exporting = session.export({
+      container: "webm",
+      quality: "high",
+      onProgress: (fraction) => progress.push(fraction),
+    });
+    // An edit while it runs changes the session, not the file.
+    const key = session.getSnapshot().plan?.clips[0]?.key as string;
+    session.execute({ type: "video.setMuted", keys: [key], muted: true });
+    const result = await exporting;
+    expect(result).toMatchObject({ container: "webm", clippedFrames: 0 });
+    expect(result.size).toBe(result.blob.size);
+    expect(exported).toHaveLength(1);
+    expect(exported[0]).toMatchObject({ container: "webm", quality: "high" });
+    expect(exported[0]?.plan.clips[0]?.muted).toBe(false);
+    expect(progress.at(-1)).toBe(1);
+    expect(events.at(-1)).toEqual({ type: "export", outcome: "done", commands: [] });
+  });
+
+  it("refuses with no plan, and says a cancelled export was cancelled", async () => {
+    const { session, events } = withProcessor();
+    const none = await rejection(session.export());
+    expect(code(none)).toBe("INVALID_COMMAND");
+    expect((none as { details?: unknown }).details).toEqual({ reason: "no-plan" });
+    expect(events.at(-1)).toMatchObject({ type: "export", outcome: "failed" });
+    await session.insert(file());
+    const controller = new AbortController();
+    controller.abort();
+    expect(code(await rejection(session.export({ signal: controller.signal })))).toBe("ABORTED");
+    expect(events.at(-1)).toMatchObject({ type: "export", outcome: "cancelled" });
+    // An export's failure isn't the session's: the snapshot keeps no error for it.
+    expect(session.getSnapshot().error).toBeNull();
+  });
+
+  it("throws TypeError without a processor", async () => {
+    const { session } = setup();
+    await session.insert(file());
+    expect(await rejection(session.export())).toBeInstanceOf(TypeError);
   });
 });
