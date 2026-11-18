@@ -38,6 +38,9 @@ async function rejection(promise: Promise<unknown> | (() => unknown)): Promise<u
 }
 
 const code = (error: unknown) => (isVideoError(error) ? error.code : error);
+/** An error's `details.reason`, which picks its text (see videoErrorText). */
+const reason = (error: unknown) =>
+  isVideoError(error) ? (error.details as { reason?: unknown } | undefined)?.reason : error;
 
 /** A fake engine whose probe or open waits at a gate the test opens. */
 function gated(step: "probe" | "open") {
@@ -121,7 +124,10 @@ describe("the video session", () => {
 
   it("checks the probe against the limits before opening, and leaves nothing behind", async () => {
     const { session, engine, events } = setup({ maxFramePixels: 1_000 });
-    expect(code(await rejection(session.insert(file())))).toBe("FRAME_TOO_LARGE");
+    const refused = await rejection(session.insert(file()));
+    expect(code(refused)).toBe("FRAME_TOO_LARGE");
+    // The file's own limit: its text is the code's, about the video opened.
+    expect(reason(refused)).toBeUndefined();
     expect(engine.sources.size).toBe(0);
     expect(session.getSnapshot()).toMatchObject({ plan: null, sources: [], canUndo: false });
     expect(session.getSnapshot().error?.code).toBe("FRAME_TOO_LARGE");
@@ -169,7 +175,10 @@ describe("the video session", () => {
     // Each file is 2 s, within 3 s; together they're 4 s.
     const length = setup({ maxDuration: 3_000 });
     await length.session.insert(file());
-    expect(code(await rejection(length.session.insert(file())))).toBe("DURATION_TOO_LONG");
+    const tooLong = await rejection(length.session.insert(file()));
+    expect(code(tooLong)).toBe("DURATION_TOO_LONG");
+    // Neither file is too long: the edited video would be.
+    expect(reason(tooLong)).toBe("plan-too-long");
     expect(length.engine.sources.size).toBe(1);
     expect(length.session.getSnapshot().plan?.clips).toHaveLength(1);
   });
@@ -281,9 +290,15 @@ describe("the video session", () => {
     const output = session.getSnapshot().plan?.output;
     if (!output) throw new Error("expected a plan");
     const tooLarge = { ...output, width: 8_192, height: 8_192 };
-    expect(
-      code(await rejection(() => session.execute({ type: "video.setOutput", output: tooLarge }))),
-    ).toBe("FRAME_TOO_LARGE");
+    const refused = await rejection(() =>
+      session.execute({ type: "video.setOutput", output: tooLarge }),
+    );
+    expect(code(refused)).toBe("FRAME_TOO_LARGE");
+    expect(reason(refused)).toBe("output");
+    expect(session.getSnapshot().error?.details).toMatchObject({
+      reason: "output",
+      actual: 8_192 * 8_192,
+    });
     expect(session.getSnapshot().plan?.output).toEqual(output);
   });
 

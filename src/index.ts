@@ -152,4 +152,4 @@ export type {
 export { createVideoSession } from "./core/session/session.js";
 export type { VideoMessageCatalogue } from "./messages/en.js";
 export { videoMessages } from "./messages/en.js";
-export { videoWarningText } from "./messages/text.js";
+export { videoErrorText, videoWarningText } from "./messages/text.js";

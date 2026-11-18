@@ -10,6 +10,7 @@ import type {
   VideoExportResult,
 } from "../core/ports/video-processor.js";
 import { exportFileName } from "../features/export-name/export-name.js";
+import { videoErrorText } from "../messages/text.js";
 import { useVideoEditor, useVideoSession } from "./context.js";
 import { formatTimecode } from "./timecode.js";
 
@@ -341,7 +342,7 @@ export function VideoExportDialog(props: VideoExportDialogProps): ReactNode {
                 ? messages.t("export.unavailable")
                 : noSoundEncoder
                   ? messages.t("export.noSoundEncoder")
-                  : messages.error(error)}
+                  : videoErrorText(messages, error)}
             </p>
           ) : null}
         </>

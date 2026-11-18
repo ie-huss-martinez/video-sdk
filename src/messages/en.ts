@@ -204,6 +204,19 @@ export const videoOwnMessages = /* @__PURE__ */ defineMessages({
     one: "A video can have {maximum} clip. Join or delete clips, and try again.",
     other: "A video can have up to {maximum, number} clips. Join or delete clips, and try again.",
   }),
+  // Texts for one reason of a code, which take its place when the error
+  // carries that reason: see videoErrorText. An output's limits, and the
+  // edited video's length, aren't a file the user opened.
+  "errors.FRAME_TOO_LARGE.output":
+    "That output size has {actual, number} pixels, which is more than the {maximum, number} a picture can have. Choose a smaller size.",
+  "errors.FRAME_RATE_TOO_HIGH.output":
+    "That output has {actual, number} frames per second, which is more than the limit of {maximum, number}.",
+  "errors.TOO_MANY_CHANNELS.output":
+    "That output has {actual, number} sound channels, which is over the {maximum, number}-channel limit.",
+  "errors.SAMPLE_RATE_TOO_HIGH.output":
+    "That output's sound quality is {actual, number} Hz, which is over the {maximum, number} Hz limit.",
+  "errors.DURATION_TOO_LONG.plan-too-long":
+    "This would make the video {actual, duration} long, which is over the {maximum, duration} limit.",
   "warnings.audioUndecodable":
     "This browser can't play this video's sound, so it opened without sound. Its sound won't be in your export. Try another browser to keep it.",
   "warnings.maxFramePixels": "This video's picture is large, and may play slowly on some devices.",

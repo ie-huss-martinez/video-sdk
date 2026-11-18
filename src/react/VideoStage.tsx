@@ -3,6 +3,7 @@ import { type ReactNode, useEffect, useRef, useState } from "react";
 import { createVideoOutput } from "../adapters/video-output.js";
 import { videoLimits } from "../core/errors/video-limits.js";
 import { planFrames } from "../core/model/plan.js";
+import { videoErrorText } from "../messages/text.js";
 import { useVideoEditor, useVideoOutput, useVideoPlayhead, useVideoSession } from "./context.js";
 import { ACCEPT } from "./files.js";
 
@@ -127,7 +128,7 @@ export function VideoStage(props: VideoStageProps): ReactNode {
   const empty = snapshot.plan === null || frames === 0;
   const error = snapshot.error ? (
     <p className="hm-video-stage-error" role="alert">
-      {messages.error(snapshot.error)}
+      {videoErrorText(messages, snapshot.error)}
     </p>
   ) : null;
   return (
