@@ -10,14 +10,7 @@ import {
 } from "../core/model/plan.js";
 import { frameTime } from "../core/model/time.js";
 import { createVideoReducer } from "../core/operations/commands.js";
-import {
-  edgeLimits,
-  moveTarget,
-  offsetsOf,
-  selectRange,
-  trimEdge,
-  trimToPlayhead,
-} from "./timeline-model.js";
+import { edgeLimits, moveTarget, offsetsOf, trimEdge, trimToPlayhead } from "./timeline-model.js";
 
 const NTSC = { num: 30_000, den: 1_001 };
 
@@ -146,10 +139,5 @@ describe("the timeline's keyboard edits", () => {
 
   it("lays clips out from sdk-core's sequence offsets", () => {
     expect(offsetsOf(plan)).toEqual([0, 10, 30, 60]);
-  });
-
-  it("selects a range in plan order, either way", () => {
-    expect(selectRange(plan, 2, 0)).toEqual(["a", "b", "c"]);
-    expect(selectRange(plan, 1, 1)).toEqual(["b"]);
   });
 });

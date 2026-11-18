@@ -2,7 +2,7 @@
 
 - **Status:** Accepted. The audio rows of the timeline depend on an amendment to [ui ADR 0011](https://github.com/ie-huss-martinez/ui/blob/main/docs/adr/0011-timeline.md), in section 10; the headless core and the inspector don't
 - **Date:** 2026-11-18
-- **Amended:** 2026-11-18, with 8c as built: the summary's date, and the writer's own rolled-over dates. Earlier, with 8b as built: sound that can't be decoded or encoded. Earlier, with item 8 split in three, the export's result as built (8a), and the date rule moved to version 2 of the formats, which sdk-core ADR 0045 requires. Earlier, with the releases as they went out: 0.2.0 after the clip panel, and each later release one number on; the clock's anchor and the element join the plan. Earlier, with the review's rulings: the mix follows [audio-sdk ADR 0006](https://github.com/ie-huss-martinez/audio-sdk/blob/main/docs/adr/0006-multitrack.md) where a user would notice a difference, why `maxAudioTracks` is 8, and `ui`'s lanes are designed for both SDKs.
+- **Amended:** 2026-11-19, with what 0.4.0 carries. Earlier, 2026-11-18, with 8c as built: the summary's date, and the writer's own rolled-over dates. Earlier, with 8b as built: sound that can't be decoded or encoded. Earlier, with item 8 split in three, the export's result as built (8a), and the date rule moved to version 2 of the formats, which sdk-core ADR 0045 requires. Earlier, with the releases as they went out: 0.2.0 after the clip panel, and each later release one number on; the clock's anchor and the element join the plan. Earlier, with the review's rulings: the mix follows [audio-sdk ADR 0006](https://github.com/ie-huss-martinez/audio-sdk/blob/main/docs/adr/0006-multitrack.md) where a user would notice a difference, why `maxAudioTracks` is 8, and `ui`'s lanes are designed for both SDKs.
 
 ## Context
 
@@ -216,7 +216,7 @@ Each line is one pull request. A release is cut where shown.
 
 The inspector comes before the timeline's move to `ui` because it doesn't touch the timeline, and it's what the user asked for.
 
-**As released:** 0.2.0 went out after item 5, with the README, `ui` 0.11 and `hm-text`, so the clip panel reached the application at once. Items 6 to 8 moved to 0.3.0, and each later release moved up one. Two items joined the table from review: the clock's anchor (item 9), and the element (item 12).
+**As released:** 0.2.0 went out after item 5, with the README, `ui` 0.11 and `hm-text`, so the clip panel reached the application at once. Items 6 to 8 moved to 0.3.0, and each later release moved up one. Two items joined the table from review: the clock's anchor (item 9), and the element (item 12). 0.4.0 carries the shared timeline's first half, item 10, with what came in from review after 0.3.0: the handle's `export()`, the output and plan-length refusals' own text, the session's warnings and playback's failures said in the stage, and fixes. The waveform lane, item 11, moves to the release after it.
 
 ## Alternatives considered
 

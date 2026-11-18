@@ -123,14 +123,3 @@ export function trimToPlayhead(
 export function offsetsOf(plan: VideoPlan): readonly number[] {
   return sequenceOffsets(plan.clips.map((clip) => clipFrames(clip, plan.output.frameRate)));
 }
-
-/**
- * The keys from `anchor` to `focus`, inclusive, in plan order: a range
- * selection made with Shift.
- *
- * @internal
- */
-export function selectRange(plan: VideoPlan, anchor: number, focus: number): string[] {
-  const [from, to] = anchor <= focus ? [anchor, focus] : [focus, anchor];
-  return plan.clips.slice(from, to + 1).map((clip) => clip.key);
-}
