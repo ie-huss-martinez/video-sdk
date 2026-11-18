@@ -45,7 +45,15 @@ function planOf(...clips: VideoClip[]) {
   };
 }
 
-function setup(options: { origin?: number; frames?: number; milliseconds?: boolean } = {}) {
+function setup(
+  options: {
+    origin?: number;
+    frames?: number;
+    milliseconds?: boolean;
+    /** Animation frames each decoded frame takes to arrive: a decoder slower than the screen. */
+    ticksPerFrame?: number;
+  } = {},
+) {
   const origin = options.origin ?? 0;
   // WebM's timestamps: whole milliseconds.
   const stamp = (index: number) =>
@@ -102,6 +110,17 @@ function setup(options: { origin?: number; frames?: number; milliseconds?: boole
           signal.throwIfAborted();
           const timestamp = origin + stamp(index);
           if (timestamp >= range.to) break;
+          // A slow decoder: each frame takes animation frames to arrive, and stops when aborted.
+          for (let tick = 0; tick < (options.ticksPerFrame ?? 0); tick += 1) {
+            await new Promise<void>((resolve, reject) => {
+              const onAbort = () => reject(signal.reason);
+              signal.addEventListener("abort", onAbort, { once: true });
+              waiters.push(() => {
+                signal.removeEventListener("abort", onAbort);
+                resolve();
+              });
+            });
+          }
           const frame = make(timestamp);
           try {
             if (timestamp >= range.from) await onFrame(frame);
@@ -421,6 +440,65 @@ describe("the frame scheduler", () => {
     t.control({ mode: "play", anchor: { media: 0, at: 1_700_000_000_000 } });
     await t.advance(REFRESH * 2);
     expect(t.decodes.length).toBeGreaterThan(1);
+    t.scheduler.dispose();
+    await t.scheduler.settled();
+  });
+
+  it("catches up after a restart with a slow decoder: the newest frame each time, never later, until on time", async () => {
+    // Twice the screen's speed: one decoded frame per animation frame, two per output frame.
+    const t = setup({ ticksPerFrame: 1 });
+    t.scheduler.load(planOf(clip("a", "s", 0, 300)), new Map([["s", 0]]));
+    // From frame 50: decoding starts at the key frame before it, 30.
+    t.play(50 * FRAME);
+    await t.advance(REFRESH * 120);
+    const drawn = t.drawn.map((entry) => ({
+      frame: entry.frame,
+      late: Math.round(entry.at / FRAME) - entry.frame,
+    }));
+    // The restart's own frame, 50, decoded 11 frames late with 51 right behind it: replaced, and counted.
+    expect(drawn[0]).toEqual({ frame: 51, late: 11 });
+    expect(drawn.some((entry) => entry.frame === 50)).toBe(false);
+    expect(t.scheduler.dropped).toBeGreaterThanOrEqual(1);
+    // Every frame later than the one before, each no later than the one before it was, until on time.
+    for (let index = 1; index < drawn.length; index += 1) {
+      const [before, now] = [drawn[index - 1], drawn[index]] as [
+        (typeof drawn)[0],
+        (typeof drawn)[0],
+      ];
+      expect(now.frame).toBeGreaterThan(before.frame);
+      expect(now.late).toBeLessThanOrEqual(before.late);
+    }
+    expect(drawn.at(-1)?.late).toBe(0);
+    t.scheduler.dispose();
+    await t.scheduler.settled();
+  });
+
+  it("still draws a late first frame on the next animation frame when no later one comes", async () => {
+    const t = setup({ ticksPerFrame: 1, frames: 60 });
+    // The clip's last frame: nothing decodes after it.
+    t.scheduler.load(planOf(clip("a", "s", 0, 60)), new Map([["s", 0]]));
+    t.play(59 * FRAME);
+    // Thirty frames from the key frame at 30, one per animation frame.
+    await t.advance(REFRESH * 30);
+    expect(t.drawn).toEqual([]);
+    await t.advance(REFRESH * 2);
+    expect(t.drawn.map((entry) => entry.frame)).toEqual([59]);
+    // Drawn late, as the newest frame there is, rather than held for good.
+    expect(Math.round((t.drawn[0]?.at ?? 0) / FRAME)).toBeGreaterThan(59 + 1);
+    t.scheduler.dispose();
+    await t.scheduler.settled();
+  });
+
+  it("draws a paused seek's frame as soon as it's decoded, however slowly", async () => {
+    const t = setup({ ticksPerFrame: 1 });
+    t.scheduler.load(planOf(clip("a", "s", 0, 300)), new Map([["s", 0]]));
+    t.control({ mode: "show", at: Math.round(59 * FRAME) });
+    // Thirty frames from the key frame at 30: the last arrives on the thirtieth animation frame.
+    await t.advance(REFRESH * 29);
+    expect(t.drawn).toEqual([]);
+    await t.advance(REFRESH);
+    // Drawn at once, without waiting for another animation frame.
+    expect(t.drawn.map((entry) => entry.frame)).toEqual([59]);
     t.scheduler.dispose();
     await t.scheduler.settled();
   });

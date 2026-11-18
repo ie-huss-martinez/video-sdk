@@ -3,7 +3,7 @@
 - **Status:** Accepted
 - **Date:** 2026-11-12
 - **Amended:** 2026-11-12, when audio playback was built: the output timestamp's latency, stamps that aren't believed, corrections without restarts, an audio clock that stops, the start of playback, and audio windows. Earlier, when video playback was built: the clock reads wall-clock time, a late frame is dropped only when a later one is due, and timestamps within a millisecond of the frame grid are on it. Then, the canvas's size follows the stage's.
-- **Amended:** 2026-11-18, with the inspector ([ADR 0007](0007-editor-shell.md)): a new plan that shows the same picture keeps the decoders, and the worker's readers, which are told apart by opening.
+- **Amended:** 2026-11-18: a restart's first frame takes the late-frame rule while playing, and how late frames are after a restart. Earlier the same day, with the inspector ([ADR 0007](0007-editor-shell.md)): a new plan that shows the same picture keeps the decoders, and the worker's readers, which are told apart by opening.
 
 ## Context
 
@@ -63,6 +63,8 @@ Both sides compute media time the same way, `M + (now − P) × 1,000` microseco
 ### Dropping late frames
 
 - **A frame whose time is past when it arrives** isn't waited for. Within one output frame of its time, it's drawn at once. Later than that, it's held and drawn on the next animation frame, unless a later frame is due by then: the later one replaces it, and the one replaced is closed undrawn and counted in the snapshot's `droppedFrames`. So the frame on screen is always the latest one due, and a frame is never dropped when nothing newer can take its place.
+  - **The first frame after a restart takes the same rule** while playing, as when an edit or a seek restarts the decoder: decoding from the key frame before the clock can bring it more than an output frame late, and the frame decoded right after it then replaces it. Paused, a seek's frame is what was asked for, and is drawn as soon as it's decoded.
+  - **After a restart, frames are late until the decoder catches up:** each one drawn is the newest decoded, from the plan at the clock, and late by how far decoding from the key frame has still to go, which shrinks while the decoder is faster than real time. How late depends on the machine, so the browser tests check only what doesn't: the plan's frame for its place, never early, never after a later one, and never the old plan's once the new one's has been drawn. The scheduler's unit tests pin the lateness with a decoder of known speed.
 - **Audio never waits for video** ([ADR 0005](0005-playback-and-export.md)). When decoding can't keep up, frames are dropped, and the clock runs on.
 - **Paused, nothing is drawn.** The canvas keeps the last frame.
 
