@@ -2,7 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-11-12
-- **Amended:** 2026-11-18, with the inspector's clip panel as built, then its picture group, then the output and metadata: see "The inspector".
+- **Amended:** 2026-11-18, with `ui`'s `onValueCommit` for the volume slider. Earlier, with the inspector's clip panel as built, then its picture group, then the output and metadata: see "The inspector".
 
 ## Context
 
@@ -46,7 +46,7 @@ Below a container width of 720 px the inspector moves under the timeline. Sizes 
   - **Mute:** a ToggleButton with the `video.mute` tool's keys.
   - **Fade in and fade out:** each a NumberField in seconds, and a SegmentedControl for its shape, "Straight" or "Smooth". A fade can't be longer than the clip has left beside its other fade; the field's maximum and the command are both kept within it.
 - **A change applies to every selected clip, as one undo step.** Where the clips differ, a control shows the first clip's value, and a line says they differ.
-- **A drag of the slider, or a run of its keys, is one undo step.** The slider shows the value as it moves; the command is executed once, when the pointer lets go, 400 ms after the last key, or when focus leaves. A gesture that spans events records one step when it ends ([sdk-core ADR 0010](https://github.com/ie-huss-martinez/sdk-core/blob/main/docs/adr/0010-edits-as-commands.md)), and the session has no `group()` yet, which this record's context assumed.
+- **A drag of the slider, or a key held down on it, is one undo step.** The slider shows the value as it moves; the command is executed once, when `ui`'s Slider says the gesture has ended (`onValueCommit`, ui 0.13): the pointer let go, the last key held let go, or focus leaving. So each press of a key is a step of its own, and a held, repeating key is one, as in every family editor. Until ui 0.13 the editor kept its own rule, a run of keys ending 400 ms after the last, which a slow machine could split.
 - **A gesture is heard as it moves, through a transient plan,** as image-sdk's stage shows a drag ([image-sdk ADR 0007](https://github.com/ie-huss-martinez/image-sdk/blob/main/docs/adr/0007-editor-shell.md)). People set a volume by ear.
   - **The editor holds a preview plan** beside the session's, outside the history. While one is set, the stage plays it instead. Every edit, and the end of the gesture, clears it.
   - **While the video plays, the slider sets it** to the session's plan with the slider's volume on the selected clips, at most every 100 ms. Paused, there's nothing to hear, so nothing is loaded until the gesture commits.
