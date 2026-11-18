@@ -267,4 +267,36 @@ describe("the timeline", () => {
     await eventually(() => expect(slider.getAttribute("aria-valuetext")).toBe("0:01.00"));
     expect(view.querySelector(".hm-video-transport-time")?.textContent).toBe("0:01.00 of 0:02.00");
   });
+
+  it("draws the clips' sound under them once their peaks arrive, and a muted clip flat", async () => {
+    const { view } = await editorWith(1);
+    const canvas = () => view.querySelector<HTMLCanvasElement>(".hm-video-timeline-waveform");
+    // How tall the drawing is: the rows with any ink, in device pixels.
+    const inkRows = () => {
+      const element = canvas();
+      const context = element?.getContext("2d");
+      if (!element || !context || element.width === 0) return 0;
+      const { data, width, height } = context.getImageData(0, 0, element.width, element.height);
+      let rows = 0;
+      for (let y = 0; y < height; y += 1) {
+        for (let x = 0; x < width; x += 1) {
+          if ((data[(y * width + x) * 4 + 3] as number) > 0) {
+            rows += 1;
+            break;
+          }
+        }
+      }
+      return rows;
+    };
+    expect(canvas()?.closest('[aria-hidden="true"]')).not.toBeNull();
+    // The fixture's sound, quiet as it is: more than the centre line.
+    await eventually(() => expect(inkRows()).toBeGreaterThan(2), 15_000);
+    const sounding = inkRows();
+    // Muted, it's drawn as silence: the centre line only.
+    await userEvent.click(clipsIn(view)[0] as HTMLElement);
+    await userEvent.click(button(view, "Mute the selected clips"));
+    await eventually(() => expect(names(view)[0]).toMatch(/, muted$/));
+    await eventually(() => expect(inkRows()).toBeLessThanOrEqual(2));
+    expect(inkRows()).toBeLessThan(sounding);
+  });
 });

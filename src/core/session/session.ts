@@ -24,7 +24,7 @@ import {
   type VideoPlan,
 } from "../model/plan.js";
 import { checkOutput, checkPlanLength, checkProbe, decodingBound } from "../model/probe-limits.js";
-import type { VideoProbe, VideoSourceInfo } from "../model/source.js";
+import type { VideoPeaks, VideoProbe, VideoSourceInfo } from "../model/source.js";
 import { type FrameRate, frameTime, isWhole } from "../model/time.js";
 import { limitWarning, type VideoWarning } from "../model/warnings.js";
 import { createVideoReducer, type VideoCommand } from "../operations/commands.js";
@@ -81,6 +81,11 @@ export interface VideoSessionSnapshot {
   readonly warnings: readonly VideoWarning[];
   /** The last failure, until the next successful insert or edit. */
   readonly error: VideoError | null;
+  /**
+   * Bumped whenever a source's waveform peaks arrive, so a waveform can
+   * redraw: read them with {@link VideoSession.getPeaks}.
+   */
+  readonly peaksVersion: number;
 }
 
 /**
@@ -151,6 +156,14 @@ export interface VideoSession {
   getSnapshot(): VideoSessionSnapshot;
   /** Calls the listener after every change. Returns a function that unsubscribes. */
   subscribe(listener: () => void): () => void;
+  /**
+   * An open source's waveform peaks (ADR 0008), for drawing its sound: the
+   * lowest and highest sample of each 10 ms. They're built in the background
+   * once the source has opened, so `undefined` until they arrive, which
+   * bumps the snapshot's `peaksVersion`, and for good for a source without
+   * sound, or whose sound this browser can't decode.
+   */
+  getPeaks(source: string): VideoPeaks | undefined;
   /**
    * Probes, checks and opens a file, and inserts all of it as one clip
    * (ADR 0001, ADR 0004). The first file sets the plan's output. A failed or
@@ -260,6 +273,11 @@ export function createVideoSession(options: VideoSessionOptions): VideoSession {
   let inserting = 0;
   let warnings: readonly VideoWarning[] = [];
   let error: VideoError | null = null;
+  /** Each open source's peaks, once built in the background. */
+  const peaks = new Map<string, VideoPeaks>();
+  /** The peaks being built, by source, to cancel when the source closes. */
+  const building = new Map<string, AbortController>();
+  let peaksVersion = 0;
   let nextId = 0;
   let destroyed = false;
   /** A new id or key, unique within the session. */
@@ -295,6 +313,7 @@ export function createVideoSession(options: VideoSessionOptions): VideoSession {
       decodingBytes: (bounds[0] ?? 0) + (bounds[1] ?? 0),
       warnings,
       error,
+      peaksVersion,
     };
   };
   const store = createStore<VideoSessionSnapshot>(snapshot());
@@ -317,6 +336,39 @@ export function createVideoSession(options: VideoSessionOptions): VideoSession {
     return error;
   };
 
+  /** Stops building a source's peaks, and forgets them. */
+  const dropPeaks = (id: string) => {
+    building.get(id)?.abort();
+    building.delete(id);
+    peaks.delete(id);
+  };
+
+  /**
+   * Builds a source's peaks in the background (ADR 0008): a video's insert
+   * already walks every packet, and decoding its sound as well before the
+   * clip appears would double the wait. Peaks that arrive after the source
+   * was closed, or the session destroyed, are dropped.
+   */
+  const buildPeaks = (id: string, info: VideoSourceInfo) => {
+    if (info.audio === null || info.unplayableAudio) return;
+    const controller = new AbortController();
+    building.set(id, controller);
+    engine.peaks(id, { filePolicy: policy, signal: controller.signal }).then(
+      (built) => {
+        if (building.get(id) !== controller || destroyed || !sources.has(id)) return;
+        building.delete(id);
+        if (!built) return;
+        peaks.set(id, built);
+        peaksVersion += 1;
+        publish();
+      },
+      () => {
+        // No waveform: the sound plays and exports as before.
+        if (building.get(id) === controller) building.delete(id);
+      },
+    );
+  };
+
   /** Closes every source that neither the plan nor any history step refers to. */
   const release = () => {
     const referenced = new Set<string>();
@@ -328,6 +380,7 @@ export function createVideoSession(options: VideoSessionOptions): VideoSession {
     for (const id of [...sources.keys()]) {
       if (!referenced.has(id)) {
         sources.delete(id);
+        dropPeaks(id);
         void engine.close(id).catch(() => {});
       }
     }
@@ -367,6 +420,7 @@ export function createVideoSession(options: VideoSessionOptions): VideoSession {
   return {
     getSnapshot: () => store.getSnapshot(),
     subscribe: (listener) => store.subscribe(listener),
+    getPeaks: (source) => peaks.get(source),
 
     async insert(file, insertOptions = {}) {
       assertAlive();
@@ -447,6 +501,7 @@ export function createVideoSession(options: VideoSessionOptions): VideoSession {
         warnings = distinct([...near, ...result.near]);
         error = null;
         release();
+        buildPeaks(id, info);
         emit({ type: "insert", outcome: "done", commands: commands.map((c) => c.type) });
         return info;
       } catch (reason) {
@@ -573,6 +628,7 @@ export function createVideoSession(options: VideoSessionOptions): VideoSession {
       if (destroyed) return;
       destroyed = true;
       const ids = [...sources.keys()];
+      for (const id of ids) dropPeaks(id);
       sources.clear();
       history.clear();
       plan = null;
