@@ -1,5 +1,13 @@
 # @hussmartinez/video-sdk
 
+## 0.3.1
+
+### Patch Changes
+
+- [#90](https://github.com/ie-huss-martinez/video-sdk/pull/90) [`1a07b29`](https://github.com/ie-huss-martinez/video-sdk/commit/1a07b29b39d9a558832c3abc0c212065dddc2c13) Thanks [@hussmartinez](https://github.com/hussmartinez)! - The package now depends on `@hussmartinez/ui` ^0.14.0, up from ^0.11.0, so a host on ui 0.14 has one copy of it. An application that installs `@hussmartinez/ui` itself, for its stylesheet or its components, should move to 0.14 too. `@hussmartinez/sdk-core` stays at ^0.4.4.
+  
+  The inspector's volume slider now ends a gesture as ui's `Slider` does: when the pointer is let go, when the last key held is let go, or when focus leaves. Each press of an arrow key is its own undo step, and a key held down is one, instead of a run of presses being joined when they came within 400 ms of each other.
+
 ## 0.3.0
 
 ### Minor Changes
