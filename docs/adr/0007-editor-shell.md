@@ -47,7 +47,11 @@ Below a container width of 720 px the inspector moves under the timeline. Sizes 
   - **Fade in and fade out:** each a NumberField in seconds, and a SegmentedControl for its shape, "Straight" or "Smooth". A fade can't be longer than the clip has left beside its other fade; the field's maximum and the command are both kept within it.
 - **A change applies to every selected clip, as one undo step.** Where the clips differ, a control shows the first clip's value, and a line says they differ.
 - **A drag of the slider, or a run of its keys, is one undo step.** The slider shows the value as it moves; the command is executed once, when the pointer lets go, 400 ms after the last key, or when focus leaves. A gesture that spans events records one step when it ends ([sdk-core ADR 0010](https://github.com/ie-huss-martinez/sdk-core/blob/main/docs/adr/0010-edits-as-commands.md)), and the session has no `group()` yet, which this record's context assumed.
-  - **The cost:** the new volume is heard when the gesture ends, not while it moves.
+- **A gesture is heard as it moves, through a transient plan,** as image-sdk's stage shows a drag ([image-sdk ADR 0007](https://github.com/ie-huss-martinez/image-sdk/blob/main/docs/adr/0007-editor-shell.md)). People set a volume by ear.
+  - **The editor holds a preview plan** beside the session's, outside the history. While one is set, the stage plays it instead. Every edit, and the end of the gesture, clears it.
+  - **While the video plays, the slider sets it** to the session's plan with the slider's volume on the selected clips, at most every 100 ms. Paused, there's nothing to hear, so nothing is loaded until the gesture commits.
+  - **The picture doesn't stutter:** a plan that differs only in sound keeps the scheduler's decoders and clock ([ADR 0006](0006-frame-scheduler.md)), and the audio takes the new plan 200 ms ahead, without a gap. So the change is heard about a fifth of a second after the thumb moves.
+  - **The fades' fields commit on Enter, blur or an arrow key,** each a step of its own, and are heard from then.
 - **A clip without sound** gets a line saying so, and no controls.
 - **Layout:** under the timeline below a container width of 720 px, and a column beside the other regions from there.
 - **The logic is headless,** in `src/features/clip-audio/`: what the selected clips share, and the commands for a fade. The React layer renders it.

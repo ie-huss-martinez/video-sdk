@@ -17,6 +17,8 @@ export const KEY_RUN = 400;
  *
  * @param committed - The value the document has.
  * @param commit - Called once with the gesture's last value, when it differs.
+ * @param end - Called when a gesture ends, after `commit`, whether or not
+ * the value changed: where a preview of the gesture is dropped.
  * @returns The value to show, `change` for the slider's `onValueChange`, and
  * `ref` for the slider's input.
  * @internal
@@ -24,6 +26,7 @@ export const KEY_RUN = 400;
 export function useGestureValue(
   committed: number,
   commit: (value: number) => void,
+  end?: () => void,
 ): {
   readonly value: number;
   readonly change: (value: number) => void;
@@ -33,8 +36,8 @@ export function useGestureValue(
   const pending = useRef<number | null>(null);
   const pressed = useRef(false);
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-  const latest = useRef({ committed, commit });
-  latest.current = { committed, commit };
+  const latest = useRef({ committed, commit, end });
+  latest.current = { committed, commit, end };
 
   const flush = useCallback(() => {
     clearTimeout(timer.current);
@@ -43,6 +46,7 @@ export function useGestureValue(
     pending.current = null;
     setDraft(null);
     if (value !== null && value !== latest.current.committed) latest.current.commit(value);
+    if (value !== null) latest.current.end?.();
   }, []);
 
   const change = useCallback(
@@ -104,6 +108,7 @@ export function useGestureValue(
       const value = pending.current;
       pending.current = null;
       if (value !== null && value !== latest.current.committed) latest.current.commit(value);
+      if (value !== null) latest.current.end?.();
     },
     [],
   );

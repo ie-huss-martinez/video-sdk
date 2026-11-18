@@ -24,6 +24,7 @@ import { createVideoEngine } from "../adapters/video-engine.js";
 import { createVideoProcessor } from "../adapters/video-processor.js";
 import type { VideoFilePolicyOverrides } from "../core/errors/video-limits.js";
 import { videoLimits } from "../core/errors/video-limits.js";
+import type { VideoPlan } from "../core/model/plan.js";
 import type { VideoEngine } from "../core/ports/video-engine.js";
 import type { VideoOutput, VideoOutputSnapshot } from "../core/ports/video-output.js";
 import type { VideoProcessor } from "../core/ports/video-processor.js";
@@ -105,6 +106,14 @@ interface EditorContext {
   readonly filePolicy: VideoFilePolicyOverrides | undefined;
   readonly output: VideoOutput | null;
   readonly setOutput: (output: VideoOutput | null) => void;
+  /**
+   * A plan the preview plays in place of the session's while a gesture is
+   * under way, such as a drag of the volume slider, or `null`. It's never in
+   * the history: the gesture commits one command when it ends
+   * (docs/adr/0007).
+   */
+  readonly preview: VideoPlan | null;
+  readonly setPreview: (plan: VideoPlan | null) => void;
   /** The clips selected in the timeline, by key, in plan order. */
   readonly selectedClips: readonly string[];
   readonly setSelectedClips: (keys: readonly string[]) => void;
@@ -177,6 +186,7 @@ export function VideoEditorProvider(props: VideoEditorProviderProps): ReactNode 
     }),
   );
   const [output, setOutput] = useState<VideoOutput | null>(null);
+  const [preview, setPreview] = useState<VideoPlan | null>(null);
   const [selectedClips, setSelectedClips] = useState<readonly string[]>([]);
   const [zoom, setZoom] = useState(1);
   const [maxZoom, setMaxZoom] = useState(1);
@@ -270,6 +280,8 @@ export function VideoEditorProvider(props: VideoEditorProviderProps): ReactNode 
       filePolicy,
       output,
       setOutput,
+      preview,
+      setPreview,
       selectedClips,
       setSelectedClips,
       zoom,
@@ -292,6 +304,7 @@ export function VideoEditorProvider(props: VideoEditorProviderProps): ReactNode 
       locale,
       filePolicy,
       output,
+      preview,
       selectedClips,
       zoom,
       maxZoom,

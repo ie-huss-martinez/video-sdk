@@ -1,5 +1,5 @@
 import { sequenceOffsets } from "@hussmartinez/sdk-core";
-import { clipFrames, planFrames, type VideoPlan } from "../model/plan.js";
+import { clipFrames, planFrames, type VideoClip, type VideoPlan } from "../model/plan.js";
 import { frameTime } from "../model/time.js";
 
 /**
@@ -95,4 +95,45 @@ export function stepTarget(position: number, delta: number, length: number): num
   if (length === 0) return undefined;
   const target = Math.min(position, length - 1) + delta;
   return target < 0 || target > length - 1 ? undefined : target;
+}
+
+/**
+ * Whether two plans show the same picture at every time: the same output
+ * size and frame rate, and clips that play the same range of the same
+ * source with the same transform, under the same keys. They may differ in
+ * sound, such as a clip's volume, mute and fades, and in metadata. The
+ * scheduler keeps its decoders through a change that leaves the picture as
+ * it is (docs/adr/0006).
+ *
+ * @internal
+ */
+export function samePicture(a: VideoPlan, b: VideoPlan): boolean {
+  if (
+    a.output.width !== b.output.width ||
+    a.output.height !== b.output.height ||
+    a.output.frameRate.num !== b.output.frameRate.num ||
+    a.output.frameRate.den !== b.output.frameRate.den ||
+    a.clips.length !== b.clips.length
+  ) {
+    return false;
+  }
+  return a.clips.every((clip, index) => {
+    const other = b.clips[index] as VideoClip;
+    const crop = clip.transform.crop;
+    const otherCrop = other.transform.crop;
+    return (
+      clip.key === other.key &&
+      clip.source === other.source &&
+      clip.start === other.start &&
+      clip.end === other.end &&
+      clip.transform.rotation === other.transform.rotation &&
+      clip.transform.fit === other.transform.fit &&
+      (crop === null || otherCrop === null
+        ? crop === otherCrop
+        : crop.x === otherCrop.x &&
+          crop.y === otherCrop.y &&
+          crop.width === otherCrop.width &&
+          crop.height === otherCrop.height)
+    );
+  });
 }

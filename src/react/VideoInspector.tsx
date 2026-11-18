@@ -6,7 +6,7 @@ import {
   Slider,
   ToggleButton,
 } from "@hussmartinez/ui/react";
-import { type ReactNode, useCallback, useId, useMemo } from "react";
+import { type ReactNode, useCallback, useId, useMemo, useRef } from "react";
 import {
   type VideoClip,
   type VideoFadeCurve,
@@ -19,7 +19,7 @@ import {
   clipAudioState,
   fadeCommands,
 } from "../features/clip-audio/clip-audio.js";
-import { useVideoEditor, useVideoSession } from "./context.js";
+import { useVideoEditor, useVideoOutput, useVideoSession } from "./context.js";
 import { useGestureValue } from "./gesture.js";
 import { useVideoTools } from "./tools.js";
 
@@ -43,10 +43,18 @@ const CURVES: readonly VideoFadeCurve[] = ["linear", "equalPower"];
 const MICROSECONDS = 1_000_000;
 
 /**
+ * How often a drag of the volume slider is played to the preview, in
+ * milliseconds: often enough to set a volume by ear, and no more often than
+ * the audio can take a new plan.
+ */
+const PREVIEW_INTERVAL = 100;
+
+/**
  * The inspector (docs/adr/0007, docs/adr/0008): the selected clips' sound.
  * Volume, mute, and a fade in and out, each with its length and shape. A
  * change applies to every selected clip, as one undo step; a drag of the
- * volume slider, or a run of its keys, is one step too. With no clip
+ * volume slider, or a run of its keys, is one step too, and is
+ * heard as it moves while the video plays. With no clip
  * selected it says what to select, and before a video is open it renders
  * nothing.
  *
@@ -102,7 +110,8 @@ function SoundControls({
   readonly state: ClipAudioState;
   readonly execute: (commands: VideoCommand | readonly VideoCommand[]) => void;
 }): ReactNode {
-  const { messages, session } = useVideoEditor();
+  const { messages, session, setPreview } = useVideoEditor();
+  const { snapshot: playback } = useVideoOutput();
   const { ariaKeyShortcuts, labelWithKeys } = useVideoTools();
   const ids = useId();
   const keys = state.keys;
@@ -118,7 +127,38 @@ function SoundControls({
     },
     [execute, keys, session],
   );
-  const slider = useGestureValue(state.volumeDb ?? lead.volumeDb, setVolume);
+  // While it plays, a drag is heard as it moves: the preview plays the plan
+  // with the slider's volume, and the drag still commits one command.
+  const playing = playback?.state === "playing";
+  const waiting = useRef<{ timer: ReturnType<typeof setTimeout>; volumeDb: number } | null>(null);
+  const endPreview = useCallback(() => {
+    if (waiting.current) clearTimeout(waiting.current.timer);
+    waiting.current = null;
+    setPreview(null);
+  }, [setPreview]);
+  const previewVolume = useCallback(
+    (volumeDb: number) => {
+      if (!playing) return;
+      const show = () => {
+        const next = waiting.current?.volumeDb;
+        waiting.current = null;
+        const current = session.getSnapshot().plan;
+        if (next === undefined || !current) return;
+        const chosen = new Set(keys);
+        setPreview({
+          ...current,
+          clips: current.clips.map((clip) =>
+            chosen.has(clip.key) ? { ...clip, volumeDb: next } : clip,
+          ),
+        });
+      };
+      // At most one preview every PREVIEW_INTERVAL, ending on the last value.
+      if (waiting.current) waiting.current.volumeDb = volumeDb;
+      else waiting.current = { timer: setTimeout(show, PREVIEW_INTERVAL), volumeDb };
+    },
+    [playing, session, keys, setPreview],
+  );
+  const slider = useGestureValue(state.volumeDb ?? lead.volumeDb, setVolume, endPreview);
 
   const decibels = (db: number) => messages.t("inspector.decibels", { db });
   const mixed =
@@ -181,7 +221,10 @@ function SoundControls({
               step={1}
               largeStep={6}
               value={Math.min(Math.max(slider.value, SLIDER_RANGE.min), SLIDER_RANGE.max)}
-              onValueChange={slider.change}
+              onValueChange={(value) => {
+                slider.change(value);
+                previewVolume(value);
+              }}
               formatValue={decibels}
             />
           </Field>

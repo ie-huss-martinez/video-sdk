@@ -28,7 +28,16 @@ export interface VideoStageProps {
  * @public
  */
 export function VideoStage(props: VideoStageProps): ReactNode {
-  const { engine, messages, filePolicy, setOutput, insertFiles, cancelInsert } = useVideoEditor();
+  const {
+    engine,
+    messages,
+    filePolicy,
+    setOutput,
+    insertFiles,
+    cancelInsert,
+    preview,
+    setPreview,
+  } = useVideoEditor();
   const { snapshot } = useVideoSession();
   const { output, snapshot: playback } = useVideoOutput();
   const frame = useVideoPlayhead();
@@ -94,9 +103,16 @@ export function VideoStage(props: VideoStageProps): ReactNode {
     };
   }, [engine, filePolicy, setOutput]);
 
+  // The session's plan, or a gesture's preview of it while one is under way
+  // (docs/adr/0007). A plan that differs only in sound keeps the picture
+  // playing (docs/adr/0006).
+  const shown = preview ?? snapshot.plan;
   useEffect(() => {
-    if (output && snapshot.plan) output.load(snapshot.plan);
-  }, [output, snapshot.plan]);
+    if (output && shown) output.load(shown);
+  }, [output, shown]);
+  // Every edit ends a preview: it was of the plan before.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: the plan is the trigger, not an input
+  useEffect(() => setPreview(null), [snapshot.plan, setPreview]);
 
   // Named while paused, not every frame while playing: the time display is the live text.
   const paused = playback?.state !== "playing";

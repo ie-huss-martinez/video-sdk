@@ -8,10 +8,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { userEvent } from "vitest/browser";
 import landscape from "../../test/fixtures/video/landscape.webm?url";
 import silent from "../../test/fixtures/video/silent-vp8.webm?url";
+import type { VideoPlan } from "../core/model/plan.js";
+import type { VideoOutput } from "../core/ports/video-output.js";
 import type { VideoSession } from "../core/session/session.js";
 import { useVideoEditor, VideoEditorProvider } from "./context.js";
 import { KEY_RUN } from "./gesture.js";
 import { VideoInspector } from "./VideoInspector.js";
+import { VideoStage } from "./VideoStage.js";
 import { VideoTimeline } from "./VideoTimeline.js";
 
 // Real probing and opening run in workers, and a heavily loaded machine
@@ -26,6 +29,7 @@ vi.setConfig({ testTimeout: 60_000 });
 let root: Root | undefined;
 let container: HTMLElement | undefined;
 let session: VideoSession | undefined;
+let output: VideoOutput | null = null;
 
 beforeEach(() => {
   (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -34,6 +38,7 @@ afterEach(async () => {
   act(() => root?.unmount());
   root = undefined;
   session = undefined;
+  output = null;
   container?.remove();
   container = undefined;
   await new Promise((resolve) => setTimeout(resolve, 0));
@@ -46,9 +51,13 @@ const eventually = <T,>(assertion: () => T | Promise<T>, timeout = 15_000) =>
 function Blocks() {
   const editor = useVideoEditor();
   session = editor.session;
+  output = editor.output;
   return (
     <UiMessagesProvider messages={editor.messages}>
       <AnnouncerProvider>
+        <div className="test-stage">
+          <VideoStage />
+        </div>
         <VideoTimeline />
         <VideoInspector />
       </AnnouncerProvider>
@@ -60,6 +69,9 @@ function render(): HTMLElement {
   container = document.createElement("div");
   container.className = "hm-text";
   container.style.inlineSize = "640px";
+  const style = document.createElement("style");
+  style.textContent = ".test-stage { block-size: 120px; display: grid; }";
+  container.append(style);
   document.body.append(container);
   act(() => {
     root = createRoot(container as HTMLElement);
@@ -217,6 +229,66 @@ describe("the inspector's clip panel", () => {
     });
     expect(planClips()[0]?.volumeDb).toBe(0);
     expect((session as VideoSession).getSnapshot().canUndo).toBe(true);
+  });
+
+  it("plays a drag of the volume to the preview as it moves while the video plays, and commits one step", async () => {
+    // Four clips, so playback outlasts the test.
+    const view = await inspectorWith(4);
+    await select(view, 1);
+    const playing = await eventually(() => {
+      expect(output).not.toBeNull();
+      return output as VideoOutput;
+    });
+    const loads: VideoPlan[] = [];
+    const load = playing.load.bind(playing);
+    playing.load = (plan) => {
+      loads.push(plan);
+      load(plan);
+    };
+    const slider = byLabel(view, "Volume");
+    const press = () =>
+      act(() => {
+        slider.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
+      });
+    const release = () =>
+      act(() => {
+        slider.dispatchEvent(new Event("change", { bubbles: true }));
+      });
+
+    // Paused, there's nothing to hear: a drag loads no plan until it ends.
+    press();
+    slide(slider, -4);
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    expect(loads).toEqual([]);
+    release();
+    await eventually(() => expect(loads.at(-1)?.clips[0]?.volumeDb).toBe(-4));
+
+    // Playing, each move is played, and the session's plan waits for the end.
+    await act(async () => {
+      await playing.play();
+    });
+    await eventually(() => expect(playing.getSnapshot().state).toBe("playing"));
+    loads.length = 0;
+    press();
+    slide(slider, -9);
+    await eventually(() => expect(loads.at(-1)?.clips[0]?.volumeDb).toBe(-9));
+    expect(planClips()[0]?.volumeDb).toBe(-4);
+    slide(slider, -20);
+    slide(slider, -12);
+    await eventually(() => expect(loads.at(-1)?.clips[0]?.volumeDb).toBe(-12));
+    // Only the selected clip, and nothing but its volume.
+    expect(loads.at(-1)?.clips.map((clip) => clip.volumeDb)).toEqual([-12, 0, 0, 0]);
+    expect(planClips()[0]?.volumeDb).toBe(-4);
+    expect(playing.getSnapshot().state).toBe("playing");
+    release();
+    expect(planClips()[0]?.volumeDb).toBe(-12);
+    // The drag was one step: one undo is back at the drag before it.
+    act(() => {
+      (session as VideoSession).undo();
+    });
+    expect(planClips()[0]?.volumeDb).toBe(-4);
+    await eventually(() => expect(loads.at(-1)?.clips[0]?.volumeDb).toBe(-4));
+    act(() => playing.pause());
   });
 
   it("takes an exact volume from the number field, within the model's range", async () => {

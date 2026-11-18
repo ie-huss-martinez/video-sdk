@@ -342,6 +342,89 @@ describe("the frame scheduler", () => {
     await t.scheduler.settled();
   });
 
+  it("keeps decoding through a new plan that shows the same picture, and draws by it", async () => {
+    const t = setup();
+    const first = clip("a", "s", 0, 300);
+    t.scheduler.load(planOf(first), new Map([["s", 0]]));
+    const anchor = { media: 0, at: 1_700_000_000_000 };
+    t.control({ mode: "play", anchor });
+    await t.advance(100);
+    const drawnBefore = t.drawn.length;
+    // Quieter, muted and faded, with other metadata: the picture is the same.
+    const quieter = {
+      ...planOf({
+        ...first,
+        volumeDb: -12,
+        muted: true,
+        fadeIn: { duration: 500_000, curve: "equalPower" as const },
+      }),
+      metadata: { ...planOf().metadata, title: "Take 2" },
+    };
+    t.scheduler.load(quieter, new Map([["s", 0]]));
+    t.control({ mode: "play", anchor });
+    await t.advance(100);
+    expect(t.decodes).toHaveLength(1);
+    expect(t.drawn.length).toBeGreaterThan(drawnBefore);
+    // No frame was skipped or drawn twice across the change.
+    const frames = t.drawn.map((record) => record.frame);
+    expect(frames).toEqual(frames.map((_, index) => (frames[0] as number) + index));
+    expect(t.scheduler.dropped).toBe(0);
+    // Paused, the same: nothing is decoded again for a change of sound.
+    t.control({ mode: "pause" });
+    await t.advance(REFRESH * 2);
+    const decodesPaused = t.decodes.length;
+    t.scheduler.load(planOf({ ...first, volumeDb: 3 }), new Map([["s", 0]]));
+    await t.advance(REFRESH * 2);
+    expect(t.decodes).toHaveLength(decodesPaused);
+    t.scheduler.dispose();
+    await t.scheduler.settled();
+  });
+
+  it("restarts on a new plan whose picture differs in any way", async () => {
+    const base = clip("a", "s", 0, 300);
+    const changes: readonly ReturnType<typeof planOf>[] = [
+      planOf({ ...base, key: "b" }),
+      planOf({ ...base, source: "other" }),
+      planOf({ ...base, transform: { ...base.transform, rotation: 90 } }),
+      planOf({ ...base, transform: { ...base.transform, fit: "cover" } }),
+      planOf({
+        ...base,
+        transform: { ...base.transform, crop: { x: 0, y: 0, width: 8, height: 8 } },
+      }),
+      { ...planOf(base), output: { ...planOf().output, width: 32 } },
+      { ...planOf(base), output: { ...planOf().output, frameRate: { num: 30_000, den: 1_001 } } },
+      planOf(base, clip("c", "s", 0, 30)),
+    ];
+    for (const changed of changes) {
+      const t = setup();
+      const starts = new Map([
+        ["s", 0],
+        ["other", 0],
+      ]);
+      t.scheduler.load(planOf(base), starts);
+      const anchor = { media: 0, at: 1_700_000_000_000 };
+      t.control({ mode: "play", anchor });
+      await t.advance(100);
+      t.scheduler.load(changed, starts);
+      t.control({ mode: "play", anchor });
+      await t.advance(REFRESH * 2);
+      expect(t.decodes.length, JSON.stringify(changed.clips[0]?.transform)).toBeGreaterThan(1);
+      t.scheduler.dispose();
+      await t.scheduler.settled();
+    }
+    // A source whose timestamps start elsewhere restarts too.
+    const t = setup();
+    t.scheduler.load(planOf(base), new Map([["s", 0]]));
+    t.control({ mode: "play", anchor: { media: 0, at: 1_700_000_000_000 } });
+    await t.advance(100);
+    t.scheduler.load(planOf(base), new Map([["s", 1_000]]));
+    t.control({ mode: "play", anchor: { media: 0, at: 1_700_000_000_000 } });
+    await t.advance(REFRESH * 2);
+    expect(t.decodes.length).toBeGreaterThan(1);
+    t.scheduler.dispose();
+    await t.scheduler.settled();
+  });
+
   it("follows a corrected anchor within a frame without restarting, and restarts on a jump", async () => {
     const t = setup();
     t.scheduler.load(planOf(clip("a", "s", 0, 300)), new Map([["s", 0]]));
