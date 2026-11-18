@@ -32,9 +32,11 @@ export interface VideoExportDialogProps {
   readonly onExport?: (blob: Blob, result: VideoExportResult) => void;
   /**
    * The downloaded file's name, without its extension, such as `"Holiday"`.
-   * Without it, the video's title is used, or else `video`. Characters file
-   * systems refuse, control characters and bidirectional overrides are
-   * removed, a video extension is dropped, and it's kept to 100 characters.
+   * Without it, the video's title is used, or else `video`. It's cleaned as
+   * the family cleans a file name (pdf-sdk ADR 0009): the last path segment,
+   * without control or bidirectional formatting characters or characters
+   * Windows refuses, and at most 128 characters. Then a video extension is
+   * dropped, as the export adds its own.
    */
   readonly fileName?: string;
   readonly className?: string;

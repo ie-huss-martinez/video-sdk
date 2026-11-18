@@ -193,7 +193,8 @@ describe("the export dialog", () => {
       }, 60_000);
       await userEvent.click(download);
       expect(names).toHaveLength(1);
-      expect(names[0]).toMatch(/^Holiday day 1\.(mp4|webm)$/);
+      // The last path segment, without the host's video extension.
+      expect(names[0]).toMatch(/^day 1\.(mp4|webm)$/);
     } finally {
       click.mockRestore();
     }
