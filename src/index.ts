@@ -93,6 +93,7 @@ export {
   microsecondsToSeconds,
   secondsToMicroseconds,
 } from "./core/model/time.js";
+export type { VideoLimitWarning, VideoWarning } from "./core/model/warnings.js";
 export type {
   DeleteRangeCommand,
   InsertClipsCommand,
@@ -132,12 +133,14 @@ export type {
   VideoExportJob,
   VideoExportOptions,
   VideoExportQuality,
+  VideoExportResult,
   VideoProcessor,
 } from "./core/ports/video-processor.js";
 export type {
   VideoInsertOptions,
   VideoSession,
   VideoSessionEvent,
+  VideoSessionExportOptions,
   VideoSessionOptions,
   VideoSessionSnapshot,
   VideoTimelineRange,
@@ -145,3 +148,4 @@ export type {
 export { createVideoSession } from "./core/session/session.js";
 export type { VideoMessageCatalogue } from "./messages/en.js";
 export { videoMessages } from "./messages/en.js";
+export { videoWarningText } from "./messages/text.js";

@@ -185,11 +185,21 @@ export function VideoEditorProvider(props: VideoEditorProviderProps): ReactNode 
       // hydrates, takes the assetsUrl (sdk-core ADR 0007).
       createVideoEngine(assetsUrl && typeof location !== "undefined" ? { assetsUrl } : {}),
   );
+  // The session exports through the editor's processor, which is made on
+  // the first export: this calls it then (ADR 0005).
+  const exporter = useRef<() => VideoProcessor>(() => {
+    throw new TypeError("The editor has no processor yet.");
+  });
   const [session] = useState(() =>
     createVideoSession({
       engine,
       ...(filePolicy ? { filePolicy } : {}),
       onEvent: (event) => onEvent.current?.(event),
+      processor: {
+        export: (job, exportOptions) => exporter.current().export(job, exportOptions),
+        // The editor's own processor is released with the editor, below.
+        destroy: async () => {},
+      },
     }),
   );
   const [output, setOutput] = useState<VideoOutput | null>(null);
@@ -210,6 +220,7 @@ export function VideoEditorProvider(props: VideoEditorProviderProps): ReactNode 
     });
     return ownProcessor.current;
   }, [givenProcessor, engine, filePolicy, assetsUrl]);
+  exporter.current = processor;
   const inserts = useRef(new Set<AbortController>());
   const mounts = useRef(0);
   const platform = usePlatform();

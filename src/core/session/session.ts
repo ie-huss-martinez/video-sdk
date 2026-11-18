@@ -9,7 +9,6 @@ import { isVideoError, VideoError } from "../errors/video-error.js";
 import {
   type VideoFilePolicy,
   type VideoFilePolicyOverrides,
-  type VideoLimitName,
   videoLimits,
 } from "../errors/video-limits.js";
 import {
@@ -27,8 +26,16 @@ import {
 import { checkOutput, checkPlanLength, checkProbe, decodingBound } from "../model/probe-limits.js";
 import type { VideoProbe, VideoSourceInfo } from "../model/source.js";
 import { type FrameRate, frameTime, isWhole } from "../model/time.js";
+import { limitWarning, type VideoWarning } from "../model/warnings.js";
 import { createVideoReducer, type VideoCommand } from "../operations/commands.js";
 import type { VideoEngine } from "../ports/video-engine.js";
+import type {
+  VideoExportContainer,
+  VideoExportOptions,
+  VideoExportQuality,
+  VideoExportResult,
+  VideoProcessor,
+} from "../ports/video-processor.js";
 
 /**
  * A range of the timeline, in output frames: `start` inclusive, `end`
@@ -66,8 +73,12 @@ export interface VideoSessionSnapshot {
    * at once, at a cut between clips (ADR 0004).
    */
   readonly decodingBytes: number;
-  /** The limits the last insert or edit came near, at or above their warnings. */
-  readonly warnings: readonly VideoLimitName[];
+  /**
+   * What the user should know about what's open: the limits the last insert
+   * or edit came near, at or above their warnings, each with its value and,
+   * for a file's own limits, its source. Show them with `videoWarningText`.
+   */
+  readonly warnings: readonly VideoWarning[];
   /** The last failure, until the next successful insert or edit. */
   readonly error: VideoError | null;
 }
@@ -79,7 +90,7 @@ export interface VideoSessionSnapshot {
  * @public
  */
 export interface VideoSessionEvent {
-  readonly type: "insert" | "execute" | "undo" | "redo";
+  readonly type: "insert" | "execute" | "undo" | "redo" | "export";
   readonly outcome: "done" | "failed" | "cancelled";
   /** The types of the commands applied or undone. */
   readonly commands: readonly VideoCommand["type"][];
@@ -96,6 +107,21 @@ export interface VideoSessionOptions {
   /** The host's limits, over `videoLimits`' defaults (ADR 0004). */
   readonly filePolicy?: VideoFilePolicyOverrides;
   readonly onEvent?: (event: VideoSessionEvent) => void;
+  /** Exports plans, such as `createVideoProcessor({ engine })`. Needed for `export()`. */
+  readonly processor?: VideoProcessor;
+}
+
+/**
+ * Options for {@link VideoSession.export}: the job's container and quality,
+ * and the call's progress, warnings and cancellation.
+ *
+ * @public
+ */
+export interface VideoSessionExportOptions extends VideoExportOptions {
+  /** Defaults to MP4 where the browser can encode it, and WebM otherwise. */
+  readonly container?: VideoExportContainer;
+  /** Defaults to `medium`. */
+  readonly quality?: VideoExportQuality;
 }
 
 /**
@@ -147,10 +173,27 @@ export interface VideoSession {
    * (ADR 0003), so the reducer stays pure; this is where they come from.
    */
   newClipKey(): string;
+  /**
+   * Exports the plan as it is when the call starts, with the session's
+   * `processor`, so edits made while it runs don't change the file
+   * (ADR 0005). It resolves with the file and what clamping did to its
+   * sound. It never downloads anything. With no plan it fails with
+   * `INVALID_COMMAND` and `details.reason: "no-plan"`, and with no clips with
+   * the processor's `empty-plan`. It throws `TypeError` when the session has
+   * no processor.
+   */
+  export(options?: VideoSessionExportOptions): Promise<VideoExportResult>;
   /** Sets or clears the selection, in timeline frames within the plan. */
   select(range: VideoTimelineRange | null): void;
   /** Closes every source the session opened. Later calls throw. */
   destroy(): Promise<void>;
+}
+
+/** Warnings without repeats: one per limit and source, the last one found. */
+function distinct(found: readonly VideoWarning[]): VideoWarning[] {
+  const byKey = new Map<string, VideoWarning>();
+  for (const warning of found) byKey.set(`${warning.limit}\u0000${warning.source ?? ""}`, warning);
+  return [...byKey.values()];
 }
 
 /** The ids of the sources a step's commands refer to. */
@@ -210,7 +253,7 @@ export function createVideoSession(options: VideoSessionOptions): VideoSession {
   let plan: VideoPlan | null = null;
   let selection: VideoTimelineRange | null = null;
   let inserting = 0;
-  let warnings: readonly VideoLimitName[] = [];
+  let warnings: readonly VideoWarning[] = [];
   let error: VideoError | null = null;
   let nextId = 0;
   let destroyed = false;
@@ -289,8 +332,9 @@ export function createVideoSession(options: VideoSessionOptions): VideoSession {
   const attempt = (from: VideoPlan, commands: readonly VideoCommand[]) => {
     const { state, inverses } = applyCommands(reducer, from, commands);
     policy.check("maxClips", state.clips.length);
-    const near: VideoLimitName[] = [...checkOutput(policy, state.output)];
-    if (checkPlanLength(policy, state)) near.push("maxDuration");
+    const near: VideoWarning[] = [...checkOutput(policy, state.output)];
+    const length = checkPlanLength(policy, state);
+    if (length) near.push(length);
     return { state, step: { commands: [...commands], inverses: [...inverses] }, near };
   };
 
@@ -335,7 +379,10 @@ export function createVideoSession(options: VideoSessionOptions): VideoSession {
           filePolicy: policy,
           ...(signal ? { signal } : {}),
         });
-        const near: VideoLimitName[] = [...checkProbe(policy, probe)];
+        // A file's own warnings are about it: they name its source.
+        const near: VideoWarning[] = checkProbe(policy, probe).map((warning) =>
+          limitWarning(warning.limit, warning.actual, id),
+        );
         throwIfAborted(signal);
         const info = await engine.open(id, file, probe, {
           filePolicy: policy,
@@ -388,7 +435,7 @@ export function createVideoSession(options: VideoSessionOptions): VideoSession {
         }
         plan = result.state;
         history.push(result.step);
-        warnings = [...new Set([...near, ...result.near])];
+        warnings = distinct([...near, ...result.near]);
         error = null;
         release();
         emit({ type: "insert", outcome: "done", commands: commands.map((c) => c.type) });
@@ -405,6 +452,47 @@ export function createVideoSession(options: VideoSessionOptions): VideoSession {
       } finally {
         inserting -= 1;
         publish();
+      }
+    },
+
+    async export(exportOptions = {}) {
+      assertAlive();
+      const { processor } = options;
+      if (!processor) {
+        throw new TypeError("Exporting needs a processor in createVideoSession.");
+      }
+      const { container, quality, ...call } = exportOptions;
+      try {
+        // The plan as it is now: an edit during the export can't change the file.
+        const current = plan;
+        if (current === null) {
+          throw new VideoError(
+            "INVALID_COMMAND",
+            "There's nothing to export before a file is inserted.",
+            {
+              details: { reason: "no-plan" },
+            },
+          );
+        }
+        const result = await processor.export(
+          {
+            plan: current,
+            ...(container === undefined ? {} : { container }),
+            ...(quality === undefined ? {} : { quality }),
+          },
+          call,
+        );
+        emit({ type: "export", outcome: "done", commands: [] });
+        return result;
+      } catch (reason) {
+        if (reason instanceof TypeError) throw reason;
+        const failure = isVideoError(reason) ? reason : asVideoError(reason);
+        emit({
+          type: "export",
+          outcome: failure.code === "ABORTED" ? "cancelled" : "failed",
+          commands: [],
+        });
+        throw failure;
       }
     },
 

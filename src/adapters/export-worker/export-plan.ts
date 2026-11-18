@@ -39,6 +39,20 @@ export interface ExportRequest {
   readonly limits: PolicyLimits;
 }
 
+/**
+ * What the export worker gives back: the file, its container, and what
+ * clamping did to its sound (docs/adr/0008).
+ *
+ * @internal
+ */
+export interface ExportOutcome {
+  readonly file: Blob;
+  readonly container: VideoExportContainer;
+  /** The mix's largest absolute sample before clamping, 0 for silence. */
+  readonly peak: number;
+  readonly clippedFrames: number;
+}
+
 /** The most encoder chunks waiting for the muxer before the encoders wait (docs/adr/0002). */
 const MAX_PENDING_WRITES = 16;
 /** Audio is made in windows of a tenth of a second, as the video reaches them. */
@@ -313,7 +327,7 @@ export async function exportPlan(
   onProgress: (fraction: number) => void,
   signal: AbortSignal,
   onWarning: (limit: VideoLimitName) => void = () => {},
-): Promise<Blob> {
+): Promise<ExportOutcome> {
   const { plan } = request;
   const quality = request.quality ?? "medium";
   const sources = new Map(request.sources.map((source) => [source.id, source]));
@@ -425,6 +439,7 @@ export async function exportPlan(
     const audioRate = audio?.sampleRate ?? 0;
     const audioTotal = Math.round((frameTime(total, rate) * audioRate) / 1_000_000);
     let audioNext = 0;
+    const meter = { peak: 0, clippedFrames: 0 };
     let lastProgress = 0;
 
     /** Encodes the audio up to timeline time `time`, in windows. */
@@ -442,6 +457,7 @@ export async function exportPlan(
           count,
           audioRate,
           signal,
+          meter,
         );
         const planar = new Float32Array(count * channels.length);
         for (const [index, channel] of channels.entries()) planar.set(channel, index * count);
@@ -554,7 +570,7 @@ export async function exportPlan(
     check();
     const file = await writer.finish();
     onProgress(1);
-    return file;
+    return { file, container: candidate.container, ...meter };
   } catch (error) {
     await writer?.cancel().catch(() => {});
     if (tooLarge !== undefined) throw tooLarge;

@@ -29,10 +29,7 @@ export {
 } from "./react/context.js";
 export type { VideoEditorHandle, VideoEditorProps } from "./react/VideoEditor.js";
 export { VideoEditor } from "./react/VideoEditor.js";
-export type {
-  VideoExportDialogProps,
-  VideoExportResult,
-} from "./react/VideoExportDialog.js";
+export type { VideoExportDialogProps } from "./react/VideoExportDialog.js";
 export { VideoExportDialog } from "./react/VideoExportDialog.js";
 export type { VideoInspectorProps } from "./react/VideoInspector.js";
 export { VideoInspector } from "./react/VideoInspector.js";

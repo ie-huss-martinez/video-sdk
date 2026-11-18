@@ -47,6 +47,32 @@ export interface VideoExportJob {
 }
 
 /**
+ * What an export gives: the file, and what clamping did to its sound
+ * (docs/adr/0008). The mix is clamped to full scale rather than limited or
+ * normalised, which would change levels nobody asked to change, and this
+ * says how much it was over, so an editor can say so. The same shape as
+ * audio-sdk's export result, with the container and size.
+ *
+ * @public
+ */
+export interface VideoExportResult {
+  /** The file. Its `type` is its container's media type: `video/mp4` or `video/webm`. */
+  readonly blob: Blob;
+  /** The container the browser could encode, which may differ from the one asked for. */
+  readonly container: VideoExportContainer;
+  /** The file's size, in bytes. */
+  readonly size: number;
+  /**
+   * The mix's peak before clamping, in decibels relative to full scale:
+   * above 0 means it clipped, by that much. `-Infinity` for silence, and for
+   * a plan without sound.
+   */
+  readonly peakDb: number;
+  /** How many sample frames had a sample over full scale, which was clamped. */
+  readonly clippedFrames: number;
+}
+
+/**
  * The port for exporting: decode, compose and encode a plan into a file
  * (ADR 0001, ADR 0003, ADR 0005, ADR 0008). The SDK's own adapter does it in
  * its export worker; hosts can pass their own to the editor's `processor`
@@ -66,10 +92,10 @@ export interface VideoProcessor {
    * only the metadata the plan sets: nothing from a source is copied into it
    * (ADR 0005). A cancelled export returns no file. A file that grows past
    * the policy's `maxFileSize` fails with `FILE_TOO_LARGE`, as soon as it
-   * does, and returns no file either. The file's `type` is its container's
-   * media type: `video/mp4` or `video/webm`.
+   * does, and returns no file either. The sound is clamped to full scale,
+   * and the result says by how much it was over.
    */
-  export(job: VideoExportJob, options?: VideoExportOptions): Promise<Blob>;
+  export(job: VideoExportJob, options?: VideoExportOptions): Promise<VideoExportResult>;
   /** Releases the processor and its worker. Pending calls reject, and later calls throw. */
   destroy(): Promise<void>;
 }

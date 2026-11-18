@@ -264,7 +264,10 @@ describe("checking a probe against the limits", () => {
     expect(decodingBound(fourK)).toBe(padded + 12_000 * 2 * 4);
     expect(decodingBound({ ...fourK, audio: null })).toBe(padded);
     expect(Math.round(padded / 1e6)).toBe(763);
-    expect(checkProbe(policy, fourK)).toEqual(["maxFramePixels", "maxDecodedSize"]);
+    expect(checkProbe(policy, fourK)).toEqual([
+      { type: "limit", limit: "maxFramePixels", actual: 3840 * 2160 },
+      { type: "limit", limit: "maxDecodedSize", actual: padded + 12_000 * 2 * 4 },
+    ]);
   });
 
   it("passes an ordinary 1080p file with no warnings", () => {

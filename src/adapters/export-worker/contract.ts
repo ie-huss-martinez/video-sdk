@@ -1,5 +1,5 @@
 import type { VideoLimitName } from "../../core/errors/video-limits.js";
-import type { ExportRequest } from "./export-plan.js";
+import type { ExportOutcome, ExportRequest } from "./export-plan.js";
 
 /**
  * The export worker's RPC contract (docs/adr/0002): one export at a time, with
@@ -9,7 +9,7 @@ import type { ExportRequest } from "./export-plan.js";
 export interface ExportWorkerContract {
   readonly export: {
     readonly input: ExportRequest;
-    readonly output: Blob;
+    readonly output: ExportOutcome;
     /** The fraction of frames encoded, or a limit whose warning the export reached. */
     readonly progress: number | { readonly warning: VideoLimitName };
   };

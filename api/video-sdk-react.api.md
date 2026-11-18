@@ -79,6 +79,7 @@ export interface VideoEditorProps extends Omit<VideoEditorProviderProps, "childr
     readonly className?: string;
     readonly fileName?: string;
     readonly initialFiles?: readonly Blob[];
+    // Warning: (ae-forgotten-export) The symbol "VideoExportResult" needs to be exported by the entry point react.d.ts
     readonly onExport?: (blob: Blob, result: VideoExportResult) => void;
 }
 
@@ -113,14 +114,6 @@ export interface VideoExportDialogProps {
     readonly className?: string;
     readonly fileName?: string;
     readonly onExport?: (blob: Blob, result: VideoExportResult) => void;
-}
-
-// @public
-export interface VideoExportResult {
-    // Warning: (ae-forgotten-export) The symbol "VideoExportContainer" needs to be exported by the entry point react.d.ts
-    readonly container: VideoExportContainer;
-    // (undocumented)
-    readonly size: number;
 }
 
 // @public

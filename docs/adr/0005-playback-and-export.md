@@ -2,7 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-11-12
-- **Amended:** 2026-11-12, when export was built: how audio is interleaved, what the file is collected in, the metadata's date and creation time, and what loads when. Earlier, when audio playback was built: the context runs at the device's rate. Earlier, when audio mixing was built: the resampler's kernel and its table, exact-position evaluation so windows join without a seam, and the order of resampling, channel mixing and gain.
+- **Amended:** 2026-11-18, with [ADR 0008](0008-audio-editing.md): an export resolves with the file and what clamping did to its sound, the mix is clamped, and the session exports through its processor. Earlier, 2026-11-12, when export was built: how audio is interleaved, what the file is collected in, the metadata's date and creation time, and what loads when. Earlier, when audio playback was built: the context runs at the device's rate. Earlier, when audio mixing was built: the resampler's kernel and its table, exact-position evaluation so windows join without a seam, and the order of resampling, channel mixing and gain.
 
 ## Context
 
@@ -82,7 +82,7 @@ A generated "flash and beep" fixture has white flash frames and short tones at k
 
 #### What an export runs
 
-`session.export({ container, quality, signal, onProgress })` sends the plan and the sources' `Blob`s to the export worker ([ADR 0002](0002-workers-and-assets.md)).
+`session.export({ container, quality, signal, onProgress, onWarning })` sends the plan, as it is when the call starts, and the sources' `Blob`s to the export worker, through the session's `processor` ([ADR 0002](0002-workers-and-assets.md)). It resolves with `{ blob, container, size, peakDb, clippedFrames }`: the file, and what clamping did to its sound ([ADR 0008](0008-audio-editing.md)). The processor's own `export(job, options)` resolves with the same.
 
 1. **Checks.** The worker chooses the container and codecs by capability ([ADR 0001](0001-video-engines.md)). The session checks the estimated size, the output's bitrate times its duration, against `maxFileSize` before anything starts ([ADR 0004](0004-video-limits.md)).
 2. **Video, frame by frame on the output's grid.**

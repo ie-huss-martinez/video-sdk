@@ -58,14 +58,14 @@ import {
   createVideoProcessor,
   createVideoSession,
   videoMessages,
+  videoWarningText,
 } from "@hussmartinez/video-sdk";
 import { createMessages } from "@hussmartinez/sdk-core";
 
 const messages = createMessages(videoMessages, { locale: "en" });
 const engine = createVideoEngine();
-const session = createVideoSession({ engine });
+const session = createVideoSession({ engine, processor: createVideoProcessor({ engine }) });
 const output = createVideoOutput({ engine, canvas });
-const processor = createVideoProcessor({ engine });
 session.subscribe(() => {
   const { plan } = session.getSnapshot(); // or useSyncExternalStore in React
   if (plan) output.load(plan);
@@ -93,21 +93,21 @@ try {
 
   await output.play(); // call it from a click: browsers start audio only then
 
-  const plan = session.getSnapshot().plan;
-  if (plan) {
-    const blob = await processor.export({ plan, container: "mp4", quality: "medium" }, { signal });
-    offerDownload(blob); // a Blob: the SDK never downloads anything itself
-  }
+  // The plan as it is now; edits while it runs don't change the file.
+  const { blob, peakDb, clippedFrames } = await session.export({ container: "mp4", signal });
+  offerDownload(blob); // a Blob: the SDK never downloads anything itself
+  if (clippedFrames > 0) warnTooLoud(peakDb); // the sound was clamped at full scale, by this much
+  for (const warning of session.getSnapshot().warnings) show(videoWarningText(messages, warning));
 } catch (error) {
   showError(messages.error(error)); // text by code, never the error's message
 }
 ```
 
-- **The snapshot** has the `plan` (the output's size and rates, the clips, and the metadata), the `sources`, `canUndo` and `canRedo`, how many files are being inserted, the last `error`, and `warnings`: limits past their warning thresholds, whose text is under `warnings.<name>` in `videoMessages`.
+- **The snapshot** has the `plan` (the output's size and rates, the clips, and the metadata), the `sources`, `canUndo` and `canRedo`, how many files are being inserted, the last `error`, and `warnings`: limits past their warning thresholds, as `{ type: "limit", limit, actual, source? }`, whose text `videoWarningText` gives.
 - **Commands** are plain data, such as `video.trimClip`, `video.moveClips`, `video.setMuted` or `video.setTransform`, with an exact inverse for undo. One that doesn't apply throws `INVALID_COMMAND` with a stable `details.reason`, such as `unknown-clip`.
 - **Times** are whole microseconds, and positions on the timeline are output frames, so every edit lands on a whole frame ([ADR 0003](docs/adr/0003-clip-plan-document-model.md)).
 - **Audio:** each clip has a volume, a mute and fades, and its sound stays with its picture through every edit. Playback uses the audio as its clock, so sound and picture stay within a frame of each other ([ADR 0005](docs/adr/0005-playback-and-export.md)).
-- **Exports** decode, compose and encode every frame and sample again, faster than real time where the encoder is. They contain only what the plan names and the metadata you set: nothing a user cut, and nothing from a source's own metadata, such as its location or device.
+- **Exports** decode, compose and encode every frame and sample again, faster than real time where the encoder is. The sound is clamped at full scale, never limited or normalised, and the result says how far over it was (`peakDb`) and for how many frames (`clippedFrames`). They contain only what the plan names and the metadata you set: nothing a user cut, and nothing from a source's own metadata, such as its location or device.
 - **Plans are portable JSON:** `toVideoPlanDocument` and `readVideoPlanDocument` write and read the `hm-video-plan` format, whose JSON Schema ships in the package ([format record](docs/formats/hm-video-plan.md)).
 
 ### Formats

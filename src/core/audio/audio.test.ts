@@ -161,6 +161,59 @@ describe("mixing a window of the plan", () => {
     ]);
   });
 
+  it("clamps the mix to full scale, and meters the peak and the frames clamped before it", () => {
+    // +24 dB on a half-scale tone peaks near 7.9, far over full scale.
+    const plan = planOf(2, clip("s", 0, 30, { volumeDb: 24 }));
+    const meter = { peak: 0, clippedFrames: 0 };
+    const [left, right] = mixWindow(plan, 48_000, 0, 4_800, () => whole(48_000, tone), meter);
+    for (const channel of [left, right] as Float32Array[]) {
+      expect(Math.max(...channel)).toBe(1);
+      expect(Math.min(...channel)).toBe(-1);
+    }
+    expect(meter.peak).toBeCloseTo(0.5 * 10 ** (24 / 20), 2);
+    // A frame counts once, however many of its channels clipped.
+    const over = [...(left as Float32Array)].filter((sample) => Math.abs(sample) === 1).length;
+    expect(meter.clippedFrames).toBe(over);
+    expect(over).toBeGreaterThan(0);
+    // The meter adds up across windows.
+    mixWindow(plan, 48_000, 4_800, 4_800, () => whole(48_000, tone), meter);
+    expect(meter.clippedFrames).toBeGreaterThan(over);
+  });
+
+  it("leaves a mix within full scale as it is, and meters its peak", () => {
+    const meter = { peak: 0, clippedFrames: 0 };
+    const [mono] = mixWindow(
+      planOf(1, clip("s", 0, 30)),
+      48_000,
+      0,
+      1_000,
+      () => whole(48_000, tone),
+      meter,
+    );
+    expect(mono).toEqual(tone.slice(0, 1_000));
+    expect(meter.clippedFrames).toBe(0);
+    expect(meter.peak).toBeCloseTo(Math.max(...[...tone.slice(0, 1_000)].map(Math.abs)), 6);
+  });
+
+  it("silences a sample that isn't a finite number, and doesn't count it", () => {
+    const broken = Float32Array.from(tone.slice(0, 48_000));
+    broken[10] = Number.NaN;
+    broken[11] = Number.POSITIVE_INFINITY;
+    broken[12] = Number.NEGATIVE_INFINITY;
+    const meter = { peak: 0, clippedFrames: 0 };
+    const [mono] = mixWindow(
+      planOf(1, clip("s", 0, 30)),
+      48_000,
+      0,
+      100,
+      () => whole(48_000, broken),
+      meter,
+    ) as [Float32Array];
+    expect([mono[10], mono[11], mono[12]]).toEqual([0, 0, 0]);
+    expect(meter.clippedFrames).toBe(0);
+    expect(Number.isFinite(meter.peak)).toBe(true);
+  });
+
   it("fades in from silence", () => {
     const plan = planOf(1, clip("s", 0, 30, { fadeIn: { duration: 100_000, curve: "linear" } }));
     const dc = new Float32Array(48_000).fill(1);

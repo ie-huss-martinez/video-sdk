@@ -2,7 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-11-12
-- **Amended:** 2026-11-12, when decoding was built: `maxDecodedSize` counts the decoders' alignment padding. Then, on `sdk-core` 0.3.0: `maxBitrate` uses its `bitsPerSecond` unit.
+- **Amended:** 2026-11-18: a warning carries its limit's value and, for a file's limits, its source, in the family's shape ([ADR 0008](0008-audio-editing.md)). Earlier, 2026-11-12, when decoding was built: `maxDecodedSize` counts the decoders' alignment padding. Then, on `sdk-core` 0.3.0: `maxBitrate` uses its `bitsPerSecond` unit.
 
 ## Context
 
@@ -71,7 +71,7 @@ Video's risks differ from the other SDKs':
 - **Every decoded frame is checked again:** one larger than the probe's coded size, or over `maxFramePixels`, is closed and fails with `INVALID_VIDEO` ([ADR 0001](0001-video-engines.md)).
 - **What's drawn is checked as well as what's opened.** `video.setOutput` checks the output's size, frame rate, sample rate and channels against the same limits, so an export can never encode more than they allow.
 - **A failed check is specific.** It fails the open or insert with `details` naming the limit, its maximum and the actual value, and leaves the session's document as it was.
-- **Warnings don't stop anything.** At or above a warning, the session adds one to the snapshot, and the editor shows it, such as "This video is large; playback may be slow on some devices."
+- **Warnings don't stop anything.** At or above a warning, the session adds one to the snapshot, as `{ type: "limit", limit, actual, source? }`: the value found, and the source for a file's own limits, and the editor shows it, such as "This video is large; playback may be slow on some devices."
 
 ### Time
 

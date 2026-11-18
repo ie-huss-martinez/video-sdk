@@ -1,4 +1,4 @@
-import { mixWindow, type SourceSamples, sourceSpan } from "../../core/audio/mix.js";
+import { type MixMeter, mixWindow, type SourceSamples, sourceSpan } from "../../core/audio/mix.js";
 import type { VideoPlan } from "../../core/model/plan.js";
 import type { VideoProbe } from "../../core/model/source.js";
 import type { FrameReader } from "../mediabunny/frame-reader.js";
@@ -20,6 +20,7 @@ export async function mixAudioWindow(
   count: number,
   rate: number,
   signal: AbortSignal,
+  meter?: MixMeter,
 ): Promise<Float32Array[]> {
   const samples = await Promise.all(
     plan.clips.map(async (clip, index) => {
@@ -33,7 +34,7 @@ export async function mixAudioWindow(
       return decodeSpan(reader.audio, source.probe, sourceRate, span, signal);
     }),
   );
-  return mixWindow(plan, rate, from, count, (index) => samples[index] ?? null);
+  return mixWindow(plan, rate, from, count, (index) => samples[index] ?? null, meter);
 }
 
 /**

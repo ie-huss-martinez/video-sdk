@@ -5,7 +5,7 @@ import type { VideoFilePolicy } from "../../core/errors/video-limits.js";
 import type { VideoExportOptions } from "../../core/ports/video-processor.js";
 import { PACKAGE_VERSION } from "../../version.js";
 import type { ExportWorkerContract } from "./contract.js";
-import type { ExportRequest } from "./export-plan.js";
+import type { ExportOutcome, ExportRequest } from "./export-plan.js";
 
 /**
  * Runs exports in the export worker (docs/adr/0002, docs/adr/0005), loaded
@@ -18,7 +18,7 @@ export interface ExportRunner {
     request: Omit<ExportRequest, "limits">,
     policy: VideoFilePolicy,
     options: VideoExportOptions,
-  ): Promise<Blob>;
+  ): Promise<ExportOutcome>;
   destroy(): void;
 }
 

@@ -1,13 +1,10 @@
 import { AnnouncerProvider, UiMessagesProvider } from "@hussmartinez/ui/react";
 import { forwardRef, type ReactNode, useEffect, useImperativeHandle, useRef } from "react";
 import type { VideoSourceInfo } from "../core/model/source.js";
+import type { VideoExportResult } from "../core/ports/video-processor.js";
 import { useVideoEditor, VideoEditorProvider, type VideoEditorProviderProps } from "./context.js";
 import { useVideoTools } from "./tools.js";
-import {
-  VideoExportDialog,
-  type VideoExportDialogProps,
-  type VideoExportResult,
-} from "./VideoExportDialog.js";
+import { VideoExportDialog, type VideoExportDialogProps } from "./VideoExportDialog.js";
 import { VideoInspector } from "./VideoInspector.js";
 import { VideoStage } from "./VideoStage.js";
 import { VideoTimeline } from "./VideoTimeline.js";

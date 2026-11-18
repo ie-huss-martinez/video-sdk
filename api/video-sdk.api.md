@@ -8,6 +8,7 @@ import { Applied } from '@hussmartinez/sdk-core';
 import { FilePolicy } from '@hussmartinez/sdk-core';
 import { FilePolicyOverrides } from '@hussmartinez/sdk-core';
 import { Limits } from '@hussmartinez/sdk-core';
+import type { Messages } from '@hussmartinez/sdk-core';
 import { Reducer } from '@hussmartinez/sdk-core';
 import { SdkCoreErrorCode } from '@hussmartinez/sdk-core';
 import { SdkError } from '@hussmartinez/sdk-core';
@@ -33,13 +34,13 @@ export function backingSize(width: number, height: number, pixelRatio?: number):
 };
 
 // @public
-export function checkOutput(policy: VideoFilePolicy, output: VideoPlanOutput): readonly VideoLimitName[];
+export function checkOutput(policy: VideoFilePolicy, output: VideoPlanOutput): readonly VideoLimitWarning[];
 
 // @public
-export function checkPlanLength(policy: VideoFilePolicy, plan: VideoPlan): boolean;
+export function checkPlanLength(policy: VideoFilePolicy, plan: VideoPlan): VideoLimitWarning | undefined;
 
 // @public
-export function checkProbe(policy: VideoFilePolicy, probe: VideoProbe): readonly VideoLimitName[];
+export function checkProbe(policy: VideoFilePolicy, probe: VideoProbe): readonly VideoLimitWarning[];
 
 // @public
 export function clipEnd(start: number, frames: number, rate: FrameRate): number;
@@ -422,6 +423,15 @@ export interface VideoExportOptions extends VideoProgressOptions {
 export type VideoExportQuality = "low" | "medium" | "high";
 
 // @public
+export interface VideoExportResult {
+    readonly blob: Blob;
+    readonly clippedFrames: number;
+    readonly container: VideoExportContainer;
+    readonly peakDb: number;
+    readonly size: number;
+}
+
+// @public
 export interface VideoFade {
     // (undocumented)
     readonly curve: VideoFadeCurve;
@@ -540,6 +550,16 @@ export type VideoLimitName = keyof VideoLimitDefinitions;
 
 // @public
 export const videoLimits: Limits<VideoLimitDefinitions>;
+
+// @public
+export interface VideoLimitWarning {
+    readonly actual: number;
+    // (undocumented)
+    readonly limit: VideoLimitName;
+    readonly source?: string;
+    // (undocumented)
+    readonly type: "limit";
+}
 
 // @public
 export type VideoMessageCatalogue = typeof videoMessages;
@@ -696,6 +716,7 @@ export const videoMessages: {
     readonly "export.largeFile": "This file is getting large. Very large files may be slow to save and share.";
     readonly "export.ready": "Your {container} video is ready: {size, fileSize}.";
     readonly "export.cancelled": "Export stopped.";
+    readonly "export.clipped": "Some of the sound was louder than a file can hold, by up to {db, number} dB, so it was cut off at full volume. Lower the volume of the loudest clips and export again to avoid it.";
     readonly "export.download": "Download";
     readonly "export.done": "Done";
     readonly "export.unavailable": "Exporting isn't available with this engine.";
@@ -926,7 +947,7 @@ export interface VideoProbeOptions extends VideoCallOptions {
 // @public
 export interface VideoProcessor {
     destroy(): Promise<void>;
-    export(job: VideoExportJob, options?: VideoExportOptions): Promise<Blob>;
+    export(job: VideoExportJob, options?: VideoExportOptions): Promise<VideoExportResult>;
 }
 
 // @public
@@ -948,6 +969,7 @@ export type VideoRotation = 0 | 90 | 180 | 270;
 export interface VideoSession {
     destroy(): Promise<void>;
     execute(commands: VideoCommand | readonly VideoCommand[]): void;
+    export(options?: VideoSessionExportOptions): Promise<VideoExportResult>;
     // (undocumented)
     getSnapshot(): VideoSessionSnapshot;
     insert(file: Blob, options?: VideoInsertOptions): Promise<VideoSourceInfo>;
@@ -964,7 +986,13 @@ export interface VideoSessionEvent {
     // (undocumented)
     readonly outcome: "done" | "failed" | "cancelled";
     // (undocumented)
-    readonly type: "insert" | "execute" | "undo" | "redo";
+    readonly type: "insert" | "execute" | "undo" | "redo" | "export";
+}
+
+// @public
+export interface VideoSessionExportOptions extends VideoExportOptions {
+    readonly container?: VideoExportContainer;
+    readonly quality?: VideoExportQuality;
 }
 
 // @public
@@ -973,6 +1001,7 @@ export interface VideoSessionOptions {
     readonly filePolicy?: VideoFilePolicyOverrides;
     // (undocumented)
     readonly onEvent?: (event: VideoSessionEvent) => void;
+    readonly processor?: VideoProcessor;
 }
 
 // @public
@@ -988,7 +1017,7 @@ export interface VideoSessionSnapshot {
     readonly selection: VideoTimelineRange | null;
     readonly sources: readonly VideoSourceInfo[];
     readonly status: "empty" | "ready";
-    readonly warnings: readonly VideoLimitName[];
+    readonly warnings: readonly VideoWarning[];
 }
 
 // @public
@@ -1051,6 +1080,12 @@ export interface VideoTransform {
     // (undocumented)
     readonly rotation: VideoRotation;
 }
+
+// @public
+export type VideoWarning = VideoLimitWarning;
+
+// @public
+export function videoWarningText(messages: Messages<VideoMessageCatalogue>, warning: VideoWarning): string;
 
 // @public
 export const VOLUME_RANGE: {
