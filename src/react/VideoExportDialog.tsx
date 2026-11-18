@@ -4,6 +4,7 @@ import { isVideoError } from "../core/errors/video-error.js";
 import { planFrames, type VideoMetadata } from "../core/model/plan.js";
 import { frameTime } from "../core/model/time.js";
 import type { VideoExportContainer, VideoExportQuality } from "../core/ports/video-processor.js";
+import { exportFileName } from "../features/export-name/export-name.js";
 import { useVideoEditor, useVideoSession } from "./context.js";
 import { formatTimecode } from "./timecode.js";
 
@@ -29,7 +30,12 @@ export interface VideoExportDialogProps {
    * dialog closes once it's called.
    */
   readonly onExport?: (blob: Blob, result: VideoExportResult) => void;
-  /** The downloaded file's name, without its extension. Defaults to `video`. */
+  /**
+   * The downloaded file's name, without its extension, such as `"Holiday"`.
+   * Without it, the video's title is used, or else `video`. Characters file
+   * systems refuse, control characters and bidirectional overrides are
+   * removed, a video extension is dropped, and it's kept to 100 characters.
+   */
   readonly fileName?: string;
   readonly className?: string;
 }
@@ -69,7 +75,7 @@ const containerOf = (blob: Blob): VideoExportContainer =>
  * @public
  */
 export function VideoExportDialog(props: VideoExportDialogProps): ReactNode {
-  const { onExport, fileName = "video" } = props;
+  const { onExport, fileName } = props;
   const { messages, locale, dialog, setDialog, processor } = useVideoEditor();
   const { snapshot } = useVideoSession();
   const announce = useAnnounce();
@@ -174,7 +180,7 @@ export function VideoExportDialog(props: VideoExportDialogProps): ReactNode {
     objectUrl.current = URL.createObjectURL(phase.blob);
     const link = document.createElement("a");
     link.href = objectUrl.current;
-    link.download = `${fileName}.${phase.container}`;
+    link.download = `${exportFileName(fileName, snapshot.plan?.metadata.title ?? "")}.${phase.container}`;
     link.click();
   };
 

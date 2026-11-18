@@ -3,7 +3,7 @@ import { forwardRef, type ReactNode, useEffect, useImperativeHandle, useRef } fr
 import type { VideoSourceInfo } from "../core/model/source.js";
 import { useVideoEditor, VideoEditorProvider, type VideoEditorProviderProps } from "./context.js";
 import { useVideoTools } from "./tools.js";
-import { VideoExportDialog } from "./VideoExportDialog.js";
+import { VideoExportDialog, type VideoExportDialogProps } from "./VideoExportDialog.js";
 import { VideoInspector } from "./VideoInspector.js";
 import { VideoStage } from "./VideoStage.js";
 import { VideoTimeline } from "./VideoTimeline.js";
@@ -20,6 +20,12 @@ export interface VideoEditorProps extends Omit<VideoEditorProviderProps, "childr
   readonly initialFiles?: readonly Blob[];
   /** Extra classes on the root. */
   readonly className?: string;
+  /**
+   * The name an export is downloaded under, without its extension, such as
+   * the name of the file being edited. Without it, the video's title is
+   * used, or else `video`. See {@link VideoExportDialogProps.fileName}.
+   */
+  readonly fileName?: string;
 }
 
 /**
@@ -39,8 +45,12 @@ export interface VideoEditorHandle {
 
 const Shell = forwardRef<
   VideoEditorHandle,
-  { readonly initialFiles?: readonly Blob[]; readonly className?: string }
->(function Shell({ initialFiles, className }, ref) {
+  {
+    readonly initialFiles?: readonly Blob[];
+    readonly className?: string;
+    readonly fileName?: string;
+  }
+>(function Shell({ initialFiles, className, fileName }, ref) {
   const { session, messages, output } = useVideoEditor();
   const inserted = useRef(false);
 
@@ -69,7 +79,7 @@ const Shell = forwardRef<
     // One Messages object for the SDK's text and ui's (sdk-core ADR 0046).
     <UiMessagesProvider messages={messages}>
       <AnnouncerProvider>
-        <Root className={className} />
+        <Root className={className} fileName={fileName} />
       </AnnouncerProvider>
     </UiMessagesProvider>
   );
@@ -80,7 +90,13 @@ const Shell = forwardRef<
  * never on `window`, so they apply only while focus is in the editor, as
  * WCAG 2.1.4 requires of single-key shortcuts (sdk-core ADR 0030).
  */
-function Root({ className }: { readonly className?: string | undefined }): ReactNode {
+function Root({
+  className,
+  fileName,
+}: {
+  readonly className?: string | undefined;
+  readonly fileName?: string | undefined;
+}): ReactNode {
   const { messages, shortcuts } = useVideoEditor();
   const { run } = useVideoTools();
   return (
@@ -102,7 +118,7 @@ function Root({ className }: { readonly className?: string | undefined }): React
       <VideoTransport />
       <VideoTimeline />
       <VideoInspector />
-      <VideoExportDialog />
+      <VideoExportDialog {...(fileName === undefined ? {} : { fileName })} />
     </section>
   );
 }
@@ -125,13 +141,14 @@ function Root({ className }: { readonly className?: string | undefined }): React
  * @public
  */
 export const VideoEditor = /* @__PURE__ */ forwardRef<VideoEditorHandle, VideoEditorProps>(
-  function VideoEditor({ initialFiles, className, ...provider }, ref): ReactNode {
+  function VideoEditor({ initialFiles, className, fileName, ...provider }, ref): ReactNode {
     return (
       <VideoEditorProvider {...provider}>
         <Shell
           ref={ref}
           {...(initialFiles ? { initialFiles } : {})}
           {...(className ? { className } : {})}
+          {...(fileName === undefined ? {} : { fileName })}
         />
       </VideoEditorProvider>
     );

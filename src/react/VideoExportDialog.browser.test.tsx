@@ -166,6 +166,80 @@ describe("the export dialog", () => {
     expect(button(view, "Download")).toBeUndefined();
   });
 
+  it("downloads under the editor's fileName, or else the title, cleaned, with the container's extension", async () => {
+    // The link's click is the download: record the name instead of saving.
+    const names: string[] = [];
+    const click = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(function (
+      this: HTMLAnchorElement,
+    ) {
+      names.push(this.download);
+    });
+    try {
+      const handle = createRef<VideoEditorHandle>();
+      const view = mount(
+        <VideoEditor
+          ref={handle}
+          fileName={"Holiday/day 1.mov"}
+          initialFiles={[await fixture()]}
+        />,
+      );
+      await eventually(() => expect(exportTool(view).getAttribute("aria-disabled")).toBeNull());
+      await userEvent.click(exportTool(view));
+      await userEvent.click(button(view, "Export") as HTMLButtonElement);
+      const download = await eventually(() => {
+        const found = button(view, "Download");
+        expect(found).toBeDefined();
+        return found as HTMLButtonElement;
+      }, 60_000);
+      await userEvent.click(download);
+      expect(names).toHaveLength(1);
+      expect(names[0]).toMatch(/^Holiday day 1\.(mp4|webm)$/);
+    } finally {
+      click.mockRestore();
+    }
+  });
+
+  it("downloads under the video's title when the editor has no fileName", async () => {
+    const names: string[] = [];
+    const click = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(function (
+      this: HTMLAnchorElement,
+    ) {
+      names.push(this.download);
+    });
+    try {
+      const { view } = await editor();
+      // The title, from the inspector's details, with no clip selected.
+      const clip = view.querySelector('[role="option"]') as HTMLElement;
+      if (clip.getAttribute("aria-selected") === "true") {
+        await userEvent.keyboard("{Control>}");
+        await userEvent.click(clip);
+        await userEvent.keyboard("{/Control}");
+      }
+      const title = await eventually(() => {
+        const label = [...view.querySelectorAll("label")].find(
+          (each) => each.textContent === "Title",
+        );
+        const field =
+          label && (view.querySelector(`#${CSS.escape(label.htmlFor)}`) as HTMLInputElement);
+        expect(field).toBeTruthy();
+        return field as HTMLInputElement;
+      });
+      await userEvent.click(title);
+      await userEvent.keyboard("Take 1{Enter}");
+      await userEvent.click(exportTool(view));
+      await userEvent.click(button(view, "Export") as HTMLButtonElement);
+      const download = await eventually(() => {
+        const found = button(view, "Download");
+        expect(found).toBeDefined();
+        return found as HTMLButtonElement;
+      }, 60_000);
+      await userEvent.click(download);
+      expect(names[0]).toMatch(/^Take 1\.(mp4|webm)$/);
+    } finally {
+      click.mockRestore();
+    }
+  });
+
   it("stops an export, says so, and keeps the dialog open at its summary", async () => {
     const { view } = await editor();
     await userEvent.click(exportTool(view));

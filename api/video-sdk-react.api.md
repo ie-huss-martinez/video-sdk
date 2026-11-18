@@ -77,6 +77,7 @@ export type VideoEditorMessages = Messages<VideoEditorCatalogue>;
 // @public
 export interface VideoEditorProps extends Omit<VideoEditorProviderProps, "children"> {
     readonly className?: string;
+    readonly fileName?: string;
     readonly initialFiles?: readonly Blob[];
 }
 
