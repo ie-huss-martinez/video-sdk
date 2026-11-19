@@ -171,7 +171,9 @@ function SoundControls({
   );
   // The slider shows its value as it moves; ui's Slider says when the
   // gesture ends, a drag let go, a key let go or focus leaving, and that's
-  // one command, so one undo step (ui 0.13).
+  // one command, so one undo step (ui 0.13). Escape cancels a gesture: the
+  // slider puts its value back and commits nothing (ui 0.15), and the drag's
+  // preview ends with it.
   const committed = state.volumeDb ?? lead.volumeDb;
   const [draft, setDraft] = useState<number | null>(null);
   const shown = draft ?? committed;
@@ -182,6 +184,10 @@ function SoundControls({
     setDraft(null);
     endPreview();
     if (volumeDb !== committed) setVolume(volumeDb);
+  };
+  const cancelVolume = () => {
+    setDraft(null);
+    endPreview();
   };
 
   const decibels = (db: number) => messages.t("inspector.decibels", { db });
@@ -249,6 +255,7 @@ function SoundControls({
                 previewVolume(value);
               }}
               onValueCommit={commitVolume}
+              onValueCancel={cancelVolume}
               formatValue={decibels}
             />
           </Field>
