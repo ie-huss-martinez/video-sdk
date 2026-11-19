@@ -615,6 +615,51 @@ describe("opening a file in place of the plan (as audio-sdk's open)", () => {
     expect(snapshot).toMatchObject({ inserting: 0, error: null });
   });
 
+  it("lets an insert in flight land when an open meanwhile fails, since nothing replaced its plan", async () => {
+    const { engine, waiting, release } = firstOpenWaits();
+    const { session } = setup({ maxFramePixels: 1280 * 720 }, engine);
+    const inserting = session.insert(file());
+    await waiting;
+    // The open fails the file policy: the plan isn't replaced.
+    expect(code(await rejection(session.open(file({ width: 3840, height: 2160 }))))).toBe(
+      "FRAME_TOO_LARGE",
+    );
+    release();
+    const info = await inserting;
+    expect(session.getSnapshot().plan?.clips.map((clip) => clip.source)).toEqual([info.id]);
+    expect([...engine.sources.keys()]).toEqual([info.id]);
+  });
+
+  it("lets an insert in flight land when an open meanwhile is cancelled", async () => {
+    const { engine, waiting, release } = firstOpenWaits();
+    const { session } = setup(undefined, engine);
+    const inserting = session.insert(file());
+    await waiting;
+    const controller = new AbortController();
+    controller.abort();
+    expect(code(await rejection(session.open(file(), { signal: controller.signal })))).toBe(
+      "ABORTED",
+    );
+    release();
+    const info = await inserting;
+    expect(session.getSnapshot().plan?.clips.map((clip) => clip.source)).toEqual([info.id]);
+  });
+
+  it("lands an insert that finishes before an open commits in the old plan, then closes it with that plan", async () => {
+    const { engine, waiting, release } = firstOpenWaits();
+    const { session } = setup(undefined, engine);
+    // The open's own source is the first open of the engine: it waits.
+    const opening = session.open(file({ frames: 45 }));
+    await waiting;
+    const inserted = await session.insert(file());
+    expect(session.getSnapshot().plan?.clips.map((clip) => clip.source)).toEqual([inserted.id]);
+    release();
+    const opened = await opening;
+    // The open replaced the plan the insert landed in, and release() closed its source.
+    expect(session.getSnapshot().plan?.clips.map((clip) => clip.source)).toEqual([opened.id]);
+    expect([...engine.sources.keys()]).toEqual([opened.id]);
+  });
+
   it("opens the first file of an empty session, as an insert would", async () => {
     const { session } = setup();
     const info = await session.open(file());

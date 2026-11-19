@@ -178,9 +178,9 @@ export interface VideoSession {
    * Opens a file in place of everything open (ADR 0003), as audio-sdk's
    * session does: a new plan of all of it as one clip, whose output the file
    * sets. The sources open before are closed, and the history is cleared,
-   * so it can't be undone. A newer `open` replaces one still in progress,
-   * and an `insert` still in progress when it lands is rejected with
-   * `ABORTED`. A failed or cancelled open keeps the plan that was open, and
+   * so it can't be undone. A newer `open` supersedes one still in progress,
+   * and an `insert` still in progress when it commits is rejected with
+   * `ABORTED`; one in flight while an open fails or is cancelled still lands. A failed or cancelled open keeps the plan that was open, and
    * its history, so a bad file never costs the user their work.
    */
   open(file: Blob, options?: VideoOpenOptions): Promise<VideoSourceInfo>;
@@ -299,8 +299,18 @@ export function createVideoSession(options: VideoSessionOptions): VideoSession {
   const building = new Map<string, AbortController>();
   let peaksVersion = 0;
   let nextId = 0;
-  /** Bumped by every open, so work started before one knows it was replaced. */
-  let generation = 0;
+  /**
+   * Bumped as each open starts, so a newer open supersedes an older one
+   * still in progress: the newest wins, as the user's latest intent, even
+   * if it then fails.
+   */
+  let openSeq = 0;
+  /**
+   * Bumped only when an open commits its new plan, so an insert started
+   * before knows its plan was replaced. An open that fails or is cancelled
+   * replaces nothing, and an insert in flight meanwhile still lands.
+   */
+  let planGeneration = 0;
   let destroyed = false;
   /** A new id or key, unique within the session. */
   const fresh = (prefix: string) => {
@@ -474,8 +484,8 @@ export function createVideoSession(options: VideoSessionOptions): VideoSession {
     async open(file, openOptions = {}) {
       assertAlive();
       const { signal } = openOptions;
-      generation += 1;
-      const started = generation;
+      openSeq += 1;
+      const started = openSeq;
       const id = fresh("source");
       let opened = false;
       inserting += 1;
@@ -488,8 +498,8 @@ export function createVideoSession(options: VideoSessionOptions): VideoSession {
         opened = true;
         throwIfAborted(signal);
         assertAlive();
-        // A newer open replaced this one meanwhile.
-        if (started !== generation) throw replacedError();
+        // A newer open superseded this one meanwhile.
+        if (started !== openSeq) throw replacedError();
         if (info.unplayableAudio) {
           near.push({ type: "audioUndecodable", source: id, codec: info.unplayableAudio.codec });
         }
@@ -516,6 +526,7 @@ export function createVideoSession(options: VideoSessionOptions): VideoSession {
         // closed, with their peaks, by release().
         plan = result.state;
         history.clear();
+        planGeneration += 1;
         selection = null;
         warnings = distinct([...near, ...result.near]);
         error = null;
@@ -526,13 +537,9 @@ export function createVideoSession(options: VideoSessionOptions): VideoSession {
       } catch (reason) {
         if (opened && !sources.has(id)) await engine.close(id).catch(() => {});
         // A failed open keeps the plan that was open, and its history. One a
-        // newer open replaced records nothing: that one reports its own outcome.
+        // newer open superseded records nothing: that one reports its own outcome.
         const failure =
-          started === generation
-            ? fail(reason)
-            : isVideoError(reason)
-              ? reason
-              : asVideoError(reason);
+          started === openSeq ? fail(reason) : isVideoError(reason) ? reason : asVideoError(reason);
         emit({
           type: "open",
           outcome: failure.code === "ABORTED" ? "cancelled" : "failed",
@@ -549,7 +556,7 @@ export function createVideoSession(options: VideoSessionOptions): VideoSession {
       assertAlive();
       const { signal } = insertOptions;
       const id = fresh("source");
-      const started = generation;
+      const started = planGeneration;
       let opened = false;
       inserting += 1;
       publish();
@@ -563,7 +570,7 @@ export function createVideoSession(options: VideoSessionOptions): VideoSession {
         throwIfAborted(signal);
         assertAlive();
         // A file opened in place of the plan meanwhile: this clip was for the old one.
-        if (started !== generation) throw replacedError();
+        if (started !== planGeneration) throw replacedError();
         // Its sound can't be decoded here: it opened with its picture only.
         if (info.unplayableAudio) {
           near.push({ type: "audioUndecodable", source: id, codec: info.unplayableAudio.codec });
@@ -622,7 +629,7 @@ export function createVideoSession(options: VideoSessionOptions): VideoSession {
         if (opened && !sources.has(id)) await engine.close(id).catch(() => {});
         // One an open replaced records nothing: the open reports its own outcome.
         const failure =
-          started === generation
+          started === planGeneration
             ? fail(reason)
             : isVideoError(reason)
               ? reason
