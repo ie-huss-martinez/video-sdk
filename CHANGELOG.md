@@ -1,5 +1,26 @@
 # @hussmartinez/video-sdk
 
+## 0.5.0
+
+### Minor Changes
+
+- [#111](https://github.com/ie-huss-martinez/video-sdk/pull/111) [`ef4529c`](https://github.com/ie-huss-martinez/video-sdk/commit/ef4529c87c589e3448c4c97a2a9430afce574a47) Thanks [@hussmartinez](https://github.com/hussmartinez)! - **Breaking, for TypeScript only:** the types `VideoEditorCatalogue`, `VideoEditorMessages` and `VideoEditorMessageOverrides` are now exported from the main entry, `@hussmartinez/video-sdk`, and no longer from `@hussmartinez/video-sdk/react`. Nothing changes at run time. Change your imports:
+  
+  ```ts
+  // Before
+  import type { VideoEditorMessageOverrides } from "@hussmartinez/video-sdk/react";
+  // After
+  import type { VideoEditorMessageOverrides } from "@hussmartinez/video-sdk";
+  ```
+  
+  They moved because the React editor and the coming `<hm-video-editor>` element both use them, and the family keeps types shared by several entry points in the main one.
+
+- [#113](https://github.com/ie-huss-martinez/video-sdk/pull/113) [`16f1493`](https://github.com/ie-huss-martinez/video-sdk/commit/16f14936c4bfaeb917522ac098c8972577b397e3) Thanks [@hussmartinez](https://github.com/hussmartinez)! - `session.open(file)` and the editor handle's `open(file)` open a file in place of everything open: a new plan of all of it as one clip, whose output the file sets. The files open before are closed, and the history is cleared, so it can't be undone, as audio-sdk's `open` behaves. If the file fails, such as for a limit, the plan that was open stays, with its undo history. A newer `open` supersedes one still in progress. An `insert` still in progress when an `open` commits is rejected with `ABORTED` and `details.reason: "replaced"`, while one in flight during an open that fails or is cancelled still lands. Usage events gain the type `open`.
+
+### Patch Changes
+
+- [#114](https://github.com/ie-huss-martinez/video-sdk/pull/114) [`5c86100`](https://github.com/ie-huss-martinez/video-sdk/commit/5c8610029846224dc6fb4d4464e5a8401df92efd) Thanks [@hussmartinez](https://github.com/hussmartinez)! - Requires `@hussmartinez/ui` 0.15.0 or later, the version the family's editors now share. Its `Slider` cancels a gesture with Escape, and the editor uses that. Pressing Escape while dragging the inspector's volume slider, or while holding an arrow key on it, puts the volume back where the gesture started, commits nothing, and stops playing the drag's preview. If your app also depends on `@hussmartinez/ui`, update it to ^0.15.0, so there's one copy.
+
 ## 0.4.0
 
 ### Minor Changes
