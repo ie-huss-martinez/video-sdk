@@ -1,5 +1,16 @@
 # @hussmartinez/video-sdk
 
+## 0.6.0
+
+### Minor Changes
+
+- [#115](https://github.com/ie-huss-martinez/video-sdk/pull/115) [`488861f`](https://github.com/ie-huss-martinez/video-sdk/commit/488861f380772f0b3561539651c9454413c116b2) Thanks [@hussmartinez](https://github.com/hussmartinez)! - The `<hm-video-editor>` custom element, for pages without React of their own. Import `defineVideoEditorElement` from `@hussmartinez/video-sdk/element` and call it once; importing registers nothing. It renders `VideoEditor` into its light DOM, so React and React DOM are still needed.
+  
+  - **Attributes:** `theme`, `locale` and `tools`.
+  - **Properties:** `file`, which opens a video in place of the plan when set (a failed open keeps the plan), plus `fileName`, `filePolicy`, `assetsUrl`, `messages`, `engine` and `processor`.
+  - **Methods:** `open`, `insert`, `export`, `undo`, `redo`, `play`, `pause` and `seek`. `open`, `insert` and `export` wait for the editor's first render, and `play` for its preview; they reject with `ABORTED` if the element is removed first, and `play` does nothing where the preview can't play. `undo` and `redo` return `false`, and `pause` and `seek` do nothing, before the first render.
+  - **Events:** `hm-video-editor-change` (the plan), `-event` (the usage event), `-export` (a `VideoExportReport`: container, size, peak and clamped frames, never the file) and `-error` (a failure's `code` and `details`). None carries a file name or contents.
+
 ## 0.5.0
 
 ### Minor Changes
