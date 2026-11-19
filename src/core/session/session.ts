@@ -178,10 +178,14 @@ export interface VideoSession {
    * Opens a file in place of everything open (ADR 0003), as audio-sdk's
    * session does: a new plan of all of it as one clip, whose output the file
    * sets. The sources open before are closed, and the history is cleared,
-   * so it can't be undone. A newer `open` supersedes one still in progress,
-   * and an `insert` still in progress when it commits is rejected with
-   * `ABORTED`; one in flight while an open fails or is cancelled still lands. A failed or cancelled open keeps the plan that was open, and
-   * its history, so a bad file never costs the user their work.
+   * so it can't be undone. A failed or cancelled open keeps the plan that
+   * was open, and its history, so a bad file never costs the user their
+   * work.
+   *
+   * A newer `open` supersedes one still in progress, which rejects with
+   * `ABORTED` and `details.reason: "replaced"`. An `insert` still in
+   * progress when an open commits rejects the same way; one in flight while
+   * an open fails or is cancelled still lands.
    */
   open(file: Blob, options?: VideoOpenOptions): Promise<VideoSourceInfo>;
   /**
@@ -537,9 +541,9 @@ export function createVideoSession(options: VideoSessionOptions): VideoSession {
       } catch (reason) {
         if (opened && !sources.has(id)) await engine.close(id).catch(() => {});
         // A failed open keeps the plan that was open, and its history. One a
-        // newer open superseded records nothing: that one reports its own outcome.
-        const failure =
-          started === openSeq ? fail(reason) : isVideoError(reason) ? reason : asVideoError(reason);
+        // newer open superseded rejects as replaced, whatever else went wrong,
+        // and records nothing: that one reports its own outcome.
+        const failure = started === openSeq ? fail(reason) : replacedError();
         emit({
           type: "open",
           outcome: failure.code === "ABORTED" ? "cancelled" : "failed",
@@ -627,13 +631,9 @@ export function createVideoSession(options: VideoSessionOptions): VideoSession {
         return info;
       } catch (reason) {
         if (opened && !sources.has(id)) await engine.close(id).catch(() => {});
-        // One an open replaced records nothing: the open reports its own outcome.
-        const failure =
-          started === planGeneration
-            ? fail(reason)
-            : isVideoError(reason)
-              ? reason
-              : asVideoError(reason);
+        // One whose plan an open replaced rejects as replaced, whatever else
+        // went wrong, and records nothing: the open reports its own outcome.
+        const failure = started === planGeneration ? fail(reason) : replacedError();
         emit({
           type: "insert",
           outcome: failure.code === "ABORTED" ? "cancelled" : "failed",
