@@ -322,6 +322,47 @@ describe("the inspector's clip panel", () => {
     act(() => playing.pause());
   });
 
+  it("cancels a volume gesture with Escape: nothing committed, and the preview back to the plan", async () => {
+    // Four clips, so playback outlasts the test.
+    const view = await inspectorWith(4);
+    await select(view, 1);
+    const playing = await eventually(() => {
+      expect(output).not.toBeNull();
+      return output as VideoOutput;
+    });
+    const loads: VideoPlan[] = [];
+    const load = playing.load.bind(playing);
+    playing.load = (plan) => {
+      loads.push(plan);
+      load(plan);
+    };
+    await act(async () => {
+      await playing.play();
+    });
+    await eventually(() => expect(playing.getSnapshot().state).toBe("playing"));
+    const slider = byLabel(view, "Volume");
+    slider.focus();
+    const before = (session as VideoSession).getSnapshot().plan;
+    loads.length = 0;
+    // Held, it's heard as it moves: the preview plays the slider's value.
+    await userEvent.keyboard("{ArrowLeft>3}");
+    await eventually(() => expect(loads.at(-1)?.clips[0]?.volumeDb).toBe(-3));
+    // Escape cancels it (ui 0.15): the value goes back, and nothing is committed.
+    await userEvent.keyboard("{Escape}");
+    await userEvent.keyboard("{/ArrowLeft}");
+    await eventually(() => expect(slider.getAttribute("aria-valuetext")).toBe("0 dB"));
+    // No command ran: the session's plan is the very one before the gesture.
+    expect((session as VideoSession).getSnapshot().plan).toBe(before);
+    // The preview ended with the gesture: what plays is the session's plan
+    // itself, not a preview copy of it at the start value, which would stay
+    // in its place until the next edit. Still so once a pending preview's
+    // interval has passed.
+    await eventually(() => expect(loads.at(-1)).toBe(before));
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    expect(loads.at(-1)).toBe(before);
+    act(() => playing.pause());
+  });
+
   it("takes an exact volume from the number field, within the model's range", async () => {
     const view = await inspectorWith(1);
     await select(view, 1);
