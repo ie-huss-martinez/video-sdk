@@ -1,5 +1,6 @@
 import { Button, Dialog, ProgressBar, SegmentedControl, useAnnounce } from "@hussmartinez/ui/react";
 import { type ReactNode, useContext, useEffect, useId, useRef, useState } from "react";
+import { asVideoError } from "../core/errors/error-helpers.js";
 import { isVideoError } from "../core/errors/video-error.js";
 import { metadataDate } from "../core/model/metadata-date.js";
 import { planFrames, type VideoMetadata } from "../core/model/plan.js";
@@ -181,6 +182,10 @@ export function VideoExportDialog(props: VideoExportDialogProps): ReactNode {
         return;
       }
       setError(reason);
+      // The element's `error` event: an export's failure never reaches the
+      // session's snapshot, so the dialog, which shows it, reports it.
+      const failure = asVideoError(reason);
+      listeners.onError?.({ code: failure.code, details: { ...(failure.details ?? {}) } });
     }
   };
 

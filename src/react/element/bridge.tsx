@@ -6,16 +6,22 @@ import { ElementListenersContext } from "./listeners.js";
 
 /**
  * Tells the element what it fires (docs/adr/0007): the plan after each
- * change, and each failure the editor shows, the session's or playback's,
- * once. Inside an editor with no element around it, there are no listeners
+ * change, each failure the session or playback shows, once, and when the
+ * preview can play. The export dialog reports its own failures. Inside an editor with no element around it, there are no listeners
  * and it does nothing. It renders nothing either way.
  *
  * @internal
  */
 export function ElementBridge(): ReactNode {
-  const { onChange, onError } = useContext(ElementListenersContext);
+  const { onChange, onError, onPlayable } = useContext(ElementListenersContext);
   const { snapshot } = useVideoSession();
-  const { snapshot: playback } = useVideoOutput();
+  const { output, snapshot: playback } = useVideoOutput();
+
+  // The preview's output exists: the handle, renewed with it before effects
+  // run, can play.
+  useEffect(() => {
+    if (output) onPlayable?.();
+  }, [output, onPlayable]);
 
   // The plan after each insert, edit, undo or redo; not before the first file.
   const plan = useRef<VideoPlan | null>(null);

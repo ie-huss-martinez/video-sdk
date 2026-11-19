@@ -69,7 +69,7 @@ editor.addEventListener("hm-video-editor-change", (event) => save((event as Cust
 - **Properties:**
   - `file` opens a video in place of the plan when you set it, and setting another opens that one, replacing it. A failed open keeps the plan. `insert` adds more files;
   - `fileName`, `filePolicy`, `assetsUrl`, `messages`, `engine` and `processor`.
-- **Methods:** `open`, `insert`, `export`, `undo`, `redo`, `play`, `pause` and `seek`. `open`, `insert`, `export` and `play` wait for the editor's first render.
+- **Methods:** `open`, `insert`, `export`, `undo`, `redo`, `play`, `pause` and `seek`. `open`, `insert` and `export` wait for the editor's first render, and `play` for its preview. If the element is removed before then, they reject with `ABORTED` and `details.reason: "removed"`.
 - **Events,** none of which carries a file name or contents:
   - `hm-video-editor-change`, with the plan;
   - `hm-video-editor-event`, with the usage event;

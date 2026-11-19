@@ -175,7 +175,7 @@ Focus always lands somewhere meaningful, and never on `<body>`:
 
 - **`fileName` joined the properties,** since the handle's `export` and the dialog use it.
 - **`file` opens, replacing,** as audio-sdk's does. Setting it calls `session.open` through the handle, which replaces the plan with one clip from the file and clears the history ([ADR 0003](0003-clip-plan-document-model.md)); setting another opens that one. A failed open keeps the plan. More files join the plan through `insert`.
-- **The methods are the handle's:** `open`, `insert`, `export`, `undo`, `redo`, `play`, `pause` and `seek`. `open`, `insert`, `export` and `play` wait for the editor's first render, since the element renders without `flushSync`.
+- **The methods are the handle's:** `open`, `insert`, `export`, `undo`, `redo`, `play`, `pause` and `seek`. `open`, `insert` and `export` wait for the editor's first render, since the element renders without `flushSync`, and `play` for the preview's output. Each then uses the handle there is, which each render renews. A removal before then rejects them with `ABORTED` and `details.reason: "removed"`, so no call waits forever.
 - **The events come through a context, not props.** The editor's internals report through an internal context the element provides, so `VideoEditor`'s public props don't grow.
   - `change`: the plan after each open, insert, edit, undo or redo, from the editor's root.
   - `error`: each failure the editor shows, the session's or playback's, once, as `{ code, details }`.

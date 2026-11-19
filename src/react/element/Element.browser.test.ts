@@ -1,7 +1,9 @@
 import "@hussmartinez/ui/styles.css";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import landscapeVp8 from "../../../test/fixtures/video/landscape-vp8.webm?url";
+import { VideoError } from "../../core/errors/video-error.js";
 import type { VideoPlan } from "../../core/model/plan.js";
+import type { VideoProcessor } from "../../core/ports/video-processor.js";
 import { defineVideoEditorElement } from "../../element.js";
 import "../../styles.css";
 import type { VideoEditorElementMethods, VideoEditorElementProps } from "./mount.js";
@@ -79,6 +81,8 @@ describe("<hm-video-editor> (docs/adr/0007, sdk-core ADR 0040)", () => {
     expect(editor.shadowRoot).toBeNull();
     // The package's stylesheet makes it a block, which the host sizes.
     expect(getComputedStyle(editor).display).toBe("block");
+    // The editor takes the height the host gives the element.
+    expect(editor.querySelector("section")?.getBoundingClientRect().height).toBeCloseTo(600, 0);
     expect(editor.querySelector("section")?.getAttribute("aria-label")).toBe("Video editor");
   });
 
@@ -116,6 +120,12 @@ describe("<hm-video-editor> (docs/adr/0007, sdk-core ADR 0040)", () => {
     await editor.insert(await video());
     await until(() => clips(events) === 2, "the insert after open()", WORK_WAIT);
 
+    // play() plays with the editor's current output, not the first render's.
+    await editor.play();
+    await until(() => editor.querySelector('button[aria-label="Pause"]') !== null, "playing");
+    editor.pause();
+    await until(() => editor.querySelector('button[aria-label="Play"]') !== null, "paused");
+
     editor.seek(30);
     await until(
       () => editor.querySelector(".hm-video-transport-time")?.textContent === "0:01.00 of 0:04.00",
@@ -137,6 +147,17 @@ describe("<hm-video-editor> (docs/adr/0007, sdk-core ADR 0040)", () => {
     document.body.append(editor);
     await editor.insert(await video());
     await until(() => clips(events) === 1, "the insert", WORK_WAIT);
+  });
+
+  it("rejects calls still waiting for the editor when it's removed before rendering", async () => {
+    const file = await video();
+    const editor = create();
+    document.body.append(editor);
+    const waiting = [editor.open(file), editor.insert(file), editor.play()];
+    editor.remove();
+    for (const call of waiting) {
+      await expect(call).rejects.toMatchObject({ code: "ABORTED", details: { reason: "removed" } });
+    }
   });
 
   it("takes theme, locale and tools from attributes, and follows their changes", async () => {
@@ -194,6 +215,38 @@ describe("<hm-video-editor> (docs/adr/0007, sdk-core ADR 0040)", () => {
     expect(report["size"]).toBeGreaterThan(0);
     expect(Object.values(report).some((value) => value instanceof Blob)).toBe(false);
     for (const event of events) expect(event.json).not.toContain("private-holiday");
+  });
+
+  it("fires error once for an export the dialog shows failing", async () => {
+    const editor = create();
+    editor.processor = {
+      export: () =>
+        Promise.reject(
+          new VideoError("UNSUPPORTED_CODEC", "No encoder.", { details: { track: "video" } }),
+        ),
+      destroy: async () => {},
+    } satisfies VideoProcessor;
+    const events = record(editor);
+    document.body.append(editor);
+    editor.file = await video();
+    await until(() => clips(events) === 1, "the open", WORK_WAIT);
+    await until(
+      () => tool(editor, "video.export")?.getAttribute("aria-disabled") !== "true",
+      "Export",
+    );
+    tool(editor, "video.export")?.click();
+    await until(() => editor.querySelector("dialog[open]") !== null, "the dialog");
+    const confirm = [...editor.querySelectorAll<HTMLButtonElement>("dialog button")].find(
+      (element) => element.textContent === "Export",
+    );
+    confirm?.click();
+    await until(() => events.some((event) => event.name === "error"), "the error", WORK_WAIT);
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    const errors = events.filter((event) => event.name === "error");
+    expect(errors.map((event) => event.detail)).toEqual([
+      { code: "UNSUPPORTED_CODEC", details: { track: "video" } },
+    ]);
+    expect(events.some((event) => event.name === "export")).toBe(false);
   });
 
   it("keeps the editor across a move, and tears it down when removed", async () => {
