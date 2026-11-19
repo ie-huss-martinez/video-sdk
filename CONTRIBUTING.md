@@ -20,7 +20,7 @@ pnpm verify        # everything CI runs
 pnpm verify:fast   # the subset the pre-push hook runs
 ```
 
-Browser tests, the end-to-end tests and the screenshots run in the pinned browser image of `ci/Dockerfile`, as CI's do, through `hm-in-image` ([sdk-core ADR 0049](https://github.com/ie-huss-martinez/sdk-core/blob/main/docs/adr/0049-local-browser-tests-in-the-pinned-image.md)), so they need Docker and no browsers on the machine. Run all three engines, as CI does, with `CI=1 pnpm verify` or `pnpm test:browser:all`. The [capability matrix](docs/capabilities.md) is checked there too.
+Browser tests, the end-to-end tests and the screenshots run in the pinned browser image of `ci/Dockerfile`, as CI's do, through `hm-in-image` ([sdk-core ADR 0049](https://github.com/ie-huss-martinez/sdk-core/blob/main/docs/adr/0049-local-browser-tests-in-the-pinned-image.md)), so they need Docker and no browsers on the machine. Run them to diagnose a failure, to measure, or to capture visual baselines: CI runs every engine for a pull request, so there's no need to run all three to prove one. `CI=1 pnpm verify` or `pnpm test:browser:all` runs all three, as CI does. The screenshots serve the examples as last built, so capture baselines after building them: `pnpm build && pnpm build:examples && pnpm test:visual:update`. The [capability matrix](docs/capabilities.md) is checked there too.
 
 The repository root is the published package, laid out as in the family's [standard layout](https://github.com/ie-huss-martinez/sdk-core/blob/main/STANDARDS.md#repository-layout): the source is in `src/`, and the examples and end-to-end tests will join the workspace as `examples/` and `e2e/`.
 
@@ -52,21 +52,22 @@ The git hooks run on their own: a secret scan and lint of staged files on commit
 ## Open a pull request
 
 - **Title:** a Conventional Commit of at most 65 characters, because it becomes the commit title on `main`, followed by ` (#NNN)`, and that must fit in 72. Put explanations in the description. The `pr-title` check enforces both.
-- **Description:** fill in the template: what changed, why, and how you tested it, including the result of `pnpm verify`. Be as detailed as is useful; the description doesn't go into git history.
+- **Description:** fill in the template: what changed, why, and how you tested it, including the CI run on its head. Be as detailed as is useful; the description doesn't go into git history.
 - **Changeset:** add one if the pull request changes what the package publishes. See [Changesets](#changesets).
 - **Checks:** `verify`, `changeset` and `pr-title` must pass, and the branch must be up to date with `main`.
+- **CodeRabbit:** it reviews every pull request. Fix or answer each of its review threads, and resolve it, before asking for a merge: the merge is refused while any is open. Its walkthrough comments, such as "No actionable comments", need nothing.
 
-Mark the pull request ready once `pnpm verify` passes locally. CI is the final gate, not a substitute for running it yourself.
+**CI is the gate**, by Huss's decision of 2026-11-19: the repository is public, so GitHub Actions is free. Before pushing, run only `pnpm verify:fast`, which the pre-push hook runs anyway, with the checks your change touches, and let CI run everything on every engine. A CI failure is investigated, and an unexplained one blocks a release.
 
 ## How pull requests are reviewed
 
 **The author of a pull request never merges it.** A separate reviewer does, after reviewing it:
 
 - **The diff:** the reviewer reads the full diff and checks it against `STANDARDS.md` and the ADRs.
-- **The checks:** CI must be green. For any change to code, the reviewer also runs `pnpm verify` independently, rather than relying on the author's result.
+- **The checks:** CI must be green on the pull request's current head. The reviewer merges on that, without running `pnpm verify` again.
 - **Not "almost right":** if the scope, title or quality isn't right, the pull request is fixed before it's merged.
 
-**Coding agents** open one pull request at a time. After opening it, they stop and report the link, a short summary and their `pnpm verify` result. They start the next change only after the pull request is merged, from an up-to-date `main`. An agent never reviews or merges a pull request it wrote; author and reviewer are always different sessions.
+**Coding agents** open one pull request at a time. After opening it, they stop and report the link, a short summary and its CI result. They start the next change only after the pull request is merged, from an up-to-date `main`. An agent never reviews or merges a pull request it wrote; author and reviewer are always different sessions.
 
 ## How pull requests are merged
 
