@@ -865,6 +865,11 @@ export interface VideoMetadata {
 }
 
 // @public
+export interface VideoOpenOptions {
+    readonly signal?: AbortSignal;
+}
+
+// @public
 export interface VideoOutput {
     destroy(): Promise<void>;
     // (undocumented)
@@ -1029,6 +1034,7 @@ export interface VideoSession {
     getSnapshot(): VideoSessionSnapshot;
     insert(file: Blob, options?: VideoInsertOptions): Promise<VideoSourceInfo>;
     newClipKey(): string;
+    open(file: Blob, options?: VideoOpenOptions): Promise<VideoSourceInfo>;
     redo(): boolean;
     select(range: VideoTimelineRange | null): void;
     subscribe(listener: () => void): () => void;
@@ -1041,7 +1047,7 @@ export interface VideoSessionEvent {
     // (undocumented)
     readonly outcome: "done" | "failed" | "cancelled";
     // (undocumented)
-    readonly type: "insert" | "execute" | "undo" | "redo" | "export";
+    readonly type: "open" | "insert" | "execute" | "undo" | "redo" | "export";
 }
 
 // @public

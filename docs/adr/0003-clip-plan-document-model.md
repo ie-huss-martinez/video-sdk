@@ -2,7 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-11-12
-- **Amended:** 2026-11-12, to match the model as built: a clip's end matches the grid within one microsecond, `video.restoreClips` and `video.setOutput` carry what undo needs, and a source's time begins at the probe's `start`. Then, when audio playback was built: that `start` is the video track's first timestamp. Then, with the portable formats ([sdk-core ADR 0045](https://github.com/ie-huss-martinez/sdk-core/blob/main/docs/adr/0045-portable-formats-and-conformance-vectors.md), [`docs/formats/hm-video-plan.md`](../formats/hm-video-plan.md)): undo of `video.setOutput` is its own `video.restoreOutput`, and refusals carry a reason.
+- **Amended:** 2026-11-19, with `session.open` as built. Earlier, 2026-11-12, to match the model as built: a clip's end matches the grid within one microsecond, `video.restoreClips` and `video.setOutput` carry what undo needs, and a source's time begins at the probe's `start`. Then, when audio playback was built: that `start` is the video track's first timestamp. Then, with the portable formats ([sdk-core ADR 0045](https://github.com/ie-huss-martinez/sdk-core/blob/main/docs/adr/0045-portable-formats-and-conformance-vectors.md), [`docs/formats/hm-video-plan.md`](../formats/hm-video-plan.md)): undo of `video.setOutput` is its own `video.restoreOutput`, and refusals carry a reason.
 
 ## Context
 
@@ -98,6 +98,13 @@ Commands are plain, structured-cloneable data, named `video.*`:
 
   Commands never carry bytes or frames.
 - **A result that arrives late applies nothing it shouldn't.** An insert resolves `at` against the plan as it is when its command executes, clamped to the end. A probe or thumbnail for a source the session has since closed is discarded.
+- **`session.open(file)` opens a file in place of the plan**, as audio-sdk's session does:
+  - **What it does:** it probes, checks and opens the file as `insert` does, then makes a new plan of all of it as one clip, with the output the file sets. The sources open before are closed, with their peaks.
+  - **No undo:** the history is cleared, so it can't be undone; it starts a new document.
+  - **A failed or cancelled open keeps the plan that was open**, and its history, so a bad file never costs the user their work.
+  - **The newest wins:** a newer `open` replaces one still in progress, which rejects with `ABORTED` and `details.reason: "replaced"`.
+  - **Inserts in flight don't land on the new plan:** an `insert` still in progress when an `open` lands rejects the same way and closes its source.
+  - **Neither records the snapshot's error,** since the open reports its own outcome. The usage event's type is `open`.
 
 ### The session
 

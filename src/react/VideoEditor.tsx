@@ -42,6 +42,12 @@ export interface VideoEditorProps extends Omit<VideoEditorProviderProps, "childr
  * @public
  */
 export interface VideoEditorHandle {
+  /**
+   * Opens a file in place of everything open, as one clip: the sources open
+   * before are closed and the history is cleared, so it can't be undone. A
+   * failed open keeps what was open, as the session's `open` does.
+   */
+  open(file: Blob): Promise<VideoSourceInfo>;
   /** Inserts a file at the end of the plan, or at a frame. */
   insert(file: Blob, at?: number): Promise<VideoSourceInfo>;
   undo(): boolean;
@@ -77,6 +83,7 @@ const Shell = forwardRef<
   useImperativeHandle(
     ref,
     () => ({
+      open: (file) => session.open(file),
       insert: (file, at) => session.insert(file, at === undefined ? {} : { at }),
       undo: () => session.undo(),
       redo: () => session.redo(),

@@ -95,7 +95,7 @@ export interface VideoSessionSnapshot {
  * @public
  */
 export interface VideoSessionEvent {
-  readonly type: "insert" | "execute" | "undo" | "redo" | "export";
+  readonly type: "open" | "insert" | "execute" | "undo" | "redo" | "export";
   readonly outcome: "done" | "failed" | "cancelled";
   /** The types of the commands applied or undone. */
   readonly commands: readonly VideoCommand["type"][];
@@ -132,6 +132,16 @@ export interface VideoSessionExportOptions extends VideoExportOptions {
 }
 
 /**
+ * Options for {@link VideoSession.open}.
+ *
+ * @public
+ */
+export interface VideoOpenOptions {
+  /** Cancels the open, which then keeps the plan that was open. */
+  readonly signal?: AbortSignal;
+}
+
+/**
  * Options for {@link VideoSession.insert}.
  *
  * @public
@@ -164,6 +174,16 @@ export interface VideoSession {
    * sound, or whose sound this browser can't decode.
    */
   getPeaks(source: string): VideoPeaks | undefined;
+  /**
+   * Opens a file in place of everything open (ADR 0003), as audio-sdk's
+   * session does: a new plan of all of it as one clip, whose output the file
+   * sets. The sources open before are closed, and the history is cleared,
+   * so it can't be undone. A newer `open` replaces one still in progress,
+   * and an `insert` still in progress when it lands is rejected with
+   * `ABORTED`. A failed or cancelled open keeps the plan that was open, and
+   * its history, so a bad file never costs the user their work.
+   */
+  open(file: Blob, options?: VideoOpenOptions): Promise<VideoSourceInfo>;
   /**
    * Probes, checks and opens a file, and inserts all of it as one clip
    * (ADR 0001, ADR 0004). The first file sets the plan's output. A failed or
@@ -279,6 +299,8 @@ export function createVideoSession(options: VideoSessionOptions): VideoSession {
   const building = new Map<string, AbortController>();
   let peaksVersion = 0;
   let nextId = 0;
+  /** Bumped by every open, so work started before one knows it was replaced. */
+  let generation = 0;
   let destroyed = false;
   /** A new id or key, unique within the session. */
   const fresh = (prefix: string) => {
@@ -417,15 +439,117 @@ export function createVideoSession(options: VideoSessionOptions): VideoSession {
     return true;
   };
 
+  /**
+   * Probes, checks and opens a file as source `id` (ADR 0001, ADR 0004),
+   * with the warnings that name it. The caller decides what it joins.
+   */
+  const openSource = async (id: string, file: Blob, signal: AbortSignal | undefined) => {
+    const probe = await engine.probe(file, {
+      filePolicy: policy,
+      ...(signal ? { signal } : {}),
+    });
+    // A file's own warnings are about it: they name its source.
+    const near: VideoWarning[] = checkProbe(policy, probe).map((warning) =>
+      limitWarning(warning.limit, warning.actual, id),
+    );
+    throwIfAborted(signal);
+    const info = await engine.open(id, file, probe, {
+      filePolicy: policy,
+      ...(signal ? { signal } : {}),
+    });
+    return { probe, info, near };
+  };
+
+  /** An insert or open that a newer open replaced: it adds nothing to the new plan. */
+  const replacedError = () =>
+    new VideoError("ABORTED", "Another file was opened in place of the plan.", {
+      details: { reason: "replaced" },
+    });
+
   return {
     getSnapshot: () => store.getSnapshot(),
     subscribe: (listener) => store.subscribe(listener),
     getPeaks: (source) => peaks.get(source),
 
+    async open(file, openOptions = {}) {
+      assertAlive();
+      const { signal } = openOptions;
+      generation += 1;
+      const started = generation;
+      const id = fresh("source");
+      let opened = false;
+      inserting += 1;
+      publish();
+      try {
+        throwIfAborted(signal);
+        // It replaces every source, so it's checked on its own.
+        policy.check("maxFiles", 1);
+        const { probe, info, near } = await openSource(id, file, signal);
+        opened = true;
+        throwIfAborted(signal);
+        assertAlive();
+        // A newer open replaced this one meanwhile.
+        if (started !== generation) throw replacedError();
+        if (info.unplayableAudio) {
+          near.push({ type: "audioUndecodable", source: id, codec: info.unplayableAudio.codec });
+        }
+
+        // From here to the end nothing awaits, so the plan can't change under us.
+        const base = createPlan(outputFromSource(info));
+        const commands: VideoCommand[] = [
+          {
+            type: "video.insertClips",
+            at: 0,
+            clips: [wholeClip(newClipKey(), info, base.output.frameRate)],
+          },
+        ];
+        sources.set(id, { info, probe });
+        let result: ReturnType<typeof attempt>;
+        try {
+          result = attempt(base, commands);
+          near.push(...checkOutput(policy, base.output));
+        } catch (reason) {
+          sources.delete(id);
+          throw reason;
+        }
+        // Committed: a new plan with no history, and the sources before it
+        // closed, with their peaks, by release().
+        plan = result.state;
+        history.clear();
+        selection = null;
+        warnings = distinct([...near, ...result.near]);
+        error = null;
+        release();
+        buildPeaks(id, info);
+        emit({ type: "open", outcome: "done", commands: commands.map((c) => c.type) });
+        return info;
+      } catch (reason) {
+        if (opened && !sources.has(id)) await engine.close(id).catch(() => {});
+        // A failed open keeps the plan that was open, and its history. One a
+        // newer open replaced records nothing: that one reports its own outcome.
+        const failure =
+          started === generation
+            ? fail(reason)
+            : isVideoError(reason)
+              ? reason
+              : asVideoError(reason);
+        emit({
+          type: "open",
+          outcome: failure.code === "ABORTED" ? "cancelled" : "failed",
+          commands: [],
+        });
+        throw failure;
+      } finally {
+        inserting -= 1;
+        publish();
+      }
+    },
+
     async insert(file, insertOptions = {}) {
       assertAlive();
       const { signal } = insertOptions;
       const id = fresh("source");
+      const started = generation;
       let opened = false;
       inserting += 1;
       publish();
@@ -434,22 +558,12 @@ export function createVideoSession(options: VideoSessionOptions): VideoSession {
         // Inserts still in flight count too, this one included, so that
         // inserts started together can't pass the check together.
         policy.check("maxFiles", sources.size + inserting);
-        const probe = await engine.probe(file, {
-          filePolicy: policy,
-          ...(signal ? { signal } : {}),
-        });
-        // A file's own warnings are about it: they name its source.
-        const near: VideoWarning[] = checkProbe(policy, probe).map((warning) =>
-          limitWarning(warning.limit, warning.actual, id),
-        );
-        throwIfAborted(signal);
-        const info = await engine.open(id, file, probe, {
-          filePolicy: policy,
-          ...(signal ? { signal } : {}),
-        });
+        const { probe, info, near } = await openSource(id, file, signal);
         opened = true;
         throwIfAborted(signal);
         assertAlive();
+        // A file opened in place of the plan meanwhile: this clip was for the old one.
+        if (started !== generation) throw replacedError();
         // Its sound can't be decoded here: it opened with its picture only.
         if (info.unplayableAudio) {
           near.push({ type: "audioUndecodable", source: id, codec: info.unplayableAudio.codec });
@@ -506,7 +620,13 @@ export function createVideoSession(options: VideoSessionOptions): VideoSession {
         return info;
       } catch (reason) {
         if (opened && !sources.has(id)) await engine.close(id).catch(() => {});
-        const failure = fail(reason);
+        // One an open replaced records nothing: the open reports its own outcome.
+        const failure =
+          started === generation
+            ? fail(reason)
+            : isVideoError(reason)
+              ? reason
+              : asVideoError(reason);
         emit({
           type: "insert",
           outcome: failure.code === "ABORTED" ? "cancelled" : "failed",

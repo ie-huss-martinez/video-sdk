@@ -51,8 +51,9 @@ export interface VideoEditorHandle {
     // Warning: (ae-forgotten-export) The symbol "VideoSessionExportOptions" needs to be exported by the entry point react.d.ts
     // Warning: (ae-forgotten-export) The symbol "VideoExportResult" needs to be exported by the entry point react.d.ts
     export(options?: VideoSessionExportOptions): Promise<VideoExportResult>;
-    // Warning: (ae-forgotten-export) The symbol "VideoSourceInfo" needs to be exported by the entry point react.d.ts
     insert(file: Blob, at?: number): Promise<VideoSourceInfo>;
+    // Warning: (ae-forgotten-export) The symbol "VideoSourceInfo" needs to be exported by the entry point react.d.ts
+    open(file: Blob): Promise<VideoSourceInfo>;
     // (undocumented)
     pause(): void;
     // (undocumented)
