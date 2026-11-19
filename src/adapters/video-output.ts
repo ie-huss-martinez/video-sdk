@@ -336,10 +336,14 @@ export function createOutput(environment: OutputEnvironment): VideoOutput {
         checkedAt = now;
         stalled = player?.stalled() ?? false;
       }
-      if (stalled) {
-        // The audio stopped keeping time: go on silently from where the clock is.
+      // A window that failed to decode, as when the decoder stalled: go on
+      // with the picture only, and say so.
+      const failed = player?.failed() ?? false;
+      if (stalled || failed) {
+        // The audio stopped keeping time, or its sound: go on silently from
+        // where the clock is.
         player?.stop();
-        update({ audio: "blocked" });
+        update({ audio: failed ? "undecodable" : "blocked" });
       } else {
         const fresh = player?.anchor();
         const moved =
@@ -375,7 +379,17 @@ export function createOutput(environment: OutputEnvironment): VideoOutput {
       const audio = await (waking ?? player.start());
       if (overtaken()) return;
       update({ audio: audio === "running" ? "ready" : "blocked" });
-      if (audio === "running") from = await player.play(frameTime(frame, rate()), duration);
+      if (audio === "running") {
+        try {
+          from = await player.play(frameTime(frame, rate()), duration);
+        } catch {
+          // The first windows didn't decode, as when the decoder stalled:
+          // the picture plays on without sound, rather than not at all.
+          if (overtaken()) return player.stop();
+          player.stop();
+          update({ audio: "undecodable" });
+        }
+      }
       if (overtaken()) return player.stop();
     }
     runClock(from ?? { media: frameTime(frame, rate()), at: environment.now() });

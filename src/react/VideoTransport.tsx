@@ -84,9 +84,11 @@ export function VideoTransport(props: VideoTransportProps): ReactNode {
       <span className="hm-video-transport-time" aria-live="off">
         {time}
       </span>
-      {playback?.audio === "blocked" ? (
+      {playback?.audio === "blocked" || playback?.audio === "undecodable" ? (
         <p className="hm-video-transport-note" role="status">
-          {messages.t("transport.audioBlocked")}
+          {messages.t(
+            playback.audio === "blocked" ? "transport.audioBlocked" : "transport.audioUndecodable",
+          )}
         </p>
       ) : null}
     </fieldset>

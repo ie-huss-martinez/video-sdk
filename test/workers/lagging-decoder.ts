@@ -108,3 +108,75 @@ export function lateOutputAudioDecoderClass(): typeof AudioDecoder {
     }
   };
 }
+
+/**
+ * An `AudioDecoder` that holds the last `lag` chunks it's given before the
+ * real decoder sees them, and counts them in `decodeQueueSize`, so it
+ * outputs nothing until `lag` chunks are in flight; and, with `dequeue:
+ * false`, one that never fires `dequeue`, as a browser without the event
+ * would; and, with `stuck`, one that never gives anything back, whose flush
+ * never settles, as a decoder that stopped: for every codec, or only the
+ * codec named. Each leaves a decode loop
+ * without a stall guard waiting forever.
+ */
+export function laggingAudioDecoderClass(
+  lag: number,
+  dequeue = true,
+  stuck: boolean | string = false,
+): typeof AudioDecoder {
+  const Real = AudioDecoder;
+  class LaggingAudioDecoder extends EventTarget {
+    readonly #real: AudioDecoder;
+    readonly #held: EncodedAudioChunk[] = [];
+    #stuck = stuck === true;
+
+    constructor(init: AudioDecoderInit) {
+      super();
+      this.#real = new Real(init);
+      if (dequeue) {
+        this.#real.addEventListener("dequeue", () => this.dispatchEvent(new Event("dequeue")));
+      }
+    }
+
+    get state(): CodecState {
+      return this.#real.state;
+    }
+
+    get decodeQueueSize(): number {
+      return this.#held.length + this.#real.decodeQueueSize;
+    }
+
+    configure(config: AudioDecoderConfig): void {
+      if (typeof stuck === "string") this.#stuck = config.codec === stuck;
+      this.#real.configure(config);
+    }
+
+    decode(chunk: EncodedAudioChunk): void {
+      this.#held.push(chunk);
+      if (this.#held.length > (this.#stuck ? Number.POSITIVE_INFINITY : lag))
+        this.#real.decode(this.#held.shift() as EncodedAudioChunk);
+    }
+
+    async flush(): Promise<void> {
+      // Stuck: it never gives anything back, and its flush never settles.
+      if (this.#stuck) return new Promise(() => {});
+      for (const chunk of this.#held.splice(0)) this.#real.decode(chunk);
+      await this.#real.flush();
+    }
+
+    reset(): void {
+      this.#held.length = 0;
+      this.#real.reset();
+    }
+
+    close(): void {
+      this.#held.length = 0;
+      this.#real.close();
+    }
+
+    static isConfigSupported(config: AudioDecoderConfig) {
+      return Real.isConfigSupported(config);
+    }
+  }
+  return LaggingAudioDecoder as unknown as typeof AudioDecoder;
+}

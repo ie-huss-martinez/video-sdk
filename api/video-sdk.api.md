@@ -614,6 +614,7 @@ export const videoMessages: {
     readonly "transport.nextFrame": "Next frame";
     readonly "transport.time": "{position} of {length}";
     readonly "transport.audioBlocked": "Sound is off: press play to turn it on.";
+    readonly "transport.audioUndecodable": "The sound couldn't be decoded, so the video plays without it.";
     readonly "timeline.label": "Timeline";
     readonly "timeline.tools": "Timeline tools";
     readonly "timeline.clips": "Clips";
@@ -887,7 +888,7 @@ export interface VideoOutput {
 }
 
 // @public
-export type VideoOutputAudio = "ready" | "blocked";
+export type VideoOutputAudio = "ready" | "blocked" | "undecodable";
 
 // @public
 export type VideoOutputEvent = "ended";

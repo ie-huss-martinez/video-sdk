@@ -1,6 +1,10 @@
 import { createWorkerClient } from "@hussmartinez/sdk-core";
 import { afterEach, describe, expect, it } from "vitest";
-import { MAX_DECODE_QUEUE } from "../../src/adapters/mediabunny/video-decoder.js";
+import { FLUSH_STALL_TIMEOUT } from "../../src/adapters/mediabunny/audio-decoder.js";
+import {
+  MAX_DECODE_QUEUE,
+  MAX_STALLED_DECODE_QUEUE,
+} from "../../src/adapters/mediabunny/video-decoder.js";
 import { isVideoError, VideoError } from "../../src/index.js";
 import landscapeMp4 from "../fixtures/video/landscape.mp4?url";
 import landscapeVp8 from "../fixtures/video/landscape-vp8.webm?url";
@@ -28,7 +32,10 @@ describe("decoding audio in a worker", () => {
   afterEach(async () => {
     const ledger = await client.call("ledger", undefined);
     expect(ledger.open, "audio left open").toBe(0);
-    expect(ledger.peakDecodeQueue).toBeLessThanOrEqual(MAX_DECODE_QUEUE);
+    // The queue grows past its bound only by one packet per stall, and never past the hard cap.
+    expect(ledger.peakDecodeQueue).toBeLessThanOrEqual(
+      Math.min(MAX_DECODE_QUEUE + ledger.stalls, MAX_STALLED_DECODE_QUEUE),
+    );
   });
 
   it("decodes the whole track: two seconds at 48 kHz", async () => {
@@ -64,6 +71,40 @@ describe("decoding audio in a worker", () => {
       }
     },
   );
+
+  it("gives a decoder that holds more chunks than the queue more, rather than deadlocking", async () => {
+    // Holding MAX_DECODE_QUEUE chunks or more without output deadlocked the
+    // first audio window, and with it the start of playback (issue #73).
+    const { frames } = await decode({ lag: MAX_DECODE_QUEUE + 4 });
+    expect(frames).toBeGreaterThan(90_000);
+    expect((await client.call("ledger", undefined)).stalls).toBeGreaterThanOrEqual(4);
+  });
+
+  it("fails fast with DECODE_FAILED when a decoder holds the hard cap without output", async () => {
+    const started = performance.now();
+    const error = await failure({ lag: MAX_STALLED_DECODE_QUEUE + 8 });
+    expect(isVideoError(error, "DECODE_FAILED")).toBe(true);
+    expect((error as VideoError).details).toMatchObject({ reason: "stalled", track: "audio" });
+    // 24 stalls of 50 ms each.
+    expect(performance.now() - started).toBeLessThan(5_000);
+  });
+
+  it("fails with DECODE_FAILED when the decoder stops altogether, even on a short range", async () => {
+    // A range shorter than the hard cap reaches the flush, which a stopped
+    // decoder never settles: a playback window is a quarter of a second.
+    const started = performance.now();
+    const error = await failure({ stuck: true, from: 0, to: 250_000 });
+    expect(isVideoError(error, "DECODE_FAILED")).toBe(true);
+    expect((error as VideoError).details).toMatchObject({ reason: "stalled", track: "audio" });
+    expect(performance.now() - started).toBeLessThan(FLUSH_STALL_TIMEOUT + 3_000);
+  });
+
+  it("goes on when the decoder's dequeue never comes, rather than waiting for it", async () => {
+    const started = performance.now();
+    const { frames } = await decode({ dequeue: false });
+    expect(frames).toBeGreaterThan(90_000);
+    expect(performance.now() - started).toBeLessThan(10_000);
+  });
 
   it("delivers only the chunks of a range", async () => {
     const { first, frames } = await decode({ from: 1_000_000, to: 1_500_000 });

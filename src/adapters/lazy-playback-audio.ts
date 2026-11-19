@@ -49,6 +49,7 @@ export function createLazyPlaybackAudio(environment: AudioEnvironment): Playback
     },
     anchor: () => player?.anchor(),
     stalled: () => player?.stalled() ?? false,
+    failed: () => player?.failed() ?? false,
     switchPlan(endTime) {
       player?.switchPlan(endTime);
     },
