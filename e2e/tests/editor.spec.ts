@@ -88,6 +88,16 @@ test("the playback diagnostics name a call no worker has answered, and nothing i
       method: "audio",
       input: { name: "private-holiday.webm" },
     });
+    // A message postMessage refuses, with a buffer listed twice, was never sent.
+    const buffer = new ArrayBuffer(8);
+    try {
+      worker.postMessage(
+        { protocol: "hm-rpc", version: 1, type: "call", id: 8, method: "control", input: buffer },
+        [buffer, buffer],
+      );
+    } catch {
+      // DataCloneError, as expected.
+    }
   });
   const diagnostics = await readPlayback(page);
   expect(diagnostics.pending).toEqual([
@@ -133,8 +143,9 @@ for (const target of targets) {
         await page.getByRole("button", { name: "Play", exact: true }).click();
         await expect(page.locator(".hm-video-transport-time")).not.toHaveText(/^0:00\.00 /);
       });
-      // The diagnostics read the page as it plays, and carry no file name.
-      const diagnostics = await readPlayback(page);
+      // The diagnostics read the page as it plays, at once, since the video
+      // is two seconds long, and carry no file name.
+      const diagnostics = await readPlayback(page, 0);
       expect(diagnostics.workers).toBeGreaterThan(0);
       expect(diagnostics.audio.length).toBeGreaterThan(0);
       expect(diagnostics.transport.button).toBe("Pause");

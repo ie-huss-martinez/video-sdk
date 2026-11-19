@@ -20,7 +20,7 @@ export interface PlaybackDiagnostics {
     readonly method: string;
     readonly ageMs: number;
   }[];
-  /** Every `AudioContext` the page made, sampled twice, 500 ms apart. */
+  /** Every `AudioContext` the page made, sampled twice, `apart` milliseconds apart. */
   readonly audio: readonly {
     readonly state: AudioContextState;
     readonly currentTime: number;
@@ -60,13 +60,12 @@ export async function recordPlayback(page: Page): Promise<void> {
         recorder.workers += 1;
         const post = this.postMessage.bind(this) as (...args: unknown[]) => void;
         this.postMessage = ((message: unknown, ...rest: unknown[]) => {
-          if (isRpc(message) && message.type === "call" && typeof message.method === "string") {
-            recorder.pending.set(`${worker}:${String(message.id)}`, {
-              method: message.method,
-              at: performance.now(),
-            });
-          }
+          const at = performance.now();
+          // Recorded once it's sent: a message postMessage refuses never was.
           post(message, ...rest);
+          if (isRpc(message) && message.type === "call" && typeof message.method === "string") {
+            recorder.pending.set(`${worker}:${String(message.id)}`, { method: message.method, at });
+          }
         }) as Worker["postMessage"];
         this.addEventListener("message", (event) => {
           const message: unknown = event.data;
@@ -89,9 +88,13 @@ export async function recordPlayback(page: Page): Promise<void> {
   });
 }
 
-/** Reads what {@link recordPlayback} recorded, sampling each audio clock twice. */
-export async function readPlayback(page: Page): Promise<PlaybackDiagnostics> {
-  return page.evaluate(async () => {
+/**
+ * Reads what {@link recordPlayback} recorded, sampling each audio clock twice,
+ * `apart` milliseconds apart: 500 by default, to see whether it moves, or 0
+ * for a reading at once, as while a short video plays.
+ */
+export async function readPlayback(page: Page, apart = 500): Promise<PlaybackDiagnostics> {
+  return page.evaluate(async (apart) => {
     const recorder = (window as unknown as { __hmPlayback?: Recorder }).__hmPlayback;
     const toggle = document.querySelector(".hm-video-transport [aria-pressed]");
     const transport = {
@@ -113,7 +116,7 @@ export async function readPlayback(page: Page): Promise<PlaybackDiagnostics> {
         currentTime: Math.round(context.currentTime * 1_000) / 1_000,
       }));
     const first = sample();
-    await new Promise((resolve) => setTimeout(resolve, 500));
+    if (apart > 0) await new Promise((resolve) => setTimeout(resolve, apart));
     const later = sample();
     const now = performance.now();
     return {
@@ -134,7 +137,7 @@ export async function readPlayback(page: Page): Promise<PlaybackDiagnostics> {
       })),
       transport,
     };
-  });
+  }, apart);
 }
 
 /**
