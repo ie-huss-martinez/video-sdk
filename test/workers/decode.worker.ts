@@ -28,6 +28,8 @@ export interface DecodeRequest {
   readonly codec?: string;
   /** Holds this many packets before decoding them, as Firefox's frame-threaded decoding does. */
   readonly lag?: number;
+  /** With `lag`: four frames come at once when the queue is full. */
+  readonly burst?: boolean;
   /** Delivers one more frame after the decoder is closed, as Firefox can. */
   readonly lateOutput?: boolean;
 }
@@ -61,7 +63,9 @@ exposeWorker<DecodeContract>({
     const input = openInput(request.file, familyOf(probe.container));
     const controller = new AbortController();
     const RealDecoder = globalThis.VideoDecoder;
-    if (request.lag !== undefined) globalThis.VideoDecoder = laggingDecoderClass(request.lag);
+    if (request.lag !== undefined) {
+      globalThis.VideoDecoder = laggingDecoderClass(request.lag, request.burst ?? false);
+    }
     if (request.lateOutput) globalThis.VideoDecoder = lateOutputDecoderClass();
     try {
       const { video } = await pickTracks(input, probe.container);

@@ -221,6 +221,28 @@ describe("an export's file", () => {
     await engine.destroy();
   });
 
+  it("fails with DECODE_FAILED when its audio decoder stalls, rather than dropping the sound", async () => {
+    const engine = createVideoEngine({ startTimeout: DEV_WORKER_START_TIMEOUT });
+    const file = await blob(exportA);
+    const a = await engine.open("a", file, await engine.probe(file));
+    const source = engineInternals(engine)?.source("a");
+    if (!source) throw new Error("expected the source to be open");
+    const error = await failure(
+      exporter.call("export", {
+        plan: smallPlan(clipOf("x", a, 0, 90)),
+        sources: [source],
+        limits: videoLimits.resolve().limits,
+        stallAudio: true,
+      }),
+    );
+    expect(isVideoError(error, "DECODE_FAILED")).toBe(true);
+    expect((error as VideoError).details).toMatchObject({ reason: "stalled", track: "audio" });
+    await vi.waitFor(async () =>
+      expect(await exporter.call("ledger", undefined)).toEqual({ frames: 0, decoded: 0, audio: 0 }),
+    );
+    await engine.destroy();
+  });
+
   it("holds no frame or audio after an export is cancelled partway", async () => {
     const engine = createVideoEngine({ startTimeout: DEV_WORKER_START_TIMEOUT });
     const file = await blob(exportA);

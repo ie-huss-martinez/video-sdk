@@ -97,6 +97,12 @@ export interface PlaybackAudio {
    * 250 ms while playing.
    */
   stalled(): boolean;
+  /**
+   * Whether a window after the first ones failed to decode, as when the
+   * decoder stalled: checked while playing, which then goes on without
+   * sound. The next `play` clears it.
+   */
+  failed(): boolean;
   /** Takes over at a sample a little ahead with windows of the plan just loaded, without a gap. */
   switchPlan(endTime: number): void;
   /** Keeps more windows ahead while the page is hidden, whose timers are throttled. */
@@ -129,6 +135,8 @@ export function createPlaybackAudio(environment: AudioEnvironment): PlaybackAudi
   let next = 0;
   let end = 0;
   let fetching = false;
+  /** Set when a window of the current play failed to decode. */
+  let failedWindow = false;
   /** The context's time and wall-clock time when last compared, to notice a context that stops. */
   let watch: { wall: number; time: number } | undefined;
   let timer: ReturnType<typeof setInterval> | undefined;
@@ -201,6 +209,7 @@ export function createPlaybackAudio(environment: AudioEnvironment): PlaybackAudi
       },
       () => {
         fetching = false;
+        if (own === generation) failedWindow = true;
       },
     );
   };
@@ -223,6 +232,7 @@ export function createPlaybackAudio(environment: AudioEnvironment): PlaybackAudi
 
   const halt = () => {
     generation += 1;
+    failedWindow = false;
     base = undefined;
     fetching = false;
     clearInterval(timer);
@@ -296,6 +306,7 @@ export function createPlaybackAudio(environment: AudioEnvironment): PlaybackAudi
       const at = environment.timeOrigin + performanceTime + (base.time - contextTime) * 1_000;
       return { media: (base.sample * 1_000_000) / rate(), at };
     },
+    failed: () => failedWindow,
     stalled() {
       if (!context || !base || !watch) return false;
       const wall = environment.performanceNow();

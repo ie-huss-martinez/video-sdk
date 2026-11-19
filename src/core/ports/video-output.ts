@@ -29,8 +29,11 @@ export interface VideoOutputSnapshot {
    * `"blocked"` when audio couldn't play: the browser's autoplay rules kept
    * it from starting, the browser has no audio output, or the output stopped
    * keeping time. Playback goes on silently on the performance clock, and
-   * the next `play` from a user gesture tries again. `"ready"` otherwise,
-   * including for a plan without audio.
+   * the next `play` from a user gesture tries again. `"undecodable"` when
+   * the browser stopped decoding the sound while playing, as when its
+   * decoder stalled: playback goes on with the picture only, and the next
+   * `play` tries the sound again. `"ready"` otherwise, including for a plan
+   * without audio.
    */
   readonly audio: VideoOutputAudio;
 }
@@ -40,7 +43,7 @@ export interface VideoOutputSnapshot {
  *
  * @public
  */
-export type VideoOutputAudio = "ready" | "blocked";
+export type VideoOutputAudio = "ready" | "blocked" | "undecodable";
 
 /**
  * What a {@link VideoOutput} tells its listeners about, apart from changes of

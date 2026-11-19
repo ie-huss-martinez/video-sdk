@@ -27,6 +27,7 @@ export const videoOwnMessages = /* @__PURE__ */ defineMessages({
   "transport.nextFrame": "Next frame",
   "transport.time": "{position} of {length}",
   "transport.audioBlocked": "Sound is off: press play to turn it on.",
+  "transport.audioUndecodable": "The sound couldn't be decoded, so the video plays without it.",
   "timeline.label": "Timeline",
   "timeline.tools": "Timeline tools",
   "timeline.clips": "Clips",

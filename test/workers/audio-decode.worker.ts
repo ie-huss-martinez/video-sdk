@@ -7,7 +7,7 @@ import { audioDataLedger, decodeAudioData } from "../../src/adapters/mediabunny/
 import { familyOf, openInput, pickTracks } from "../../src/adapters/mediabunny/tracks.js";
 import { probeFile } from "../../src/adapters/probe.js";
 import { videoLimits } from "../../src/core/errors/video-limits.js";
-import { lateOutputAudioDecoderClass } from "./lagging-decoder.js";
+import { laggingAudioDecoderClass, lateOutputAudioDecoderClass } from "./lagging-decoder.js";
 
 export interface AudioDecodeRequest {
   readonly file: Blob;
@@ -23,6 +23,14 @@ export interface AudioDecodeRequest {
   readonly wrongChannels?: boolean;
   /** Decodes with another codec's configuration, so that decoding fails. */
   readonly codec?: string;
+  /** Holds this many chunks before the real decoder sees them. */
+  readonly lag?: number;
+  /** Whether the decoder fires `dequeue`; it does unless this is false. */
+  readonly dequeue?: boolean;
+  /** The decoder gives nothing back, and its flush never settles. */
+  readonly stuck?: boolean;
+  /** With `lag`: four chunks come at once when the queue is full. */
+  readonly burst?: boolean;
 }
 
 export interface AudioDecodeContract {
@@ -40,7 +48,11 @@ export interface AudioDecodeContract {
   };
   readonly ledger: {
     readonly input: undefined;
-    readonly output: { readonly open: number; readonly peakDecodeQueue: number };
+    readonly output: {
+      readonly open: number;
+      readonly peakDecodeQueue: number;
+      readonly stalls: number;
+    };
   };
 }
 
@@ -51,6 +63,16 @@ exposeWorker<AudioDecodeContract>({
     const controller = new AbortController();
     const RealDecoder = globalThis.AudioDecoder;
     if (request.lateOutput) globalThis.AudioDecoder = lateOutputAudioDecoderClass();
+    if (request.lag !== undefined || request.dequeue === false || request.stuck) {
+      globalThis.AudioDecoder = request.stuck
+        ? laggingAudioDecoderClass(0, true, true)
+        : laggingAudioDecoderClass(
+            request.lag ?? 0,
+            request.dequeue ?? true,
+            false,
+            request.burst ?? false,
+          );
+    }
     try {
       const { audio } = await pickTracks(input, probe.container);
       const config = audio && (await audio.getDecoderConfig());

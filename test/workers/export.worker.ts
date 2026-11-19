@@ -11,10 +11,14 @@ import {
 import { audioDataLedger } from "../../src/adapters/mediabunny/audio-decoder.js";
 import { videoFrameLedger } from "../../src/adapters/mediabunny/video-decoder.js";
 import type { VideoLimitName } from "../../src/core/errors/video-limits.js";
+import { laggingAudioDecoderClass } from "./lagging-decoder.js";
+
+/** An export, and whether its sources' audio decoder stopped: nothing back, and a flush that never settles. */
+export type ExportTestRequest = ExportRequest & { readonly stallAudio?: boolean };
 
 export interface ExportTestContract {
   readonly export: {
-    readonly input: ExportRequest;
+    readonly input: ExportTestRequest;
     readonly output: ExportOutcome;
     readonly progress: number | { readonly warning: VideoLimitName };
   };
@@ -25,8 +29,18 @@ export interface ExportTestContract {
 }
 
 exposeWorker<ExportTestContract>({
-  export: (request, { signal, progress }) =>
-    exportPlan(request, progress, signal, (limit) => progress({ warning: limit })),
+  async export({ stallAudio, ...request }, { signal, progress }) {
+    const RealDecoder = globalThis.AudioDecoder;
+    if (stallAudio) {
+      // Only the sources' Opus: the probe of an AAC encoder's priming decodes too.
+      globalThis.AudioDecoder = laggingAudioDecoderClass(0, true, "opus");
+    }
+    try {
+      return await exportPlan(request, progress, signal, (limit) => progress({ warning: limit }));
+    } finally {
+      globalThis.AudioDecoder = RealDecoder;
+    }
+  },
   ledger: () => ({
     frames: exportLedger.frames,
     decoded: videoFrameLedger.open,

@@ -83,8 +83,18 @@ function fakeAudioContext(blocked: boolean) {
   return context;
 }
 
-function setup(options: { audio?: ReturnType<typeof fakeAudioContext> } = {}) {
+function setup(
+  options: {
+    audio?: ReturnType<typeof fakeAudioContext>;
+    /** Audio windows from this one on, counted from 0, fail to decode. */
+    failAudioFrom?: number;
+    /** The first two audio windows wait for this, then fail to decode. */
+    holdFirstAudio?: Promise<void>;
+  } = {},
+) {
   const commands: SchedulerCommand[] = [];
+  let audioCalls = 0;
+  let failAudioFrom = options.failAudioFrom ?? Number.POSITIVE_INFINITY;
   const resizes: { width: number; height: number }[] = [];
   let hidden = false;
   let onVisibility = () => {};
@@ -95,6 +105,16 @@ function setup(options: { audio?: ReturnType<typeof fakeAudioContext> } = {}) {
       call: async (method, input) => {
         if (method === "resize") resizes.push(input as { width: number; height: number });
         if (method === "audio") {
+          audioCalls += 1;
+          if (options.holdFirstAudio && audioCalls <= 2) {
+            await options.holdFirstAudio;
+            throw new VideoError("DECODE_FAILED", "Stalled.");
+          }
+          if (audioCalls > failAudioFrom) {
+            throw new VideoError("DECODE_FAILED", "Stalled.", {
+              details: { reason: "stalled", track: "audio" },
+            });
+          }
           const { count } = input as { count: number };
           return { channels: [new Float32Array(count), new Float32Array(count)] } as never;
         }
@@ -143,6 +163,9 @@ function setup(options: { audio?: ReturnType<typeof fakeAudioContext> } = {}) {
     },
     failNextControl(error: VideoError) {
       failControl = error;
+    },
+    decodeAudio() {
+      failAudioFrom = Number.POSITIVE_INFINITY;
     },
   };
 }
@@ -446,6 +469,76 @@ describe("the video output's page side", () => {
     const then = t.output.position();
     await vi.advanceTimersByTimeAsync(1_000);
     expect(t.output.position()).toBe(then + 30);
+    await t.output.destroy();
+  });
+
+  it("plays the picture without sound when the first audio windows don't decode, and says so", async () => {
+    // As when the audio decoder stalls (issue #73): playback starts, rather
+    // than staying at the first frame with its clock never started.
+    const t = setup({ audio: fakeAudioContext(false), failAudioFrom: 0 });
+    t.output.load(planOf(300));
+    await t.output.play();
+    expect(t.output.getSnapshot()).toMatchObject({
+      state: "playing",
+      audio: "undecodable",
+      error: null,
+    });
+    expect(t.last()?.mode).toBe("play");
+    await vi.advanceTimersByTimeAsync(1_000);
+    expect(t.output.position()).toBe(30);
+    // The next play tries the sound again.
+    t.output.pause();
+    t.decodeAudio();
+    await t.output.play();
+    expect(t.output.getSnapshot().audio).toBe("ready");
+    await t.output.destroy();
+  });
+
+  it("leaves a newer start's sound playing when an older start's audio fails after it", async () => {
+    let release = () => {};
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const context = fakeAudioContext(false);
+    const stopped: unknown[] = [];
+    const createBufferSource = context.createBufferSource;
+    context.createBufferSource = () => {
+      const node = createBufferSource();
+      node.stop = () => stopped.push(node);
+      return node;
+    };
+    const t = setup({ audio: context, holdFirstAudio: held });
+    t.output.load(planOf(300));
+    // A waits for its first windows; a seek while playing starts B, whose
+    // windows come.
+    const first = t.output.play();
+    await vi.advanceTimersByTimeAsync(0);
+    t.output.seek(60);
+    await vi.advanceTimersByTimeAsync(10);
+    expect(t.output.getSnapshot().audio).toBe("ready");
+    // A's windows fail now: B owns the player, and its sound plays on.
+    release();
+    await first;
+    await vi.advanceTimersByTimeAsync(10);
+    expect(stopped).toEqual([]);
+    expect(t.output.getSnapshot()).toMatchObject({ state: "playing", audio: "ready" });
+    await t.output.destroy();
+  });
+
+  it("goes on with the picture only when a later audio window doesn't decode, and says so", async () => {
+    const t = setup({ audio: fakeAudioContext(false), failAudioFrom: 2 });
+    t.output.load(planOf(300));
+    await t.output.play();
+    expect(t.output.getSnapshot().audio).toBe("ready");
+    await vi.advanceTimersByTimeAsync(100);
+    expect(t.output.getSnapshot()).toMatchObject({
+      state: "playing",
+      audio: "undecodable",
+      error: null,
+    });
+    const then = t.output.position();
+    await vi.advanceTimersByTimeAsync(500);
+    expect(t.output.position()).toBe(then + 15);
     await t.output.destroy();
   });
 
