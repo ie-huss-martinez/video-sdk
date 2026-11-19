@@ -64,8 +64,8 @@ export const DECODE_FIXTURES: Record<
 
 /** The browser versions the matrix was last measured with, for the record. */
 export const MEASURED = {
-  playwright: "1.65.0",
-  chromium: "Chromium 158",
+  playwright: "1.65.1",
+  chromium: "Chromium 159",
   firefox: "Firefox 159",
   webkit: "WebKit 27.2 (Linux)",
 } as const;
