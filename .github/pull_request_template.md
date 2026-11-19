@@ -14,11 +14,11 @@ on main. See CONTRIBUTING.md for how pull requests are merged.
 
 ## How it was tested
 
-<!-- Include the result of `pnpm verify`, and anything you checked by hand. -->
+<!-- The CI run on this head, the visual baselines you captured if any moved, and anything you checked by hand. -->
 
 ## Checklist
 
-- [ ] `pnpm verify` passes locally, and its result is above.
+- [ ] The pre-push `pnpm verify:fast` passed, and CI is green on this head.
 - [ ] Tests cover the change, next to the code.
 - [ ] Exported APIs are typed and have TSDoc, and the API report is updated where the package has one.
 - [ ] New dependencies are justified above.
