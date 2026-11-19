@@ -1,6 +1,7 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, type Page, test } from "@playwright/test";
 import { targets, video, WORKER_PATHS } from "../targets.js";
+import { explained, readPlayback, recordPlayback } from "./playback-diagnostics.js";
 
 /**
  * The editor on each built example, as a host serves it (docs/adr/0007 in
@@ -68,6 +69,34 @@ async function open(page: Page): Promise<void> {
   await expect(page.getByRole("img", { name: "Video preview, frame 1 of 60" })).toBeVisible();
 }
 
+test("the playback diagnostics name a call no worker has answered, and nothing it carried", async ({
+  page,
+}) => {
+  // A page whose policy allows blob: workers, and a worker that never answers.
+  const target = targets.find((each) => !each.selfHosted);
+  if (!target) throw new Error("expected a target with inlined workers");
+  await recordPlayback(page);
+  await page.goto(target.url);
+  await page.evaluate(() => {
+    const source = new Blob(["onmessage = () => {};"], { type: "text/javascript" });
+    const worker = new Worker(URL.createObjectURL(source));
+    worker.postMessage({
+      protocol: "hm-rpc",
+      version: 1,
+      type: "call",
+      id: 7,
+      method: "audio",
+      input: { name: "private-holiday.webm" },
+    });
+  });
+  const diagnostics = await readPlayback(page);
+  expect(diagnostics.pending).toEqual([
+    { worker: expect.any(Number), method: "audio", ageMs: expect.any(Number) },
+  ]);
+  expect(diagnostics.pending[0]?.ageMs).toBeGreaterThanOrEqual(500);
+  expect(JSON.stringify(diagnostics)).not.toContain("private-holiday");
+});
+
 test.describe("the Next.js example's server rendering", () => {
   for (const target of targets.filter((each) => each.url.includes(":4331"))) {
     test(`renders the empty editor on the server, with no canvas: ${target.name}`, async ({
@@ -94,12 +123,22 @@ for (const target of targets) {
     }) => {
       const origin = new URL(target.url).origin;
       const problems = watch(page, origin);
+      // What playback waits for, printed if a step below fails (issue #73).
+      await recordPlayback(page);
       await page.goto(target.url);
       await open(page);
 
       // Plays: the time moves on from the start.
-      await page.getByRole("button", { name: "Play", exact: true }).click();
-      await expect(page.locator(".hm-video-transport-time")).not.toHaveText(/^0:00\.00 /);
+      await explained(page, "play", async () => {
+        await page.getByRole("button", { name: "Play", exact: true }).click();
+        await expect(page.locator(".hm-video-transport-time")).not.toHaveText(/^0:00\.00 /);
+      });
+      // The diagnostics read the page as it plays, and carry no file name.
+      const diagnostics = await readPlayback(page);
+      expect(diagnostics.workers).toBeGreaterThan(0);
+      expect(diagnostics.audio.length).toBeGreaterThan(0);
+      expect(diagnostics.transport.button).toBe("Pause");
+      expect(JSON.stringify(diagnostics)).not.toContain("landscape");
       await page.getByRole("button", { name: "Pause", exact: true }).focus();
       await page.keyboard.press("Enter");
       await expect(page.getByRole("button", { name: "Play", exact: true })).toBeVisible();
@@ -107,9 +146,11 @@ for (const target of targets) {
       // Exports, in its own worker, to a file ready to download.
       await page.getByRole("button", { name: "Export the video", exact: true }).click();
       const dialog = page.getByRole("dialog", { name: "Export the video" });
-      await dialog.getByRole("button", { name: "Export", exact: true }).click();
-      await expect(dialog.getByRole("button", { name: "Download" })).toBeFocused({
-        timeout: 90_000,
+      await explained(page, "export", async () => {
+        await dialog.getByRole("button", { name: "Export", exact: true }).click();
+        await expect(dialog.getByRole("button", { name: "Download" })).toBeFocused({
+          timeout: 90_000,
+        });
       });
       await expect(dialog).toContainText(/video is ready/);
 
