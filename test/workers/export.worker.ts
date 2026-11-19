@@ -11,10 +11,18 @@ import {
 import { audioDataLedger } from "../../src/adapters/mediabunny/audio-decoder.js";
 import { videoFrameLedger } from "../../src/adapters/mediabunny/video-decoder.js";
 import type { VideoLimitName } from "../../src/core/errors/video-limits.js";
-import { laggingAudioDecoderClass } from "./lagging-decoder.js";
+import {
+  laggingAudioDecoderClass,
+  stuckAudioEncoderClass,
+  stuckVideoEncoderClass,
+} from "./lagging-decoder.js";
 
 /** An export, and whether its sources' audio decoder stopped: nothing back, and a flush that never settles. */
-export type ExportTestRequest = ExportRequest & { readonly stallAudio?: boolean };
+export type ExportTestRequest = ExportRequest & {
+  readonly stallAudio?: boolean;
+  /** A codec the browser's encoder probes use that stopped: the AAC decoder, or an encoder. */
+  readonly stuckProbe?: "aac-decoder" | "audio-encoder" | "video-encoder";
+};
 
 export interface ExportTestContract {
   readonly export: {
@@ -29,8 +37,15 @@ export interface ExportTestContract {
 }
 
 exposeWorker<ExportTestContract>({
-  async export({ stallAudio, ...request }, { signal, progress }) {
+  async export({ stallAudio, stuckProbe, ...request }, { signal, progress }) {
     const RealDecoder = globalThis.AudioDecoder;
+    const RealAudioEncoder = globalThis.AudioEncoder;
+    const RealVideoEncoder = globalThis.VideoEncoder;
+    if (stuckProbe === "aac-decoder") {
+      globalThis.AudioDecoder = laggingAudioDecoderClass(0, true, "mp4a.40.2");
+    }
+    if (stuckProbe === "audio-encoder") globalThis.AudioEncoder = stuckAudioEncoderClass();
+    if (stuckProbe === "video-encoder") globalThis.VideoEncoder = stuckVideoEncoderClass();
     if (stallAudio) {
       // Only the sources' Opus: the probe of an AAC encoder's priming decodes too.
       globalThis.AudioDecoder = laggingAudioDecoderClass(0, true, "opus");
@@ -39,6 +54,8 @@ exposeWorker<ExportTestContract>({
       return await exportPlan(request, progress, signal, (limit) => progress({ warning: limit }));
     } finally {
       globalThis.AudioDecoder = RealDecoder;
+      globalThis.AudioEncoder = RealAudioEncoder;
+      globalThis.VideoEncoder = RealVideoEncoder;
     }
   },
   ledger: () => ({

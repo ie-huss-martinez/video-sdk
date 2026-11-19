@@ -1,6 +1,6 @@
 import { createWorkerClient } from "@hussmartinez/sdk-core";
 import { afterEach, describe, expect, it } from "vitest";
-import { FLUSH_STALL_TIMEOUT } from "../../src/adapters/mediabunny/audio-decoder.js";
+import { FLUSH_STALL_TIMEOUT } from "../../src/adapters/bounded-flush.js";
 import {
   MAX_DECODE_QUEUE,
   MAX_STALLED_DECODE_QUEUE,
