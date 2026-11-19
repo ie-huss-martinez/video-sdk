@@ -11,7 +11,7 @@ import {
 import { probeFile } from "../../src/adapters/probe.js";
 import { videoLimits } from "../../src/core/errors/video-limits.js";
 import type { VideoProbe } from "../../src/core/model/source.js";
-import { laggingDecoderClass, lateOutputDecoderClass } from "./lagging-decoder.js";
+import { laggingDecoderClass, lateOutputDecoderClass, standInsClosed } from "./lagging-decoder.js";
 
 export interface DecodeRequest {
   readonly file: Blob;
@@ -30,6 +30,11 @@ export interface DecodeRequest {
   readonly lag?: number;
   /** With `lag`: four frames come at once when the queue is full. */
   readonly burst?: boolean;
+  /** With `lag`: a decoder that stopped, or one that waits for its frames back before its flush settles. */
+  readonly mode?: "stuck" | "pool";
+  /** The consumer holds this delivered frame, counted from 0, for `holdMs`. */
+  readonly holdAt?: number;
+  readonly holdMs?: number;
   /** Delivers one more frame after the decoder is closed, as Firefox can. */
   readonly lateOutput?: boolean;
 }
@@ -47,6 +52,8 @@ export interface DecodeContract {
       readonly stalls: number;
     };
   };
+  /** How many stand-in decoders have been closed. */
+  readonly standInsClosed: { readonly input: undefined; readonly output: number };
   /** Starts counting the queue's peak and the stalls afresh, for one test. */
   readonly resetLedger: { readonly input: undefined; readonly output: undefined };
 }
@@ -64,7 +71,11 @@ exposeWorker<DecodeContract>({
     const controller = new AbortController();
     const RealDecoder = globalThis.VideoDecoder;
     if (request.lag !== undefined) {
-      globalThis.VideoDecoder = laggingDecoderClass(request.lag, request.burst ?? false);
+      globalThis.VideoDecoder = laggingDecoderClass(
+        request.lag,
+        request.burst ?? false,
+        request.mode,
+      );
     }
     if (request.lateOutput) globalThis.VideoDecoder = lateOutputDecoderClass();
     try {
@@ -82,8 +93,11 @@ exposeWorker<DecodeContract>({
           to: request.to ?? Number.POSITIVE_INFINITY,
           ...(request.limit === undefined ? {} : { limit: request.limit }),
         },
-        (frame) => {
+        async (frame) => {
           const index = timestamps.length;
+          if (index === request.holdAt) {
+            await new Promise((resolve) => setTimeout(resolve, request.holdMs ?? 0));
+          }
           timestamps.push(frame.timestamp);
           sizes.push([frame.codedWidth, frame.codedHeight]);
           if (index === request.throwAt) throw new RangeError("the consumer failed");
@@ -98,6 +112,7 @@ exposeWorker<DecodeContract>({
     }
   },
   ledger: () => ({ ...videoFrameLedger }),
+  standInsClosed: () => standInsClosed.video,
   resetLedger() {
     videoFrameLedger.peakDecodeQueue = 0;
     videoFrameLedger.stalls = 0;

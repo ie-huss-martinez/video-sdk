@@ -4,17 +4,38 @@
  * outputs nothing until `lag` chunks are in flight, and counts them all in
  * `decodeQueueSize`. Installed in place of the global one, for a test.
  */
-export function laggingDecoderClass(lag: number, burst = false): typeof VideoDecoder {
+/** How many stand-in video decoders have been closed, so tests can see nothing keeps running. */
+export const standInsClosed = { video: 0 };
+
+/**
+ * With `mode`: `"stuck"`, a decoder that gives nothing back and whose flush
+ * never settles, as one that stopped; `"pool"`, one whose flush settles only
+ * once every frame it gave back has been closed, as a decoder with a fixed
+ * pool of frames waits for them.
+ */
+export function laggingDecoderClass(
+  lag: number,
+  burst = false,
+  mode?: "stuck" | "pool",
+): typeof VideoDecoder {
   const Real = VideoDecoder;
   class LaggingDecoder extends EventTarget {
     readonly #real: VideoDecoder;
     readonly #held: EncodedVideoChunk[] = [];
     readonly #output: VideoFrameOutputCallback;
 
+    readonly #given: VideoFrame[] = [];
+
     constructor(init: VideoDecoderInit) {
       super();
       this.#output = init.output;
-      this.#real = new Real(init);
+      this.#real = new Real({
+        ...init,
+        output: (frame) => {
+          this.#given.push(frame);
+          init.output(frame);
+        },
+      });
       this.#real.addEventListener("dequeue", () => this.dispatchEvent(new Event("dequeue")));
     }
 
@@ -44,12 +65,19 @@ export function laggingDecoderClass(lag: number, burst = false): typeof VideoDec
           }
         }, 0);
       }
-      if (this.#held.length > lag) this.#real.decode(this.#held.shift() as EncodedVideoChunk);
+      if (mode !== "stuck" && this.#held.length > lag) {
+        this.#real.decode(this.#held.shift() as EncodedVideoChunk);
+      }
     }
 
     async flush(): Promise<void> {
+      if (mode === "stuck") return new Promise(() => {});
       for (const chunk of this.#held.splice(0)) this.#real.decode(chunk);
       await this.#real.flush();
+      // A closed frame has no format.
+      while (mode === "pool" && this.#given.some((frame) => frame.format !== null)) {
+        await new Promise((resolve) => setTimeout(resolve, 20));
+      }
     }
 
     reset(): void {
@@ -59,6 +87,7 @@ export function laggingDecoderClass(lag: number, burst = false): typeof VideoDec
 
     close(): void {
       this.#held.length = 0;
+      standInsClosed.video += 1;
       this.#real.close();
     }
 
