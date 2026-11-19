@@ -2,6 +2,7 @@ import { type EncodedPacket, EncodedPacketSink, type InputVideoTrack } from "med
 import { abortError } from "../../core/errors/error-helpers.js";
 import { isVideoError, VideoError } from "../../core/errors/video-error.js";
 import { CODED_PADDING } from "../../core/model/probe-limits.js";
+import { boundedFlush } from "../bounded-flush.js";
 
 /** The most packets waiting in the decoder's own queue (docs/adr/0002). */
 export const MAX_DECODE_QUEUE = 8;
@@ -67,7 +68,10 @@ export interface FrameRange {
  *   time, up to {@link MAX_STALLED_DECODE_QUEUE}, so one that needs more
  *   packets in flight than that bound can't deadlock. One that still holds
  *   them all without output fails with `DECODE_FAILED` and
- *   `details.reason: "stalled"`.
+ *   `details.reason: "stalled"`. So does a flush that gives back nothing for
+ *   `FLUSH_STALL_TIMEOUT`, as from a decoder that stopped altogether; frames
+ *   are lent to `onFrame` as the flush gives them, and the time `onFrame`
+ *   holds one isn't counted as the decoder's silence.
  * - **Borrowed frames:** a frame is closed as soon as `onFrame` settles, so
  *   every frame is closed in one place. `onFrame` clones a frame to keep it,
  *   and then owns the clone.
@@ -103,6 +107,10 @@ export async function decodeVideoFrames(
   /** What the consumer threw, which is passed on as it is. */
   let consumerFailure: unknown;
   let delivered = 0;
+  /** When the decoder last gave back a frame, or the consumer last let one go. */
+  let heard = performance.now();
+  /** Whether the consumer has a frame: the decoder may then rightly wait for it. */
+  let consuming = false;
   let wake: (() => void) | undefined;
   const notify = () => {
     const resolve = wake;
@@ -120,6 +128,7 @@ export async function decodeVideoFrames(
       // would take this one, so it's closed here.
       if (finished) return frame.close();
       videoFrameLedger.open += 1;
+      heard = performance.now();
       waiting.push(frame);
       notify();
     },
@@ -215,11 +224,15 @@ export async function decodeVideoFrames(
         }
         if (frame.timestamp >= range.from && frame.timestamp < range.to && delivered < limit) {
           delivered += 1;
+          consuming = true;
           try {
             await onFrame(frame);
           } catch (error) {
             consumerFailure = error;
             throw error;
+          } finally {
+            consuming = false;
+            heard = performance.now();
           }
         }
       } finally {
@@ -261,7 +274,32 @@ export async function decodeVideoFrames(
       packet = await sink.getNextPacket(packet);
     }
     if (delivered < limit) {
-      await decoder.flush();
+      // The flush, bounded: a decoder that stopped would leave it pending.
+      // Frames are lent to the consumer as they come, since a decoder may
+      // wait for its frames back before it outputs more; and the time the
+      // consumer holds one, as playback does until the frame's time, isn't
+      // the decoder's silence.
+      let flushed = false;
+      heard = performance.now();
+      const flushing = boundedFlush(
+        decoder,
+        () => (consuming ? performance.now() : heard),
+        () =>
+          new VideoError(
+            "DECODE_FAILED",
+            "The browser's decoder stopped producing frames for the video track.",
+            { details: { codec: config.codec, reason: "stalled" } },
+          ),
+      ).finally(() => {
+        flushed = true;
+        notify();
+      });
+      flushing.catch(() => {});
+      while (!flushed) {
+        await until(() => flushed || waiting.length > 0);
+        await drain();
+      }
+      await flushing;
       await drain();
     }
     check();
