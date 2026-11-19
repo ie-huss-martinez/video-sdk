@@ -88,6 +88,8 @@ function setup(
     audio?: ReturnType<typeof fakeAudioContext>;
     /** Audio windows from this one on, counted from 0, fail to decode. */
     failAudioFrom?: number;
+    /** The first two audio windows wait for this, then fail to decode. */
+    holdFirstAudio?: Promise<void>;
   } = {},
 ) {
   const commands: SchedulerCommand[] = [];
@@ -104,6 +106,10 @@ function setup(
         if (method === "resize") resizes.push(input as { width: number; height: number });
         if (method === "audio") {
           audioCalls += 1;
+          if (options.holdFirstAudio && audioCalls <= 2) {
+            await options.holdFirstAudio;
+            throw new VideoError("DECODE_FAILED", "Stalled.");
+          }
           if (audioCalls > failAudioFrom) {
             throw new VideoError("DECODE_FAILED", "Stalled.", {
               details: { reason: "stalled", track: "audio" },
@@ -485,6 +491,37 @@ describe("the video output's page side", () => {
     t.decodeAudio();
     await t.output.play();
     expect(t.output.getSnapshot().audio).toBe("ready");
+    await t.output.destroy();
+  });
+
+  it("leaves a newer start's sound playing when an older start's audio fails after it", async () => {
+    let release = () => {};
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const context = fakeAudioContext(false);
+    const stopped: unknown[] = [];
+    const createBufferSource = context.createBufferSource;
+    context.createBufferSource = () => {
+      const node = createBufferSource();
+      node.stop = () => stopped.push(node);
+      return node;
+    };
+    const t = setup({ audio: context, holdFirstAudio: held });
+    t.output.load(planOf(300));
+    // A waits for its first windows; a seek while playing starts B, whose
+    // windows come.
+    const first = t.output.play();
+    await vi.advanceTimersByTimeAsync(0);
+    t.output.seek(60);
+    await vi.advanceTimersByTimeAsync(10);
+    expect(t.output.getSnapshot().audio).toBe("ready");
+    // A's windows fail now: B owns the player, and its sound plays on.
+    release();
+    await first;
+    await vi.advanceTimersByTimeAsync(10);
+    expect(stopped).toEqual([]);
+    expect(t.output.getSnapshot()).toMatchObject({ state: "playing", audio: "ready" });
     await t.output.destroy();
   });
 

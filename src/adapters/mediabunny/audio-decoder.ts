@@ -1,12 +1,7 @@
 import { type EncodedPacket, EncodedPacketSink, type InputAudioTrack } from "mediabunny";
 import { abortError } from "../../core/errors/error-helpers.js";
 import { isVideoError, VideoError } from "../../core/errors/video-error.js";
-import {
-  MAX_DECODE_QUEUE,
-  MAX_QUEUED_FRAMES,
-  MAX_STALLED_DECODE_QUEUE,
-  STALL_TIMEOUT,
-} from "./video-decoder.js";
+import { MAX_DECODE_QUEUE, MAX_STALLED_DECODE_QUEUE, STALL_TIMEOUT } from "./video-decoder.js";
 
 /**
  * Counts the `AudioData` this worker's decoders have output and not yet
@@ -52,8 +47,9 @@ export interface AudioRange {
  * discipline as the video decoder.
  *
  * - **Bounded:** at most `MAX_DECODE_QUEUE` packets wait in the decoder, with
- *   back-pressure on its `dequeue` event, and no packet is fed while
- *   `MAX_QUEUED_FRAMES` decoded chunks wait for `onData`.
+ *   back-pressure on its `dequeue` event, and no packet is fed while a
+ *   decoded chunk waits for `onData`: chunks that come while the loop waits
+ *   for room are drained first, since nothing else takes them.
  * - **Never waiting forever,** as the video decoder: a decoder that holds a
  *   full queue without output for `STALL_TIMEOUT` is given one more packet
  *   at a time, up to `MAX_STALLED_DECODE_QUEUE`, so one that needs more
@@ -235,10 +231,14 @@ export async function decodeAudioData(
       (await sink.getPacket(Math.max(0, range.from) / 1_000_000)) ?? (await sink.getFirstPacket());
     while (packet !== null && packet.microsecondTimestamp < range.to) {
       check();
-      await until(
-        () => decoder.decodeQueueSize < queueLimit && waiting.length < MAX_QUEUED_FRAMES,
-        onStall,
-      );
+      // Room for one more packet. Output that came meanwhile, as while the
+      // next packet was read, is drained first: the wait can't take it, and
+      // would never end with it waiting.
+      await drain();
+      while (decoder.decodeQueueSize >= queueLimit) {
+        await until(() => waiting.length > 0 || decoder.decodeQueueSize < queueLimit, onStall);
+        await drain();
+      }
       expected ??= packet.microsecondTimestamp;
       decoder.decode(packet.toEncodedAudioChunk());
       audioDataLedger.peakDecodeQueue = Math.max(

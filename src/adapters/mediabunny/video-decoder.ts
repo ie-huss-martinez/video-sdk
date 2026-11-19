@@ -14,8 +14,6 @@ export const MAX_DECODE_QUEUE = 8;
 export const MAX_STALLED_DECODE_QUEUE = 32;
 /** How long a full queue may go without output before the decoder is given one more packet, in milliseconds. */
 export const STALL_TIMEOUT = 50;
-/** The most decoded frames waiting for their consumer while packets are fed (docs/adr/0002). */
-export const MAX_QUEUED_FRAMES = 4;
 
 /**
  * Counts the `VideoFrame`s this worker's decoders have output and not yet
@@ -63,7 +61,8 @@ export interface FrameRange {
  *
  * - **Bounded:** at most {@link MAX_DECODE_QUEUE} packets wait in the
  *   decoder, with back-pressure on its `dequeue` event, and no packet is fed
- *   while {@link MAX_QUEUED_FRAMES} decoded frames wait for `onFrame`. A
+ *   while a decoded frame waits for `onFrame`: frames that come while the
+ *   loop waits for room are drained first, since nothing else takes them. A
  *   decoder that holds a full queue without output gets one more packet at a
  *   time, up to {@link MAX_STALLED_DECODE_QUEUE}, so one that needs more
  *   packets in flight than that bound can't deadlock. One that still holds
@@ -243,10 +242,14 @@ export async function decodeVideoFrames(
       // has seen a key packet past its end.
       if (packet.type === "key" && packet !== start && packet.microsecondTimestamp >= range.to)
         break;
-      await until(
-        () => decoder.decodeQueueSize < queueLimit && waiting.length < MAX_QUEUED_FRAMES,
-        onStall,
-      );
+      // Room for one more packet. Output that came meanwhile, as while the
+      // next packet was read, is drained first: the wait can't take it, and
+      // would never end with it waiting.
+      await drain();
+      while (decoder.decodeQueueSize >= queueLimit) {
+        await until(() => waiting.length > 0 || decoder.decodeQueueSize < queueLimit, onStall);
+        await drain();
+      }
       decoder.decode(packet.toEncodedVideoChunk());
       videoFrameLedger.peakDecodeQueue = Math.max(
         videoFrameLedger.peakDecodeQueue,

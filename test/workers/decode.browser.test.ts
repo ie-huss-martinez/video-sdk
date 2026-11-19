@@ -63,6 +63,15 @@ describe("decoding video frames in a worker", () => {
     expect((await client.call("ledger", undefined)).stalls).toBeGreaterThanOrEqual(4);
   });
 
+  it("drains output that comes while it waits for room, rather than waiting forever", async () => {
+    // Four frames while the queue is full, as while the next packet was
+    // read: with them waiting, the wait for room could never end.
+    const started = performance.now();
+    const result = await decode({ lag: MAX_DECODE_QUEUE, burst: true });
+    expect(result.timestamps.length).toBeGreaterThan(4);
+    expect(performance.now() - started).toBeLessThan(10_000);
+  });
+
   it("fails fast with DECODE_FAILED when a decoder holds the hard cap without output", async () => {
     const started = performance.now();
     const error = await failure({ lag: MAX_STALLED_DECODE_QUEUE + 8 });

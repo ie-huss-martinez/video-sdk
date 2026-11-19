@@ -4,14 +4,16 @@
  * outputs nothing until `lag` chunks are in flight, and counts them all in
  * `decodeQueueSize`. Installed in place of the global one, for a test.
  */
-export function laggingDecoderClass(lag: number): typeof VideoDecoder {
+export function laggingDecoderClass(lag: number, burst = false): typeof VideoDecoder {
   const Real = VideoDecoder;
   class LaggingDecoder extends EventTarget {
     readonly #real: VideoDecoder;
     readonly #held: EncodedVideoChunk[] = [];
+    readonly #output: VideoFrameOutputCallback;
 
     constructor(init: VideoDecoderInit) {
       super();
+      this.#output = init.output;
       this.#real = new Real(init);
       this.#real.addEventListener("dequeue", () => this.dispatchEvent(new Event("dequeue")));
     }
@@ -30,6 +32,18 @@ export function laggingDecoderClass(lag: number): typeof VideoDecoder {
 
     decode(chunk: EncodedVideoChunk): void {
       this.#held.push(chunk);
+      // A burst: once the queue is full, four frames come at once, on a task,
+      // while the queue still counts every packet held.
+      if (burst && this.#held.length === lag) {
+        const times = this.#held.slice(0, 4).map((held) => held.timestamp);
+        setTimeout(() => {
+          for (const timestamp of times) {
+            const canvas = new OffscreenCanvas(16, 16);
+            canvas.getContext("2d")?.fillRect(0, 0, 16, 16);
+            this.#output(new VideoFrame(canvas, { timestamp }));
+          }
+        }, 0);
+      }
       if (this.#held.length > lag) this.#real.decode(this.#held.shift() as EncodedVideoChunk);
     }
 
@@ -123,15 +137,19 @@ export function laggingAudioDecoderClass(
   lag: number,
   dequeue = true,
   stuck: boolean | string = false,
+  burst = false,
 ): typeof AudioDecoder {
   const Real = AudioDecoder;
   class LaggingAudioDecoder extends EventTarget {
     readonly #real: AudioDecoder;
     readonly #held: EncodedAudioChunk[] = [];
     #stuck = stuck === true;
+    readonly #output: AudioDataOutputCallback;
+    #config: AudioDecoderConfig | undefined;
 
     constructor(init: AudioDecoderInit) {
       super();
+      this.#output = init.output;
       this.#real = new Real(init);
       if (dequeue) {
         this.#real.addEventListener("dequeue", () => this.dispatchEvent(new Event("dequeue")));
@@ -148,11 +166,32 @@ export function laggingAudioDecoderClass(
 
     configure(config: AudioDecoderConfig): void {
       if (typeof stuck === "string") this.#stuck = config.codec === stuck;
+      this.#config = config;
       this.#real.configure(config);
     }
 
     decode(chunk: EncodedAudioChunk): void {
       this.#held.push(chunk);
+      // A burst: once the queue is full, four chunks come at once, on a task,
+      // while the queue still counts every packet held.
+      const config = this.#config;
+      if (burst && config && this.#held.length === lag) {
+        const times = this.#held.slice(0, 4).map((held) => held.timestamp);
+        setTimeout(() => {
+          for (const timestamp of times) {
+            this.#output(
+              new AudioData({
+                format: "f32-planar",
+                sampleRate: config.sampleRate,
+                numberOfFrames: 960,
+                numberOfChannels: config.numberOfChannels,
+                timestamp,
+                data: new Float32Array(960 * config.numberOfChannels),
+              }),
+            );
+          }
+        }, 0);
+      }
       if (this.#held.length > (this.#stuck ? Number.POSITIVE_INFINITY : lag))
         this.#real.decode(this.#held.shift() as EncodedAudioChunk);
     }

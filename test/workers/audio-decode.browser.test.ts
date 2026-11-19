@@ -99,6 +99,15 @@ describe("decoding audio in a worker", () => {
     expect(performance.now() - started).toBeLessThan(FLUSH_STALL_TIMEOUT + 3_000);
   });
 
+  it("drains output that comes while it waits for room, rather than waiting forever", async () => {
+    // Four outputs while the queue is full, as while the next packet was
+    // read: with them waiting, the wait for room could never end.
+    const started = performance.now();
+    const result = await decode({ lag: MAX_DECODE_QUEUE, burst: true });
+    expect(result.chunks).toBeGreaterThan(4);
+    expect(performance.now() - started).toBeLessThan(10_000);
+  });
+
   it("goes on when the decoder's dequeue never comes, rather than waiting for it", async () => {
     const started = performance.now();
     const { frames } = await decode({ dequeue: false });

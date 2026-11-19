@@ -29,6 +29,8 @@ export interface AudioDecodeRequest {
   readonly dequeue?: boolean;
   /** The decoder gives nothing back, and its flush never settles. */
   readonly stuck?: boolean;
+  /** With `lag`: four chunks come at once when the queue is full. */
+  readonly burst?: boolean;
 }
 
 export interface AudioDecodeContract {
@@ -64,7 +66,12 @@ exposeWorker<AudioDecodeContract>({
     if (request.lag !== undefined || request.dequeue === false || request.stuck) {
       globalThis.AudioDecoder = request.stuck
         ? laggingAudioDecoderClass(0, true, true)
-        : laggingAudioDecoderClass(request.lag ?? 0, request.dequeue ?? true);
+        : laggingAudioDecoderClass(
+            request.lag ?? 0,
+            request.dequeue ?? true,
+            false,
+            request.burst ?? false,
+          );
     }
     try {
       const { audio } = await pickTracks(input, probe.container);
