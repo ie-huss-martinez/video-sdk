@@ -16,9 +16,6 @@
 export type {
   UseVideoOutputResult,
   UseVideoSessionResult,
-  VideoEditorCatalogue,
-  VideoEditorMessageOverrides,
-  VideoEditorMessages,
   VideoEditorProviderProps,
 } from "./react/context.js";
 export {

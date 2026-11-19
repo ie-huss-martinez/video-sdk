@@ -8,10 +8,12 @@ import { Applied } from '@hussmartinez/sdk-core';
 import { FilePolicy } from '@hussmartinez/sdk-core';
 import { FilePolicyOverrides } from '@hussmartinez/sdk-core';
 import { Limits } from '@hussmartinez/sdk-core';
+import type { MessageOverrides } from '@hussmartinez/sdk-core';
 import { Messages } from '@hussmartinez/sdk-core';
 import { Reducer } from '@hussmartinez/sdk-core';
 import { SdkCoreErrorCode } from '@hussmartinez/sdk-core';
 import { SdkError } from '@hussmartinez/sdk-core';
+import type { uiMessages } from '@hussmartinez/ui';
 
 // @public
 export function addRotations(a: VideoRotation, b: VideoRotation): VideoRotation;
@@ -391,6 +393,15 @@ export interface VideoCrop {
 
 // @public
 export type VideoDocumentRejection = Exclude<VideoCommandRejection, "malformed-command"> | "malformed-document" | "unknown-format" | "unknown-format-version";
+
+// @public
+export type VideoEditorCatalogue = typeof videoMessages & typeof uiMessages;
+
+// @public
+export type VideoEditorMessageOverrides = MessageOverrides<VideoEditorCatalogue>;
+
+// @public
+export type VideoEditorMessages = Messages<VideoEditorCatalogue>;
 
 // @public
 export interface VideoEngine {
