@@ -2,7 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-11-12
-- **Amended:** 2026-11-19, with the timeline on `ui`'s `Timeline`: see "As built" under the timeline. Earlier, 2026-11-18, with the handle's `export` as built. Earlier the same day, with `ui`'s `onValueCommit` for the volume slider, and with the inspector's clip panel as built, then its picture group, then the output and metadata: see "The inspector".
+- **Amended:** 2026-11-19, with the element as built: see "As built" under "The element". Earlier the same day, with the timeline on `ui`'s `Timeline`: see "As built" under the timeline. Earlier, 2026-11-18, with the handle's `export` as built. Earlier the same day, with `ui`'s `onValueCommit` for the volume slider, and with the inspector's clip panel as built, then its picture group, then the output and metadata: see "The inspector".
 
 ## Context
 
@@ -170,6 +170,20 @@ Focus always lands somewhere meaningful, and never on `<body>`:
 ### The element
 
 `defineVideoEditorElement` is built with `createEditorElement`: kind `video`, the tag `hm-video-editor`, the attributes `theme`, `locale` and `tools`, the properties `file`, `filePolicy`, `assetsUrl`, `messages`, `engine` and `processor`, the ref handle's methods, and the events `change`, `event`, `export` and `error`. It mounts `<VideoEditor>` into the light DOM ([ADR 0040](https://github.com/ie-huss-martinez/sdk-core/blob/main/docs/adr/0040-editor-element-base.md)).
+
+**As built**, as audio-sdk's and image-sdk's elements are:
+
+- **`fileName` joined the properties,** since the handle's `export` and the dialog use it.
+- **`file` opens, replacing,** as audio-sdk's does. Setting it calls `session.open` through the handle, which replaces the plan with one clip from the file and clears the history ([ADR 0003](0003-clip-plan-document-model.md)); setting another opens that one. A failed open keeps the plan. More files join the plan through `insert`.
+- **The methods are the handle's:** `open`, `insert`, `export`, `undo`, `redo`, `play`, `pause` and `seek`. `open`, `insert`, `export` and `play` wait for the editor's first render, since the element renders without `flushSync`.
+- **The events come through a context, not props.** The editor's internals report through an internal context the element provides, so `VideoEditor`'s public props don't grow.
+  - `change`: the plan after each open, insert, edit, undo or redo, from the editor's root.
+  - `error`: each failure the editor shows, the session's or playback's, once, as `{ code, details }`.
+  - `export`: a `VideoExportReport` after the dialog finishes, `{ container, size, peakDb, clippedFrames }`, never the file.
+  - `event`: the session's usage event.
+
+  None carries a file name or contents ([sdk-core ADR 0012](https://github.com/ie-huss-martinez/sdk-core/blob/main/docs/adr/0012-hostile-input-and-no-network.md)).
+- **The element is a block,** `hm-video-editor { display: block }` in the `hm.sdk` layer, which the host sizes.
 
 ### Tests
 

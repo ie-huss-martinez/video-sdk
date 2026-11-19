@@ -9,6 +9,11 @@
 @layer hm.tokens, hm.base, hm.components, hm.sdk;
 
 @layer hm.sdk {
+  /* The element is a block the host sizes; the editor fills it. */
+  hm-video-editor {
+    display: block;
+  }
+
   /* The editor (docs/adr/0007): a column of regions that fills its container. */
   /* Its own text, such as the transport's time, takes ui's type and colour
      from the hm-text class on the root (ui ADR 0010), not from rules here. */

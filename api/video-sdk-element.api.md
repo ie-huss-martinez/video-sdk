@@ -4,4 +4,69 @@
 
 ```ts
 
+import { EditorElementDefine } from '@hussmartinez/sdk-core/element';
+import { FilePolicy } from '@hussmartinez/sdk-core';
+import { FilePolicyOverrides } from '@hussmartinez/sdk-core';
+import type { MessageOverrides } from '@hussmartinez/sdk-core';
+import type { uiMessages } from '@hussmartinez/ui';
+
+// @public
+export const defineVideoEditorElement: EditorElementDefine<Partial<VideoEditorElementProps>, VideoEditorElementMethods>;
+
+// @public
+export type VideoEditorElementEvent = "change" | "event" | "export" | "error";
+
+// @public
+export interface VideoEditorElementMethods {
+    // Warning: (ae-forgotten-export) The symbol "VideoSessionExportOptions" needs to be exported by the entry point element.d.ts
+    // Warning: (ae-forgotten-export) The symbol "VideoExportResult" needs to be exported by the entry point element.d.ts
+    export(options?: VideoSessionExportOptions): Promise<VideoExportResult>;
+    insert(file: Blob, at?: number): Promise<VideoSourceInfo>;
+    // Warning: (ae-forgotten-export) The symbol "VideoSourceInfo" needs to be exported by the entry point element.d.ts
+    open(file: Blob): Promise<VideoSourceInfo>;
+    // (undocumented)
+    pause(): void;
+    // (undocumented)
+    play(): Promise<void>;
+    redo(): boolean;
+    // (undocumented)
+    seek(frame: number): void;
+    undo(): boolean;
+}
+
+// @public
+export interface VideoEditorElementProps {
+    assetsUrl?: string | URL;
+    // Warning: (ae-forgotten-export) The symbol "VideoEngine" needs to be exported by the entry point element.d.ts
+    //
+    // (undocumented)
+    engine?: VideoEngine;
+    file?: Blob;
+    fileName?: string;
+    // Warning: (ae-forgotten-export) The symbol "VideoFilePolicyOverrides" needs to be exported by the entry point element.d.ts
+    //
+    // (undocumented)
+    filePolicy?: VideoFilePolicyOverrides;
+    locale?: string;
+    // Warning: (ae-forgotten-export) The symbol "VideoEditorMessageOverrides" needs to be exported by the entry point element.d.ts
+    messages?: VideoEditorMessageOverrides;
+    // Warning: (ae-forgotten-export) The symbol "VideoProcessor" needs to be exported by the entry point element.d.ts
+    //
+    // (undocumented)
+    processor?: VideoProcessor;
+    theme?: string;
+    tools?: readonly string[];
+}
+
+// @public
+export interface VideoExportReport {
+    readonly clippedFrames: number;
+    // Warning: (ae-forgotten-export) The symbol "VideoExportContainer" needs to be exported by the entry point element.d.ts
+    //
+    // (undocumented)
+    readonly container: VideoExportContainer;
+    readonly peakDb: number;
+    readonly size: number;
+}
+
 ```

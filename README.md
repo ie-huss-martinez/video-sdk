@@ -1,10 +1,10 @@
 # video-sdk
 
-A client-side video SDK: trim, split, arrange, rotate, crop and export videos entirely in the browser. Videos never leave the device. Its headless core and React editor (`VideoEditor`) are published; a `<hm-video-editor>` custom element comes later.
+A client-side video SDK: trim, split, arrange, rotate, crop and export videos entirely in the browser. Videos never leave the device. Its headless core, React editor (`VideoEditor`) and `<hm-video-editor>` custom element are published.
 
 This repository publishes **[`@hussmartinez/video-sdk`](https://www.npmjs.com/package/@hussmartinez/video-sdk)**. It follows the family standards in [`sdk-core`'s `STANDARDS.md`](https://github.com/ie-huss-martinez/sdk-core/blob/main/STANDARDS.md), and in particular the decisions on [hostile input and no network](https://github.com/ie-huss-martinez/sdk-core/blob/main/docs/adr/0012-hostile-input-and-no-network.md), [workers and assets](https://github.com/ie-huss-martinez/sdk-core/blob/main/docs/adr/0011-worker-messaging-and-assets.md) and [ports and adapters](https://github.com/ie-huss-martinez/sdk-core/blob/main/docs/adr/0008-ports-adapters-and-session.md).
 
-> Status: pre-1.0. The headless core and the React editor are published. The editor's inspector sets a clip's volume, mute, fades, rotation, fit and crop, and, with no clip selected, the exported video's size, frame rate and sound, and its title and other details; the `<hm-video-editor>` element and audio tracks come later ([ADR 0008](docs/adr/0008-audio-editing.md) has the order). The API may change between minor versions until 1.0.
+> Status: pre-1.0. The headless core, the React editor and the `<hm-video-editor>` element are published. The editor's inspector sets a clip's volume, mute, fades, rotation, fit and crop, and, with no clip selected, the exported video's size, frame rate and sound, and its title and other details; audio tracks come later ([ADR 0008](docs/adr/0008-audio-editing.md) has the order). The API may change between minor versions until 1.0.
 
 ## Install
 
@@ -18,7 +18,7 @@ React and React DOM 18.3 or later are optional peer dependencies, needed only fo
 |---|---|---|
 | `@hussmartinez/video-sdk` | The headless core: the session, commands, engine, playback output, export, limits, errors and messages | Anywhere, servers included: no React, and no DOM access on import |
 | `@hussmartinez/video-sdk/react` | `VideoEditor`, its building blocks and hooks | Client components: it starts with `"use client"` |
-| `@hussmartinez/video-sdk/element` | Nothing yet: the custom element comes in a later release | |
+| `@hussmartinez/video-sdk/element` | `defineVideoEditorElement`, for the `<hm-video-editor>` custom element | Browsers; it registers nothing on import, and needs React and React DOM |
 | `@hussmartinez/video-sdk/styles.css` | The editor's styles, in the `hm.sdk` cascade layer | Import it once, after `@hussmartinez/ui/styles.css` |
 
 ## The editor
@@ -46,6 +46,35 @@ It renders a toolbar, the preview with its transport, the timeline and the inspe
 - **Building blocks:** `VideoEditorProvider` with `VideoToolbar`, `VideoStage`, `VideoTransport`, `VideoTimeline`, `VideoInspector` and `VideoExportDialog`, and the hooks `useVideoSession`, `useVideoOutput` and `useVideoPlayhead`, for a layout of your own.
 - **Server rendering:** on a server the editor renders its empty state, with no canvas, engine or worker.
 - **Layout follows the container,** not the viewport: an editor in a narrow column lays out for the column.
+
+## The element
+
+```ts
+import "@hussmartinez/ui/styles.css";
+import "@hussmartinez/video-sdk/styles.css";
+import {
+  defineVideoEditorElement,
+  type VideoEditorElementProps,
+} from "@hussmartinez/video-sdk/element";
+
+defineVideoEditorElement();
+const editor = document.querySelector("hm-video-editor") as HTMLElement & VideoEditorElementProps;
+editor.file = file;
+editor.addEventListener("hm-video-editor-change", (event) => save((event as CustomEvent).detail));
+```
+
+`<hm-video-editor>` renders `VideoEditor` into its light DOM, for pages without React of their own. React and React DOM, the package's optional peer dependencies, are still needed. Importing the entry registers nothing: call `defineVideoEditorElement()` once, for `hm-video-editor` or a tag you name. The stylesheet makes the element a block, which you size.
+
+- **Attributes:** `theme` (`light`, `dark` or `system`), `locale`, and `tools`, space-separated.
+- **Properties:**
+  - `file` opens a video in place of the plan when you set it, and setting another opens that one, replacing it. A failed open keeps the plan. `insert` adds more files;
+  - `fileName`, `filePolicy`, `assetsUrl`, `messages`, `engine` and `processor`.
+- **Methods:** `open`, `insert`, `export`, `undo`, `redo`, `play`, `pause` and `seek`. `open`, `insert`, `export` and `play` wait for the editor's first render.
+- **Events,** none of which carries a file name or contents:
+  - `hm-video-editor-change`, with the plan;
+  - `hm-video-editor-event`, with the usage event;
+  - `hm-video-editor-export`, with a `VideoExportReport` after the export dialog finishes: the container, size, peak and clamped frames, and no file;
+  - `hm-video-editor-error`, with a failure's `code` and `details`.
 
 ## The headless core
 
