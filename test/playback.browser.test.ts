@@ -35,12 +35,17 @@ import type {
 } from "./workers/playback.worker.js";
 
 // Real decoding and playback run in workers, and a loaded machine slows them.
-// The slowest test here took 5.1-5.5 s on CI's runners, and 7.2 s locally
-// with WebKit sharing two cores with CPU burners: 20 s is about three times
-// that. A test that hangs fails by name well before anything else happens,
-// rather than sitting a minute in a page that may then crash. Waits inside
-// have their own 15 s timeouts, so each still fails through its own check.
-vi.setConfig({ testTimeout: 20_000 });
+// The waits inside name a hang, not the test's timeout: each waits on frames
+// being decoded and drawn, and gets 30 s, well before WebKit's page died in
+// verify run 44410142740, about 44 s after its last progress. Measured: the
+// slowest test here took 5.1-5.5 s on CI's runners, and 7.2 s locally with
+// WebKit sharing two cores with CPU burners, and the shared review machine's
+// bursts of load run tests several times slower. So the test's own timeout is
+// a generous 60 s, which a hang inside a wait never reaches.
+vi.setConfig({ testTimeout: 60_000 });
+
+/** How long a wait on frames being decoded and drawn gets. */
+const WORK_WAIT = 30_000;
 
 // Playback over the real engine and output (docs/adr/0006), in every browser
 // engine: the numbered fixture shows each frame's number, and the worker
@@ -140,7 +145,7 @@ function planned(plan: VideoPlan, frame: number): { clip: string; number: number
 async function shown(): Promise<number> {
   drawn = drawn.filter((record) => record.clock !== null);
   await vi.waitFor(() => expect(drawn.some((record) => record.clock === null)).toBe(true), {
-    timeout: 15_000,
+    timeout: WORK_WAIT,
   });
   const record = drawn.find((entry) => entry.clock === null) as DrawnRecord;
   drawn = [];
@@ -157,7 +162,7 @@ async function noFramesOpen(): Promise<void> {
       expect(ledgers).toHaveLength(ports.length);
       for (const ledger of ledgers) expect(ledger).toMatchObject({ open: 0, held: 0, audio: 0 });
     },
-    { timeout: 15_000, interval: 50 },
+    { timeout: WORK_WAIT, interval: 50 },
   );
 }
 
@@ -184,7 +189,7 @@ async function readersNow(
       // the plans sent before it.
       expect(total.plans).toBeGreaterThanOrEqual(plans);
     },
-    { timeout: 15_000, interval: 50 },
+    { timeout: WORK_WAIT, interval: 50 },
   );
   return total;
 }
@@ -229,7 +234,7 @@ describe("drawing what the plan places at the clock", () => {
     await shown();
     await output.play();
     await vi.waitFor(() => expect(output?.getSnapshot().state).toBe("stopped"), {
-      timeout: 10_000,
+      timeout: WORK_WAIT,
     });
     const playing = drawn.filter((record) => record.clock !== null);
     // What holds however slow the machine is (docs/adr/0006): each frame is
@@ -312,7 +317,7 @@ describe("drawing what the plan places at the clock", () => {
     output.load(base);
     await shown();
     await output.play();
-    await vi.waitFor(() => expect(drawn.length).toBeGreaterThan(3), { timeout: 15_000 });
+    await vi.waitFor(() => expect(drawn.length).toBeGreaterThan(3), { timeout: WORK_WAIT });
     // Every failure, even one a later load clears from the snapshot.
     const failures: string[] = [];
     const unsubscribe = output.subscribe(() => {
@@ -327,7 +332,7 @@ describe("drawing what the plan places at the clock", () => {
     }
     // Still drawing, frame after frame.
     const count = drawn.length;
-    await vi.waitFor(() => expect(drawn.length).toBeGreaterThan(count + 3), { timeout: 15_000 });
+    await vi.waitFor(() => expect(drawn.length).toBeGreaterThan(count + 3), { timeout: WORK_WAIT });
     unsubscribe();
     expect(failures).toEqual([]);
     expect(output.getSnapshot().state).toBe("playing");
@@ -343,7 +348,7 @@ describe("drawing what the plan places at the clock", () => {
     await shown();
     await output.play();
     // The reader is in use: frames are being decoded from it.
-    await vi.waitFor(() => expect(drawn.length).toBeGreaterThan(3), { timeout: 15_000 });
+    await vi.waitFor(() => expect(drawn.length).toBeGreaterThan(3), { timeout: WORK_WAIT });
     const before = await readersNow();
     expect(before.opened).toBeGreaterThan(0);
     const clip = base.clips[0] as VideoPlan["clips"][number];
@@ -366,7 +371,7 @@ describe("drawing what the plan places at the clock", () => {
     await vi.waitFor(
       async () => expect((await readersNow()).released).toBeGreaterThan(before.released),
       {
-        timeout: 15_000,
+        timeout: WORK_WAIT,
       },
     );
     output.pause();
@@ -380,7 +385,7 @@ describe("drawing what the plan places at the clock", () => {
     output.load(base);
     await shown();
     await output.play();
-    await vi.waitFor(() => expect(drawn.length).toBeGreaterThan(3), { timeout: 15_000 });
+    await vi.waitFor(() => expect(drawn.length).toBeGreaterThan(3), { timeout: WORK_WAIT });
     const failures: string[] = [];
     const unsubscribe = output.subscribe(() => {
       const error = output?.getSnapshot().error;
@@ -390,7 +395,9 @@ describe("drawing what the plan places at the clock", () => {
     output.load({ ...base, clips: [{ ...clip, muted: true }] });
     const count = drawn.length;
     // Frames keep coming: the decoder wasn't stopped by the new plan.
-    await vi.waitFor(() => expect(drawn.length).toBeGreaterThan(count + 10), { timeout: 15_000 });
+    await vi.waitFor(() => expect(drawn.length).toBeGreaterThan(count + 10), {
+      timeout: WORK_WAIT,
+    });
     unsubscribe();
     expect(failures).toEqual([]);
     expect(output.getSnapshot().state).toBe("playing");
@@ -409,7 +416,7 @@ describe("drawing what the plan places at the clock", () => {
     output.resize(128, 16, 4);
     // The file's own timeout, not the default second: a loaded machine redraws late.
     await vi.waitFor(() => expect(drawn.some((record) => record.clock === null)).toBe(true), {
-      timeout: 15_000,
+      timeout: WORK_WAIT,
     });
     expect(drawn[0]).toMatchObject({ number: 40, width: 512, height: 64 });
     drawn = [];
@@ -417,7 +424,7 @@ describe("drawing what the plan places at the clock", () => {
     output.resize(256, 128);
     output.step(1);
     await vi.waitFor(() => expect(drawn.some((record) => record.number === 41)).toBe(true), {
-      timeout: 15_000,
+      timeout: WORK_WAIT,
     });
     expect(drawn.at(-1)).toMatchObject({ number: 41, width: 256, height: 128 });
     await noFramesOpen();
@@ -441,7 +448,7 @@ describe("drawing what the plan places at the clock", () => {
     // checks every one that's drawn.
     const ofEdit = () => drawn.filter((record) => record.clip === "x" || record.clip === "y");
     await vi.waitFor(() => expect(ofEdit().length).toBeGreaterThan(5), {
-      timeout: 15_000,
+      timeout: WORK_WAIT,
       interval: 50,
     });
     // What holds however slow the machine is (docs/adr/0006): every frame drawn
@@ -539,7 +546,7 @@ async function runnerLag(during: () => Promise<void>): Promise<number> {
 async function workerLags(since: number): Promise<number[]> {
   lags = [];
   for (const port of ports) port.postMessage({ type: "lag", since });
-  await vi.waitFor(() => expect(lags).toHaveLength(ports.length), { timeout: 15_000 });
+  await vi.waitFor(() => expect(lags).toHaveLength(ports.length), { timeout: WORK_WAIT });
   return lags.map((record) => record.p90);
 }
 
@@ -726,7 +733,7 @@ describe("audio as the clock", () => {
         await playFromGesture(output as VideoOutput);
         expect(output?.getSnapshot().audio).toBe("ready");
         await vi.waitFor(() => expect(output?.getSnapshot().state).toBe("stopped"), {
-          timeout: 10_000,
+          timeout: WORK_WAIT,
         });
       });
     } finally {
