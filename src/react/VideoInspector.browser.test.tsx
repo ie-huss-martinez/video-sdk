@@ -353,10 +353,13 @@ describe("the inspector's clip panel", () => {
     await eventually(() => expect(slider.getAttribute("aria-valuetext")).toBe("0 dB"));
     // No command ran: the session's plan is the very one before the gesture.
     expect((session as VideoSession).getSnapshot().plan).toBe(before);
-    // The preview ended with the gesture: what plays is the session's plan again.
-    await eventually(() => expect(loads.at(-1)?.clips[0]?.volumeDb).toBe(0));
+    // The preview ended with the gesture: what plays is the session's plan
+    // itself, not a preview copy of it at the start value, which would stay
+    // in its place until the next edit. Still so once a pending preview's
+    // interval has passed.
+    await eventually(() => expect(loads.at(-1)).toBe(before));
     await new Promise((resolve) => setTimeout(resolve, 300));
-    expect(loads.at(-1)?.clips[0]?.volumeDb).toBe(0);
+    expect(loads.at(-1)).toBe(before);
     act(() => playing.pause());
   });
 
