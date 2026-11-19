@@ -1,5 +1,55 @@
 # @hussmartinez/video-sdk
 
+## 0.4.0
+
+### Minor Changes
+
+- [#92](https://github.com/ie-huss-martinez/video-sdk/pull/92) [`0038ac6`](https://github.com/ie-huss-martinez/video-sdk/commit/0038ac69062a5338701fb431a2a39e7134df9aa0) Thanks [@hussmartinez](https://github.com/hussmartinez)! - `VideoEditor`'s ref handle has `export(options?)`, as the family's editors' handles do, for a host's own export button. It exports the plan as it is when it's called, through the editor's processor or the host's `processor`, without opening the dialog, and resolves with `{ blob, container, size, peakDb, clippedFrames }`. It takes `session.export`'s options: `container`, `quality`, `audio: "omit"`, `signal`, `onProgress` and `onWarning`. It never downloads anything, and doesn't call `onExport`, since the caller has the file.
+
+- [#97](https://github.com/ie-huss-martinez/video-sdk/pull/97) [`72d3eff`](https://github.com/ie-huss-martinez/video-sdk/commit/72d3eff32b2d1cccc628b747db45fa655e93def1) Thanks [@hussmartinez](https://github.com/hussmartinez)! - Refusals that aren't about a file now say what was refused. Setting an output over a limit, such as a size over `maxFramePixels`, used to show the text for a video that's too large to open; an edit that would make the video longer than `maxDuration` said the video was too long to open. Now:
+  
+  - `checkOutput` throws with `details.reason: "output"`, and `checkPlanLength` with `details.reason: "plan-too-long"`, on the same codes as before.
+  - The catalogue has their text under `errors.<CODE>.<reason>`: `errors.FRAME_TOO_LARGE.output`, `errors.FRAME_RATE_TOO_HIGH.output`, `errors.TOO_MANY_CHANNELS.output`, `errors.SAMPLE_RATE_TOO_HIGH.output` and `errors.DURATION_TOO_LONG.plan-too-long`. Override them like any other message.
+  - New `videoErrorText(messages, error)` returns that text when the error has a reason the catalogue knows, and `messages.error(error)` otherwise. The editor's stage and export dialog use it. If you show the session's errors yourself, call it in place of `messages.error(error)`:
+  
+  ```ts
+  showError(videoErrorText(messages, error));
+  ```
+  
+  A file's own refusals carry no reason, and their text is unchanged.
+
+- [#102](https://github.com/ie-huss-martinez/video-sdk/pull/102) [`90255fb`](https://github.com/ie-huss-martinez/video-sdk/commit/90255fbf3c4c5b302d46311057cab75ad3d62efb) Thanks [@hussmartinez](https://github.com/hussmartinez)! - The editor's timeline now shows each clip's sound as a waveform under the clips, at the clip's volume and fades, so a muted clip shows flat. The clips let it show through, each with a short title such as "Clip 2".
+  
+  For your own drawing:
+  
+  - **`session.getPeaks(source)`** returns a source's waveform peaks, the lowest and highest sample of each 10 ms. They're built in the background after a file is inserted, so the clip appears without waiting for them. Until they arrive it returns `undefined`, and when they do, the snapshot's new `peaksVersion` goes up. A source without sound never has peaks.
+  - **`peakColumns(peaks, { from, to, columns })`** turns peaks into one lowest and one highest sample per column, for a source's time from `from` to `to` in microseconds.
+
+### Patch Changes
+
+- [#96](https://github.com/ie-huss-martinez/video-sdk/pull/96) [`0385438`](https://github.com/ie-huss-martinez/video-sdk/commit/0385438c926d2713d862666ccdccb67d8864871e) Thanks [@hussmartinez](https://github.com/hussmartinez)! - When the sound stalls during playback, the picture now waits for it within about one frame, instead of running up to a quarter of a second ahead. The preview reads the audio clock more often, and corrects the picture as soon as the clock has moved by more than a frame. The correction no longer restarts decoding from a key frame, so the picture doesn't fall further behind while it catches up.
+
+- [#95](https://github.com/ie-huss-martinez/video-sdk/pull/95) [`d8ce000`](https://github.com/ie-huss-martinez/video-sdk/commit/d8ce000fa28fffd73f4fc7c090ec11c53a7137fd) Thanks [@hussmartinez](https://github.com/hussmartinez)! - Playback no longer piles up frames in a browser that can't draw a `VideoFrame` directly and falls back to drawing through `ImageBitmap`s. If making bitmaps was slower than the video's frame rate, every frame still waiting to be drawn was kept open, so memory grew for as long as playback ran. Now at most one frame waits, and a newer one replaces it, as when frames arrive late. Nothing changes in your code.
+
+- [#99](https://github.com/ie-huss-martinez/video-sdk/pull/99) [`613b91d`](https://github.com/ie-huss-martinez/video-sdk/commit/613b91d3cb0cb4aed9637c41ffd9604b31f4fe13) Thanks [@hussmartinez](https://github.com/hussmartinez)! - The video editor now says when playback fails. Before, when the browser couldn't decode or draw the video, playback paused silently: the stage stayed as it was and Play did nothing, with no message. Now the failure's text shows at the foot of the stage as an alert, looked up by its code like the editor's other errors, such as "This browser couldn't play part of this video." Pressing Play again clears it and tries again.
+
+- [#98](https://github.com/ie-huss-martinez/video-sdk/pull/98) [`0fb317c`](https://github.com/ie-huss-martinez/video-sdk/commit/0fb317cb5b9b7746442064ede4d6bdc401a83c0a) Thanks [@hussmartinez](https://github.com/hussmartinez)! - The video editor now shows the session's warnings, which it computed but never showed. A video that is long or large, one whose sound this browser can't play, or a session using a lot of memory now gets a notice at the foot of the stage, above any error. There's one notice per kind of warning, so a long file and the long video it makes say it once. Each notice is announced to screen readers once and can be dismissed with its Dismiss button, and a dismissed kind doesn't come back, even after an undo and a redo. Two new messages name the area and the button: `stage.notices` and `stage.dismiss`. The text of each warning comes from `videoWarningText`, as before.
+
+- [#105](https://github.com/ie-huss-martinez/video-sdk/pull/105) [`236607d`](https://github.com/ie-huss-martinez/video-sdk/commit/236607d7d83e6b60795a894bbf1cb3d7c70a65b0) Thanks [@hussmartinez](https://github.com/hussmartinez)! - Stopping an export in its first moment now stops it. The first export of a session loads its worker code first, and an export stopped or closed during that load, which takes longer on a busy device, used to start anyway and run to its end unseen. Meanwhile the next export failed with "A video is already being saved", for as long as the hidden one ran. Now an export stopped while its code loads never starts, `processor.export()` rejects it with `ABORTED`, and the next one runs at once.
+
+- [#100](https://github.com/ie-huss-martinez/video-sdk/pull/100) [`6c063ca`](https://github.com/ie-huss-martinez/video-sdk/commit/6c063ca0b907efe65834d28a283134c971dbf47d) Thanks [@hussmartinez](https://github.com/hussmartinez)! - The editor's timeline is now built on `ui`'s `Timeline`, as audio-sdk's is, so both editors' timelines look and behave the same. The keys, the clips' names, trimming, snapping and zoom are unchanged. Two things differ:
+  
+  - **The playhead slider sits on the track,** as wide as it, instead of above it with a visible "Playhead" label. Screen readers still hear it as "Playhead", with the time.
+  - **The playhead goes to the end of the video,** one frame past the last, which is where playback stops.
+  
+  Nothing changes in your code.
+
+- [#101](https://github.com/ie-huss-martinez/video-sdk/pull/101) [`b7c5172`](https://github.com/ie-huss-martinez/video-sdk/commit/b7c5172edfee721e7e4f550fa39ac1c8558c341c) Thanks [@hussmartinez](https://github.com/hussmartinez)! - Requires `@hussmartinez/ui` 0.14.1 or later. In the editor, the timeline's playhead now shows its whole focus ring when it has keyboard focus, which 0.14.0 cut off. If your app also depends on `@hussmartinez/ui`, update it to ^0.14.1, so there's one copy.
+
+- [#103](https://github.com/ie-huss-martinez/video-sdk/pull/103) [`8e87de4`](https://github.com/ie-huss-martinez/video-sdk/commit/8e87de4c47778cd942c10a93b511f445bf2a907d) Thanks [@hussmartinez](https://github.com/hussmartinez)! - Requires `@hussmartinez/ui` 0.14.3 or later. Its announcer says every message sent in the same moment, such as a new warning and "Undone.", rather than only the last one, so the editor now leaves that to `ui`, and its "Undone." and "Redone." announcements end with a full stop, so they read as sentences when joined. In a right-to-left layout, `ui` 0.14.3 also mirrors the icons that point along time, such as the step and move arrows. If your app also depends on `@hussmartinez/ui`, update it to ^0.14.3, so there's one copy.
+
+- [#108](https://github.com/ie-huss-martinez/video-sdk/pull/108) [`b6fc808`](https://github.com/ie-huss-martinez/video-sdk/commit/b6fc808cf2cadf973fbe5db4a49ec5feb1fcc7f3) Thanks [@hussmartinez](https://github.com/hussmartinez)! - Requires `@hussmartinez/ui` 0.14.4 or later, whose icons that point along time stay mirrored in a right-to-left layout after a bundler such as Vite lowers its CSS. In 0.14.3 they could point the wrong way there. If your app also depends on `@hussmartinez/ui`, update it to ^0.14.4, so there's one copy.
+
 ## 0.3.1
 
 ### Patch Changes
