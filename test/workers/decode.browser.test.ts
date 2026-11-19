@@ -72,6 +72,12 @@ describe("decoding video frames in a worker", () => {
     expect(performance.now() - started).toBeLessThan(10_000);
   });
 
+  it("stops feeding once a drain while waiting for room delivers the frames wanted", async () => {
+    // The burst comes with the queue at the hard cap: waiting on would fail.
+    const { timestamps } = await decode({ lag: MAX_STALLED_DECODE_QUEUE, burst: true, limit: 1 });
+    expect(timestamps).toHaveLength(1);
+  });
+
   it("fails fast with DECODE_FAILED when a decoder holds the hard cap without output", async () => {
     const started = performance.now();
     const error = await failure({ lag: MAX_STALLED_DECODE_QUEUE + 8 });

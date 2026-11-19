@@ -246,10 +246,12 @@ export async function decodeVideoFrames(
       // next packet was read, is drained first: the wait can't take it, and
       // would never end with it waiting.
       await drain();
-      while (decoder.decodeQueueSize >= queueLimit) {
+      while (delivered < limit && decoder.decodeQueueSize >= queueLimit) {
         await until(() => waiting.length > 0 || decoder.decodeQueueSize < queueLimit, onStall);
         await drain();
       }
+      // A drain can deliver the last frame wanted: nothing more is fed.
+      if (delivered >= limit) break;
       decoder.decode(packet.toEncodedVideoChunk());
       videoFrameLedger.peakDecodeQueue = Math.max(
         videoFrameLedger.peakDecodeQueue,
