@@ -45,12 +45,13 @@ export interface VideoEditorElementProps {
 /**
  * The `<hm-video-editor>` element's methods, the React editor's ref handle's
  * own (docs/adr/0007). `open()`, `insert()` and `export()` wait for the
- * editor's first render, and `play()` for its preview; if the element is
- * removed first, they reject with `ABORTED` and `details.reason: "removed"`.
- * The others act on the editor there is, and do nothing before it. It's
- * written out from the main entry's types, not picked
- * from the React handle, so the element's API report copies nothing the main
- * entry doesn't export (sdk-core ADR 0033).
+ * editor's first render, and `play()` for its preview, then call it at once,
+ * so calls made in one task keep their order; if the element is removed
+ * first, they reject with `ABORTED` and `details.reason: "removed"`. The
+ * others act on the editor there is, and do nothing before it. It's written
+ * out from the main entry's types, not picked from the React handle, so the
+ * element's API report copies nothing the main entry doesn't export
+ * (sdk-core ADR 0033).
  *
  * @public
  */
@@ -127,12 +128,16 @@ function ElementEditor(props: ElementEditorProps): ReactNode {
   );
 }
 
-/** A promise and its settlers. Nobody may wait on it, so its rejection is handled. */
-function deferred(): {
+/** Something the element waits for: whether it has come, and a promise of it. */
+interface Readiness {
+  readonly done: boolean;
   readonly promise: Promise<void>;
   readonly resolve: () => void;
   readonly reject: (reason: unknown) => void;
-} {
+}
+
+/** A readiness and its settlers. Nobody may wait on it, so its rejection is handled. */
+function deferred(): Readiness {
   let resolve: () => void = () => {};
   let reject: (reason: unknown) => void = () => {};
   const promise = new Promise<void>((done, fail) => {
@@ -140,7 +145,16 @@ function deferred(): {
     reject = fail;
   });
   promise.catch(() => {});
-  return { promise, resolve, reject };
+  const readiness = {
+    done: false,
+    promise,
+    resolve: () => {
+      readiness.done = true;
+      resolve();
+    },
+    reject,
+  };
+  return readiness;
 }
 
 /** What a call waiting on an editor that was removed rejects with. */
@@ -195,13 +209,19 @@ export function mountVideoEditor(
   render(initial);
 
   const now = (): VideoEditorHandle | null => handle.current;
-  // The handle there is once it's ready: each render renews it, and the
-  // first one's `play` has no output yet.
-  const after = async (ready: Promise<void>): Promise<VideoEditorHandle> => {
-    await ready;
+  // Runs a method on the handle there is, as audio-sdk's element does: at
+  // once when what it needs has come, so calls made in one task keep their
+  // order, such as play() then pause(), and after it before then. Each render
+  // renews the handle, and the first one's `play` has no output yet. It finds
+  // the handle and calls it in one step, so a removal can't come between.
+  const call = async <Result,>(
+    ready: Readiness,
+    method: (editor: VideoEditorHandle) => Result,
+  ): Promise<Awaited<Result>> => {
+    if (!ready.done) await ready.promise;
     const editor = now();
     if (!editor) throw removed();
-    return editor;
+    return await method(editor);
   };
   return {
     update: render,
@@ -212,12 +232,12 @@ export function mountVideoEditor(
       playable.reject(removed());
     },
     handle: {
-      open: async (file) => (await after(rendered.promise)).open(file),
-      insert: async (file, at) => (await after(rendered.promise)).insert(file, at),
-      export: async (options) => (await after(rendered.promise)).export(options),
+      open: (file) => call(rendered, (editor) => editor.open(file)),
+      insert: (file, at) => call(rendered, (editor) => editor.insert(file, at)),
+      export: (options) => call(rendered, (editor) => editor.export(options)),
       undo: () => now()?.undo() ?? false,
       redo: () => now()?.redo() ?? false,
-      play: async () => (await after(playable.promise)).play(),
+      play: () => call(playable, (editor) => editor.play()),
       pause: () => now()?.pause(),
       seek: (frame) => now()?.seek(frame),
     },

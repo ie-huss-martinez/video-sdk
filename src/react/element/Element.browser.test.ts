@@ -127,6 +127,13 @@ describe("<hm-video-editor> (docs/adr/0007, sdk-core ADR 0040)", () => {
     editor.pause();
     await until(() => editor.querySelector('button[aria-label="Play"]') !== null, "paused");
 
+    // Calls made in one task keep their order: play() then pause() ends paused.
+    const playing = editor.play();
+    editor.pause();
+    await playing;
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    expect(editor.querySelector('button[aria-label="Pause"]')).toBeNull();
+
     editor.seek(30);
     await until(
       () => editor.querySelector(".hm-video-transport-time")?.textContent === "0:01.00 of 0:04.00",
