@@ -19,7 +19,7 @@ catalog:
   "@commitlint/cli": ^21.2.4
   "@hussmartinez/sdk-config": ^0.8.0
   "@hussmartinez/sdk-core": ^0.4.4
-  "@hussmartinez/ui": ^0.14.3
+  "@hussmartinez/ui": ^0.14.4
   # The browser test image's version (ci/Dockerfile), so the end-to-end suite
   # drives the browsers the image installed.
   "@playwright/test": 1.65.0
