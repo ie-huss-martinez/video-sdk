@@ -219,3 +219,33 @@ export function laggingAudioDecoderClass(
   }
   return LaggingAudioDecoder as unknown as typeof AudioDecoder;
 }
+
+/**
+ * An `AudioEncoder` that stopped: it takes what it's given and gives nothing
+ * back, and its flush never settles. Installed in place of the global one.
+ */
+export function stuckAudioEncoderClass(): typeof AudioEncoder {
+  const Real = AudioEncoder;
+  return class StuckAudioEncoder extends Real {
+    override encode(_data: AudioData): void {}
+
+    override flush(): Promise<void> {
+      return new Promise(() => {});
+    }
+  };
+}
+
+/**
+ * A `VideoEncoder` that stopped: it takes what it's given and gives nothing
+ * back, and its flush never settles. Installed in place of the global one.
+ */
+export function stuckVideoEncoderClass(): typeof VideoEncoder {
+  const Real = VideoEncoder;
+  return class StuckVideoEncoder extends Real {
+    override encode(_frame: VideoFrame, _options?: VideoEncoderEncodeOptions): void {}
+
+    override flush(): Promise<void> {
+      return new Promise(() => {});
+    }
+  };
+}

@@ -1,5 +1,6 @@
 import { createWorkerClient } from "@hussmartinez/sdk-core";
 import { describe, expect, it, vi } from "vitest";
+import { FLUSH_STALL_TIMEOUT } from "../src/adapters/bounded-flush.js";
 import { createVideoEngine, engineInternals } from "../src/adapters/video-engine.js";
 import { createVideoProcessor } from "../src/adapters/video-processor.js";
 import { isVideoError, VideoError, videoLimits } from "../src/index.js";
@@ -242,6 +243,53 @@ describe("an export's file", () => {
     );
     await engine.destroy();
   });
+
+  // The encoder probes, each codec's flush bounded: a codec that stopped
+  // proves nothing, rather than leaving the export waiting for it.
+  const exportWithStuck = async (stuckProbe: "aac-decoder" | "audio-encoder" | "video-encoder") => {
+    const engine = createVideoEngine({ startTimeout: DEV_WORKER_START_TIMEOUT });
+    const file = await blob(exportA);
+    const a = await engine.open("a", file, await engine.probe(file));
+    const source = engineInternals(engine)?.source("a");
+    if (!source) throw new Error("expected the source to be open");
+    const started = performance.now();
+    try {
+      const outcome = await exporter.call("export", {
+        plan: smallPlan(clipOf("x", a, 0, 90)),
+        sources: [source],
+        limits: videoLimits.resolve().limits,
+        stuckProbe,
+      });
+      return { outcome, error: undefined, seconds: (performance.now() - started) / 1_000 };
+    } catch (error) {
+      return { outcome: undefined, error, seconds: (performance.now() - started) / 1_000 };
+    } finally {
+      await engine.destroy();
+    }
+  };
+
+  it("fails with UNSUPPORTED_CODEC for the sound when the audio encoder stalls in its probe", async () => {
+    const { error, seconds } = await exportWithStuck("audio-encoder");
+    expect(isVideoError(error, "UNSUPPORTED_CODEC")).toBe(true);
+    expect((error as VideoError).details).toMatchObject({ track: "audio" });
+    // Two audio codecs probed, each given up after the flush's timeout.
+    expect(seconds).toBeLessThan((2 * FLUSH_STALL_TIMEOUT) / 1_000 + 5);
+  }, 30_000);
+
+  it("fails with UNSUPPORTED_CODEC for the picture when the video encoder stalls in its probe", async () => {
+    const { error, seconds } = await exportWithStuck("video-encoder");
+    expect(isVideoError(error, "UNSUPPORTED_CODEC")).toBe(true);
+    expect((error as VideoError).details).toMatchObject({ track: "video" });
+    expect(seconds).toBeLessThan((3 * FLUSH_STALL_TIMEOUT) / 1_000 + 5);
+  }, 30_000);
+
+  it("goes on to another candidate when the AAC probe's decoder stalls", async () => {
+    // Only where AAC encodes, as in WebKit, does the probe decode AAC: there
+    // it gives up after the flush's timeout, and Opus is used instead.
+    const { outcome, error } = await exportWithStuck("aac-decoder");
+    expect(error).toBeUndefined();
+    expect(outcome?.file.size).toBeGreaterThan(0);
+  }, 30_000);
 
   it("holds no frame or audio after an export is cancelled partway", async () => {
     const engine = createVideoEngine({ startTimeout: DEV_WORKER_START_TIMEOUT });

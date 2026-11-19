@@ -1,6 +1,7 @@
 import { type EncodedPacket, EncodedPacketSink, type InputAudioTrack } from "mediabunny";
 import { abortError } from "../../core/errors/error-helpers.js";
 import { isVideoError, VideoError } from "../../core/errors/video-error.js";
+import { FLUSH_STALL_TIMEOUT } from "../bounded-flush.js";
 import { MAX_DECODE_QUEUE, MAX_STALLED_DECODE_QUEUE, STALL_TIMEOUT } from "./video-decoder.js";
 
 /**
@@ -13,14 +14,6 @@ import { MAX_DECODE_QUEUE, MAX_STALLED_DECODE_QUEUE, STALL_TIMEOUT } from "./vid
  * @internal
  */
 export const audioDataLedger = { open: 0, peakDecodeQueue: 0, restamped: 0, stalls: 0 };
-
-/**
- * How long a flush may go without output or a `dequeue` before the decoder
- * is taken to have stopped, in milliseconds. A flush decodes the packets
- * still queued, each in far less; one that gives nothing back for this long
- * never will.
- */
-export const FLUSH_STALL_TIMEOUT = 2_000;
 
 /**
  * The most frames one decoded chunk may hold, by codec (docs/adr/0001): the

@@ -14,6 +14,7 @@ import { frameTime } from "../../core/model/time.js";
 import { composeFrame } from "../../core/playback/compose.js";
 import { TIMESTAMP_TOLERANCE } from "../../core/playback/scheduler.js";
 import type { VideoExportContainer, VideoExportQuality } from "../../core/ports/video-processor.js";
+import { boundedFlush } from "../bounded-flush.js";
 import { paint } from "../canvas/paint.js";
 import { mixAudioWindow } from "../media-worker/audio-window.js";
 import type { PlaybackSource, PolicyLimits } from "../media-worker/contract.js";
@@ -92,7 +93,14 @@ function audioConfig(
   };
 }
 
-/** Whether this browser encodes a configuration: it says so, and one black frame encodes (docs/adr/0001). */
+/** What a probe's codec that stopped rejects its flush with: the probe then proves nothing. */
+const probeStalled = () => new Error("The codec stopped during the probe.");
+
+/**
+ * Whether this browser encodes a configuration: it says so, and one black
+ * frame encodes (docs/adr/0001). An encoder whose flush stalls proves
+ * nothing, so it doesn't.
+ */
 async function provesVideo(config: VideoEncoderConfig): Promise<boolean> {
   try {
     if (!(await VideoEncoder.isConfigSupported(config)).supported) return false;
@@ -101,9 +109,11 @@ async function provesVideo(config: VideoEncoderConfig): Promise<boolean> {
   }
   let produced = false;
   let failed = false;
+  let heard = performance.now();
   const encoder = new VideoEncoder({
     output: () => {
       produced = true;
+      heard = performance.now();
     },
     error: () => {
       failed = true;
@@ -117,7 +127,9 @@ async function provesVideo(config: VideoEncoderConfig): Promise<boolean> {
     const frame = new VideoFrame(canvas, { timestamp: 0 });
     encoder.encode(frame, { keyFrame: true });
     frame.close();
-    await encoder.flush();
+    // Bounded: an encoder that stopped would leave the export waiting here.
+    heard = performance.now();
+    await boundedFlush(encoder, () => heard, probeStalled);
     return produced && !failed;
   } catch {
     return false;
@@ -137,7 +149,9 @@ const BURST_AT = 4_800;
  * it back. Opus carries its pre-skip in its own header, so its priming is 0
  * once it encodes. AAC's isn't recorded anywhere a decoder applies, so it's
  * measured: where the burst comes back, less where it went in. `undefined`
- * when the configuration doesn't encode, or AAC's priming can't be measured.
+ * when the configuration doesn't encode, or AAC's priming can't be measured,
+ * as when the encoder's or decoder's flush stalls: the export then tries the
+ * next candidate, or fails with `UNSUPPORTED_CODEC` for the sound.
  */
 async function provesAudio(config: AudioEncoderConfig): Promise<number | undefined> {
   try {
@@ -148,8 +162,10 @@ async function provesAudio(config: AudioEncoderConfig): Promise<number | undefin
   const chunks: EncodedAudioChunk[] = [];
   let decoderConfig: AudioDecoderConfig | undefined;
   let failed = false;
+  let heard = performance.now();
   const encoder = new AudioEncoder({
     output: (chunk, meta) => {
+      heard = performance.now();
       chunks.push(chunk);
       decoderConfig ??= meta?.decoderConfig;
     },
@@ -178,7 +194,9 @@ async function provesAudio(config: AudioEncoderConfig): Promise<number | undefin
     });
     encoder.encode(data);
     data.close();
-    await encoder.flush();
+    // Bounded, as the decoder's below: a stalled codec proves nothing.
+    heard = performance.now();
+    await boundedFlush(encoder, () => heard, probeStalled);
   } catch {
     return undefined;
   } finally {
@@ -192,6 +210,7 @@ async function provesAudio(config: AudioEncoderConfig): Promise<number | undefin
   let decodeFailed = false;
   const decoder = new AudioDecoder({
     output: (data) => {
+      heard = performance.now();
       const plane = new Float32Array(data.numberOfFrames);
       data.copyTo(plane, { planeIndex: 0, format: "f32-planar" });
       data.close();
@@ -207,7 +226,8 @@ async function provesAudio(config: AudioEncoderConfig): Promise<number | undefin
     for (const [index, chunk] of chunks.entries()) {
       decoder.decode(restamp(chunk, index * step, step, rate));
     }
-    await decoder.flush();
+    heard = performance.now();
+    await boundedFlush(decoder, () => heard, probeStalled);
   } catch {
     return undefined;
   } finally {
