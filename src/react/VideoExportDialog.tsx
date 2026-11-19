@@ -1,5 +1,6 @@
 import { Button, Dialog, ProgressBar, SegmentedControl, useAnnounce } from "@hussmartinez/ui/react";
-import { type ReactNode, useEffect, useId, useRef, useState } from "react";
+import { type ReactNode, useContext, useEffect, useId, useRef, useState } from "react";
+import { asVideoError } from "../core/errors/error-helpers.js";
 import { isVideoError } from "../core/errors/video-error.js";
 import { metadataDate } from "../core/model/metadata-date.js";
 import { planFrames, type VideoMetadata } from "../core/model/plan.js";
@@ -12,6 +13,7 @@ import type {
 import { exportFileName } from "../features/export-name/export-name.js";
 import { videoErrorText } from "../messages/text.js";
 import { useVideoEditor, useVideoSession } from "./context.js";
+import { ElementListenersContext } from "./element/listeners.js";
 import { formatTimecode } from "./timecode.js";
 
 /**
@@ -80,6 +82,7 @@ export function VideoExportDialog(props: VideoExportDialogProps): ReactNode {
   const [withoutSound, setWithoutSound] = useState(false);
   const [error, setError] = useState<unknown>(null);
   const controller = useRef<AbortController | null>(null);
+  const listeners = useContext(ElementListenersContext);
   const objectUrl = useRef<string | null>(null);
   const downloadButton = useRef<HTMLButtonElement>(null);
   const ids = useId();
@@ -154,6 +157,13 @@ export function VideoExportDialog(props: VideoExportDialogProps): ReactNode {
       // Closed while it ran: the result belongs to no one.
       if (controller.current !== running) return;
       controller.current = null;
+      // The element's `export` event: what was written, never the file.
+      listeners.onExport?.({
+        container: result.container,
+        size: result.size,
+        peakDb: result.peakDb,
+        clippedFrames: result.clippedFrames,
+      });
       const containerName = messages.t(`export.containers.${result.container}`);
       announce(messages.t("export.ready", { container: containerName, size: result.size }));
       if (onExport) {
@@ -172,6 +182,10 @@ export function VideoExportDialog(props: VideoExportDialogProps): ReactNode {
         return;
       }
       setError(reason);
+      // The element's `error` event: an export's failure never reaches the
+      // session's snapshot, so the dialog, which shows it, reports it.
+      const failure = asVideoError(reason);
+      listeners.onError?.({ code: failure.code, details: { ...(failure.details ?? {}) } });
     }
   };
 

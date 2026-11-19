@@ -4,6 +4,7 @@ import type { VideoSourceInfo } from "../core/model/source.js";
 import type { VideoExportResult } from "../core/ports/video-processor.js";
 import type { VideoSessionExportOptions } from "../core/session/session.js";
 import { useVideoEditor, VideoEditorProvider, type VideoEditorProviderProps } from "./context.js";
+import { ElementBridge } from "./element/bridge.js";
 import { useVideoTools } from "./tools.js";
 import { VideoExportDialog, type VideoExportDialogProps } from "./VideoExportDialog.js";
 import { VideoInspector } from "./VideoInspector.js";
@@ -152,6 +153,7 @@ function Root({
         {...(fileName === undefined ? {} : { fileName })}
         {...(onExport ? { onExport } : {})}
       />
+      <ElementBridge />
     </section>
   );
 }

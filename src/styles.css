@@ -9,6 +9,11 @@
 @layer hm.tokens, hm.base, hm.components, hm.sdk;
 
 @layer hm.sdk {
+  /* The element is a block the host sizes. */
+  hm-video-editor {
+    display: block;
+  }
+
   /* The editor (docs/adr/0007): a column of regions that fills its container. */
   /* Its own text, such as the transport's time, takes ui's type and colour
      from the hm-text class on the root (ui ADR 0010), not from rules here. */
@@ -21,6 +26,12 @@
     row-gap: var(--hm-gap-normal);
     min-block-size: calc(var(--hm-space-12) * 3);
     container-type: inline-size;
+  }
+
+  /* A host given a height gets an editor of that height; an auto-height host
+     keeps the editor's own. */
+  hm-video-editor > .hm-video-editor {
+    block-size: 100%;
   }
 
   .hm-video-editor > * {
