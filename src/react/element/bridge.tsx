@@ -13,15 +13,15 @@ import { ElementListenersContext } from "./listeners.js";
  * @internal
  */
 export function ElementBridge(): ReactNode {
-  const { onChange, onError, onPlayable } = useContext(ElementListenersContext);
+  const { onChange, onError, onPreviewSettled } = useContext(ElementListenersContext);
   const { snapshot } = useVideoSession();
   const { output, snapshot: playback } = useVideoOutput();
 
   // The preview's output exists: the handle, renewed with it before effects
-  // run, can play.
+  // run, can play. The stage says when there will be none.
   useEffect(() => {
-    if (output) onPlayable?.();
-  }, [output, onPlayable]);
+    if (output) onPreviewSettled?.();
+  }, [output, onPreviewSettled]);
 
   // The plan after each insert, edit, undo or redo; not before the first file.
   const plan = useRef<VideoPlan | null>(null);

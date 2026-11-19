@@ -90,14 +90,14 @@ const MODES = new Set(["light", "dark", "system"]);
 
 interface ElementEditorProps {
   readonly values: Partial<VideoEditorElementProps>;
-  readonly onPlayable: () => void;
+  readonly onPreviewSettled: () => void;
   readonly setHandle: RefCallback<VideoEditorHandle>;
   readonly handle: { readonly current: VideoEditorHandle | null };
   readonly dispatch: EditorElementContext<VideoEditorElementEvent>["dispatch"];
 }
 
 function ElementEditor(props: ElementEditorProps): ReactNode {
-  const { values, setHandle, handle, dispatch, onPlayable } = props;
+  const { values, setHandle, handle, dispatch, onPreviewSettled } = props;
   const { file, theme: _theme, ...editorProps } = values;
 
   // A file is opened when it's set, replacing the plan. A failure is the
@@ -115,9 +115,9 @@ function ElementEditor(props: ElementEditorProps): ReactNode {
       onExport: (report: VideoExportReport) => dispatch("export", report),
       onError: (error: { code: string; details: Readonly<Record<string, unknown>> }) =>
         dispatch("error", error),
-      onPlayable,
+      onPreviewSettled,
     }),
-    [dispatch, onPlayable],
+    [dispatch, onPreviewSettled],
   );
 
   return (
@@ -165,8 +165,8 @@ export function mountVideoEditor(
 ): MountedEditor<Partial<VideoEditorElementProps>, VideoEditorElementMethods> {
   const root = createRoot(host);
   const handle: { current: VideoEditorHandle | null } = { current: null };
-  // The first render, and the preview's output after it. A removal before
-  // either rejects the calls waiting for it, which would otherwise never
+  // The first render, and the preview after it: its output, or knowing it
+  // has none, as with a host's own engine. A removal before either rejects the calls waiting for it, which would otherwise never
   // settle.
   const rendered = deferred();
   const playable = deferred();
@@ -188,7 +188,7 @@ export function mountVideoEditor(
         setHandle={setHandle}
         handle={handle}
         dispatch={dispatch}
-        onPlayable={playable.resolve}
+        onPreviewSettled={playable.resolve}
       />,
     );
   };

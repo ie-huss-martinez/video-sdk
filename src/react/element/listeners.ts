@@ -24,7 +24,8 @@ export interface VideoExportReport {
  * What the element listens to inside the editor, without props on the
  * public components (docs/adr/0007), as audio-sdk's element does: the plan
  * as it changes, an export the dialog finished, a failure the editor shows,
- * and when the preview's output exists, so `play()` can wait for it.
+ * and when the preview has settled, with its output or knowing it has none,
+ * so `play()` can wait for it.
  *
  * @internal
  */
@@ -35,7 +36,7 @@ export interface ElementListeners {
     readonly code: VideoErrorCode;
     readonly details: Readonly<Record<string, unknown>>;
   }) => void;
-  readonly onPlayable?: () => void;
+  readonly onPreviewSettled?: () => void;
 }
 
 /** @internal */

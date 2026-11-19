@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import landscapeVp8 from "../../../test/fixtures/video/landscape-vp8.webm?url";
 import { VideoError } from "../../core/errors/video-error.js";
 import type { VideoPlan } from "../../core/model/plan.js";
+import type { VideoEngine } from "../../core/ports/video-engine.js";
 import type { VideoProcessor } from "../../core/ports/video-processor.js";
 import { defineVideoEditorElement } from "../../element.js";
 import "../../styles.css";
@@ -158,6 +159,26 @@ describe("<hm-video-editor> (docs/adr/0007, sdk-core ADR 0040)", () => {
     for (const call of waiting) {
       await expect(call).rejects.toMatchObject({ code: "ABORTED", details: { reason: "removed" } });
     }
+  });
+
+  it("settles play() when the preview can't play, as with a host's own engine", async () => {
+    const editor = create();
+    editor.engine = {
+      probe: vi.fn(),
+      open: vi.fn(),
+      peaks: vi.fn(),
+      close: vi.fn(),
+      destroy: vi.fn(async () => {}),
+    } as unknown as VideoEngine;
+    document.body.append(editor);
+    // It does nothing, as the handle's play() does without an output, but it
+    // returns rather than waiting for an output that never comes.
+    const settled = await Promise.race([
+      editor.play().then(() => "settled"),
+      new Promise((resolve) => setTimeout(() => resolve("waiting"), UI_WAIT)),
+    ]);
+    expect(settled).toBe("settled");
+    expect(editor.textContent).toContain("The preview isn't available with this engine.");
   });
 
   it("takes theme, locale and tools from attributes, and follows their changes", async () => {

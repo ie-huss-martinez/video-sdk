@@ -1,10 +1,11 @@
 import { Button, FileDropZone, ProgressBar } from "@hussmartinez/ui/react";
-import { type ReactNode, useEffect, useRef, useState } from "react";
+import { type ReactNode, useContext, useEffect, useRef, useState } from "react";
 import { createVideoOutput } from "../adapters/video-output.js";
 import { videoLimits } from "../core/errors/video-limits.js";
 import { planFrames } from "../core/model/plan.js";
 import { videoErrorText } from "../messages/text.js";
 import { useVideoEditor, useVideoOutput, useVideoPlayhead, useVideoSession } from "./context.js";
+import { ElementListenersContext } from "./element/listeners.js";
 import { ACCEPT } from "./files.js";
 import { StageNotices } from "./StageNotices.js";
 
@@ -47,6 +48,12 @@ export function VideoStage(props: VideoStageProps): ReactNode {
   const surface = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [unavailable, setUnavailable] = useState(false);
+  // No output will come, as with a host's own engine: the element's play()
+  // stops waiting for one (docs/adr/0007).
+  const { onPreviewSettled } = useContext(ElementListenersContext);
+  useEffect(() => {
+    if (unavailable) onPreviewSettled?.();
+  }, [unavailable, onPreviewSettled]);
 
   useEffect(() => {
     const container = surface.current;
