@@ -46,7 +46,9 @@ export default [
   // readers and document reader and writer took the core from 13.7 to 17.5 kB.
   // 20.5 kB since the waveform (ADR 0008): the session's peaks, built in the
   // background with getPeaks, and peakColumns took it from 19.84 to 20.34 kB.
-  entry("Server-safe core (.)", "index.js", "20.5 kB"),
+  // 21 kB since session.open (ADR 0003): opening a file in place of the plan,
+  // as audio-sdk's session does, took it from 20.36 to 20.55 kB.
+  entry("Server-safe core (.)", "index.js", "21 kB"),
   entry("React entry (./react)", "react.js", "40 kB"),
   entry("Element entry (./element)", "element.js", "40 kB"),
   {

@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { createFakeEngine, type FakeEngine } from "../../../test/fakes/fake-engine.js";
 import { createFakeProcessor } from "../../../test/fakes/fake-processor.js";
 import { encodeFakeVideo, type FakeVideoSpec } from "../../../test/fakes/fake-video.js";
-import { isVideoError, type VideoErrorCode } from "../errors/video-error.js";
+import { isVideoError, VideoError, type VideoErrorCode } from "../errors/video-error.js";
 import type { VideoFilePolicyOverrides } from "../errors/video-limits.js";
 import { clipFrames, planFrames } from "../model/plan.js";
 import { decodingBound } from "../model/probe-limits.js";
@@ -514,5 +514,210 @@ describe("a source's peaks", () => {
     await new Promise((resolve) => setTimeout(resolve, 0));
     expect(session.getPeaks(info.id)).toBeUndefined();
     expect(session.getSnapshot().peaksVersion).toBe(0);
+  });
+});
+
+/** A fake engine whose first open of a source waits at a gate, and every later one doesn't. */
+function firstOpenWaits() {
+  const engine = createFakeEngine();
+  let release!: () => void;
+  const gate = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  let entered!: () => void;
+  const waiting = new Promise<void>((resolve) => {
+    entered = resolve;
+  });
+  const openSource = engine.open;
+  let calls = 0;
+  engine.open = async (id, f, p, o) => {
+    calls += 1;
+    const info = await openSource(id, f, p, o);
+    if (calls === 1) {
+      entered();
+      await gate;
+    }
+    return info;
+  };
+  return { engine, waiting, release };
+}
+
+/** A fake engine whose first open of a source waits at a gate, then fails on its own. */
+function firstOpenWaitsThenFails() {
+  const engine = createFakeEngine();
+  let release!: () => void;
+  const gate = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  let entered!: () => void;
+  const waiting = new Promise<void>((resolve) => {
+    entered = resolve;
+  });
+  const openSource = engine.open;
+  let calls = 0;
+  engine.open = async (id, f, p, o) => {
+    calls += 1;
+    if (calls === 1) {
+      entered();
+      await gate;
+      throw new VideoError("UNSUPPORTED_FORMAT", "This file can't be read.");
+    }
+    return openSource(id, f, p, o);
+  };
+  return { engine, waiting, release };
+}
+
+describe("opening a file in place of the plan (as audio-sdk's open)", () => {
+  it("replaces the plan with the file, closes the sources before it, and clears the history", async () => {
+    const { session, engine, events } = setup();
+    await session.insert(file());
+    await session.insert(file());
+    expect(session.getSnapshot().plan?.clips).toHaveLength(2);
+
+    const info = await session.open(file({ width: 640, height: 480, frames: 30 }));
+    const snapshot = session.getSnapshot();
+    expect(snapshot.plan?.clips.map((clip) => clip.source)).toEqual([info.id]);
+    // Its output is the opened file's, as the first insert's is.
+    expect(snapshot.plan?.output).toMatchObject({ width: 640, height: 480 });
+    expect(snapshot.sources.map((source) => source.id)).toEqual([info.id]);
+    expect([...engine.sources.keys()]).toEqual([info.id]);
+    expect(snapshot).toMatchObject({ canUndo: false, canRedo: false, error: null });
+    expect(session.undo()).toBe(false);
+    expect(events.at(-1)).toEqual({
+      type: "open",
+      outcome: "done",
+      commands: ["video.insertClips"],
+    });
+  });
+
+  it("keeps the plan and its history when the file fails, so a bad file costs nothing", async () => {
+    const { session, engine } = setup({ maxFramePixels: 1280 * 720 });
+    await session.insert(file());
+    await session.insert(file());
+    const before = session.getSnapshot();
+    const failure = await rejection(session.open(file({ width: 3840, height: 2160 })));
+    expect(code(failure)).toBe("FRAME_TOO_LARGE");
+    const after = session.getSnapshot();
+    expect(after.plan).toBe(before.plan);
+    expect(after.canUndo).toBe(true);
+    expect(engine.sources.size).toBe(2);
+    // Undo still works on the plan that was kept.
+    expect(session.undo()).toBe(true);
+    expect(session.getSnapshot().plan?.clips).toHaveLength(1);
+  });
+
+  it("lets a newer open replace one still in progress, which records no error", async () => {
+    const { engine, waiting, release } = firstOpenWaits();
+    const { session } = setup(undefined, engine);
+    const first = session.open(file({ frames: 30 }));
+    await waiting;
+    const second = await session.open(file({ frames: 45 }));
+    release();
+    const failure = await rejection(first);
+    expect(code(failure)).toBe("ABORTED");
+    expect(reason(failure)).toBe("replaced");
+    const snapshot = session.getSnapshot();
+    expect(snapshot.plan?.clips.map((clip) => clip.source)).toEqual([second.id]);
+    // The replaced open's source is closed, and its abort isn't the editor's error.
+    expect([...engine.sources.keys()]).toEqual([second.id]);
+    expect(snapshot.error).toBeNull();
+  });
+
+  it("rejects an insert still in progress when an open lands, and closes its source", async () => {
+    const { engine, waiting, release } = firstOpenWaits();
+    const { session } = setup(undefined, engine);
+    const inserting = session.insert(file());
+    await waiting;
+    const opened = await session.open(file({ frames: 45 }));
+    release();
+    const failure = await rejection(inserting);
+    expect(code(failure)).toBe("ABORTED");
+    expect(reason(failure)).toBe("replaced");
+    // The new plan has only the opened file: the insert's clip was for the old one.
+    const snapshot = session.getSnapshot();
+    expect(snapshot.plan?.clips.map((clip) => clip.source)).toEqual([opened.id]);
+    expect([...engine.sources.keys()]).toEqual([opened.id]);
+    expect(snapshot).toMatchObject({ inserting: 0, error: null });
+  });
+
+  it("lets an insert in flight land when an open meanwhile fails, since nothing replaced its plan", async () => {
+    const { engine, waiting, release } = firstOpenWaits();
+    const { session } = setup({ maxFramePixels: 1280 * 720 }, engine);
+    const inserting = session.insert(file());
+    await waiting;
+    // The open fails the file policy: the plan isn't replaced.
+    expect(code(await rejection(session.open(file({ width: 3840, height: 2160 }))))).toBe(
+      "FRAME_TOO_LARGE",
+    );
+    release();
+    const info = await inserting;
+    expect(session.getSnapshot().plan?.clips.map((clip) => clip.source)).toEqual([info.id]);
+    expect([...engine.sources.keys()]).toEqual([info.id]);
+  });
+
+  it("lets an insert in flight land when an open meanwhile is cancelled", async () => {
+    const { engine, waiting, release } = firstOpenWaits();
+    const { session } = setup(undefined, engine);
+    const inserting = session.insert(file());
+    await waiting;
+    const controller = new AbortController();
+    controller.abort();
+    expect(code(await rejection(session.open(file(), { signal: controller.signal })))).toBe(
+      "ABORTED",
+    );
+    release();
+    const info = await inserting;
+    expect(session.getSnapshot().plan?.clips.map((clip) => clip.source)).toEqual([info.id]);
+  });
+
+  it("lands an insert that finishes before an open commits in the old plan, then closes it with that plan", async () => {
+    const { engine, waiting, release } = firstOpenWaits();
+    const { session } = setup(undefined, engine);
+    // The open's own source is the first open of the engine: it waits.
+    const opening = session.open(file({ frames: 45 }));
+    await waiting;
+    const inserted = await session.insert(file());
+    expect(session.getSnapshot().plan?.clips.map((clip) => clip.source)).toEqual([inserted.id]);
+    release();
+    const opened = await opening;
+    // The open replaced the plan the insert landed in, and release() closed its source.
+    expect(session.getSnapshot().plan?.clips.map((clip) => clip.source)).toEqual([opened.id]);
+    expect([...engine.sources.keys()]).toEqual([opened.id]);
+  });
+
+  it("rejects a superseded open as replaced even when it then fails on its own", async () => {
+    const { engine, waiting, release } = firstOpenWaitsThenFails();
+    const { session } = setup(undefined, engine);
+    const first = session.open(file());
+    await waiting;
+    const second = await session.open(file({ frames: 45 }));
+    release();
+    const failure = await rejection(first);
+    // Not its own UNSUPPORTED_FORMAT: a newer open had already taken its place.
+    expect(code(failure)).toBe("ABORTED");
+    expect(reason(failure)).toBe("replaced");
+    expect(session.getSnapshot().plan?.clips.map((clip) => clip.source)).toEqual([second.id]);
+    expect(session.getSnapshot().error).toBeNull();
+  });
+
+  it("rejects an insert whose plan an open replaced as replaced even when it then fails on its own", async () => {
+    const { engine, waiting, release } = firstOpenWaitsThenFails();
+    const { session } = setup(undefined, engine);
+    const inserting = session.insert(file());
+    await waiting;
+    const opened = await session.open(file({ frames: 45 }));
+    release();
+    const failure = await rejection(inserting);
+    expect(code(failure)).toBe("ABORTED");
+    expect(reason(failure)).toBe("replaced");
+    expect(session.getSnapshot().plan?.clips.map((clip) => clip.source)).toEqual([opened.id]);
+    expect(session.getSnapshot().error).toBeNull();
+  });
+
+  it("opens the first file of an empty session, as an insert would", async () => {
+    const { session } = setup();
+    const info = await session.open(file());
+    expect(session.getSnapshot()).toMatchObject({ status: "ready", canUndo: false });
+    expect(session.getSnapshot().plan?.clips.map((clip) => clip.source)).toEqual([info.id]);
   });
 });

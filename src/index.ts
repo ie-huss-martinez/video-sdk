@@ -147,6 +147,7 @@ export type {
 } from "./core/ports/video-processor.js";
 export type {
   VideoInsertOptions,
+  VideoOpenOptions,
   VideoSession,
   VideoSessionEvent,
   VideoSessionExportOptions,

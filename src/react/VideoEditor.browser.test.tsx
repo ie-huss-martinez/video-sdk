@@ -284,6 +284,24 @@ describe("the video editor", () => {
     expect(box(".hm-video-stage").right).toBeLessThanOrEqual(box(".hm-video-inspector").left);
   });
 
+  it("opens a file from its handle in place of the plan, which can't be undone", async () => {
+    const handle = createRef<VideoEditorHandle>();
+    const view = render(<VideoEditor ref={handle} />);
+    const options = () => view.querySelectorAll('[role="option"]');
+    await act(async () => {
+      await (handle.current as VideoEditorHandle).insert(await fixture());
+      await (handle.current as VideoEditorHandle).insert(await fixture());
+    });
+    await vi.waitFor(() => expect(options()).toHaveLength(2), { timeout: 15_000 });
+    await act(async () => {
+      await (handle.current as VideoEditorHandle).open(await fixture());
+    });
+    await vi.waitFor(() => expect(options()).toHaveLength(1), { timeout: 15_000 });
+    // Its history went with the plan it replaced.
+    expect((handle.current as VideoEditorHandle).undo()).toBe(false);
+    expect(options()).toHaveLength(1);
+  });
+
   it("exports from its handle, without the dialog or onExport, and with sound left out when asked", async () => {
     const handle = createRef<VideoEditorHandle>();
     const exported: Blob[] = [];
