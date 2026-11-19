@@ -55,6 +55,7 @@ The git hooks run on their own: a secret scan and lint of staged files on commit
 - **Description:** fill in the template: what changed, why, and how you tested it, including the CI run on its head. Be as detailed as is useful; the description doesn't go into git history.
 - **Changeset:** add one if the pull request changes what the package publishes. See [Changesets](#changesets).
 - **Checks:** `verify`, `changeset` and `pr-title` must pass, and the branch must be up to date with `main`.
+- **CodeRabbit:** it reviews every pull request. Fix or answer each of its review threads, and resolve it, before asking for a merge: the merge is refused while any is open. Its walkthrough comments, such as "No actionable comments", need nothing.
 
 **CI is the gate**, by Huss's decision of 2026-11-19: the repository is public, so GitHub Actions is free. Before pushing, run only `pnpm verify:fast`, which the pre-push hook runs anyway, with the checks your change touches, and let CI run everything on every engine. A CI failure is investigated, and an unexplained one blocks a release.
 
