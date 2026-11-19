@@ -1,5 +1,11 @@
 # @hussmartinez/video-sdk
 
+## 0.6.1
+
+### Patch Changes
+
+- [#117](https://github.com/ie-huss-martinez/video-sdk/pull/117) [`ce3f1fe`](https://github.com/ie-huss-martinez/video-sdk/commit/ce3f1fe1703a6d3cdc88d9c3bf9cf2bb9a3926a4) Thanks [@hussmartinez](https://github.com/hussmartinez)! - `<hm-video-editor>`'s methods now run in the order you call them. Once the editor is ready, `open`, `insert`, `export` and `play` call it at once instead of a microtask later, so `editor.play(); editor.pause();` in one task ends paused, and an `open` or `insert` followed by `undo` acts in that order. Before the editor is ready they still wait for it, and reject with `ABORTED` if the element is removed first.
+
 ## 0.6.0
 
 ### Minor Changes
