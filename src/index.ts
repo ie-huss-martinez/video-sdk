@@ -155,6 +155,11 @@ export type {
   VideoTimelineRange,
 } from "./core/session/session.js";
 export { createVideoSession } from "./core/session/session.js";
+export type {
+  VideoEditorCatalogue,
+  VideoEditorMessageOverrides,
+  VideoEditorMessages,
+} from "./messages/editor.js";
 export type { VideoMessageCatalogue } from "./messages/en.js";
 export { videoMessages } from "./messages/en.js";
 export { videoErrorText, videoWarningText } from "./messages/text.js";

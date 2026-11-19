@@ -2,8 +2,6 @@ import {
   createMessages,
   createShortcutRegistry,
   createToolRegistry,
-  type MessageOverrides,
-  type Messages,
   type ShortcutRegistry,
   type ToolRegistry,
 } from "@hussmartinez/sdk-core";
@@ -35,16 +33,12 @@ import {
   type VideoSessionSnapshot,
 } from "../core/session/session.js";
 import { defaultVideoToolbar, type VideoTool, videoTools } from "../features/tools/tools.js";
+import type {
+  VideoEditorCatalogue,
+  VideoEditorMessageOverrides,
+  VideoEditorMessages,
+} from "../messages/editor.js";
 import { videoMessages } from "../messages/en.js";
-
-/**
- * The shape of the editor's catalogue: the SDK's messages, and `ui`'s for
- * its own components, as one catalogue for one `Messages` object (sdk-core
- * ADR 0046).
- *
- * @public
- */
-export type VideoEditorCatalogue = typeof videoMessages & typeof uiMessages;
 
 /**
  * The editor's catalogue. A host overrides `ui`'s text, such as
@@ -53,20 +47,6 @@ export type VideoEditorCatalogue = typeof videoMessages & typeof uiMessages;
  * @internal
  */
 export const editorCatalogue: VideoEditorCatalogue = { ...videoMessages, ...uiMessages };
-
-/**
- * The text the editor uses: the SDK's catalogue with `ui`'s.
- *
- * @public
- */
-export type VideoEditorMessages = Messages<VideoEditorCatalogue>;
-
-/**
- * A host's overrides of the editor's text, keyed as in `videoMessages`.
- *
- * @public
- */
-export type VideoEditorMessageOverrides = MessageOverrides<VideoEditorCatalogue>;
 
 /**
  * Props of {@link VideoEditorProvider}.
