@@ -46,7 +46,12 @@ import { videoMessages } from "../messages/en.js";
  *
  * @internal
  */
-export const editorCatalogue: VideoEditorCatalogue = { ...videoMessages, ...uiMessages };
+// In a function marked pure, as a bundler keeps an object literal that
+// spreads another, and with it the whole catalogue, for any import.
+export const editorCatalogue: VideoEditorCatalogue = /* @__PURE__ */ (() => ({
+  ...videoMessages,
+  ...uiMessages,
+}))();
 
 /**
  * Props of {@link VideoEditorProvider}.

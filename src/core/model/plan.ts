@@ -145,17 +145,18 @@ export function codePointLength(text: string): number {
  *
  * @public
  */
-export const VOLUME_RANGE: { readonly min: number; readonly max: number } = Object.freeze({
-  min: -96,
-  max: 24,
-});
+export const VOLUME_RANGE: { readonly min: number; readonly max: number } =
+  /* @__PURE__ */ Object.freeze({
+    min: -96,
+    max: 24,
+  });
 
 /**
  * Metadata with every field empty.
  *
  * @public
  */
-export const EMPTY_METADATA: VideoMetadata = Object.freeze({
+export const EMPTY_METADATA: VideoMetadata = /* @__PURE__ */ Object.freeze({
   title: "",
   description: "",
   artist: "",
@@ -168,14 +169,14 @@ export const EMPTY_METADATA: VideoMetadata = Object.freeze({
  *
  * @public
  */
-export const NO_FADE: VideoFade = Object.freeze({ duration: 0, curve: "linear" });
+export const NO_FADE: VideoFade = /* @__PURE__ */ Object.freeze({ duration: 0, curve: "linear" });
 
 /**
  * The whole picture, unrotated, letterboxed.
  *
  * @public
  */
-export const IDENTITY_TRANSFORM: VideoTransform = Object.freeze({
+export const IDENTITY_TRANSFORM: VideoTransform = /* @__PURE__ */ Object.freeze({
   rotation: 0,
   crop: null,
   fit: "contain",
