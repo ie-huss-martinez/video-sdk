@@ -24,6 +24,11 @@ It publishes `@hussmartinez/video-sdk`: a headless core for editing video, a Rea
 - **ADRs:** add one for any significant decision, meaning anything affecting public API, cross-package consistency or security, or that is hard to reverse.
 - **Other repositories:** don't edit them from here. If this repository needs a change elsewhere, such as a shared helper in `@hussmartinez/sdk-core` or a component in `@hussmartinez/ui`, propose it in that repository.
 
+## Task state and memory
+
+- **Task state:** keep the current task's state in `.local/HANDOFF.md`, uncommitted, with `.local/` listed in the repository's exclude file, which `git rev-parse --git-path info/exclude` finds in a plain checkout and in a linked worktree alike. It holds the goal and decisions, what's done (pull requests and commits), what's in progress with the exact next step, open questions, and where things live. Update it after every step, so that another agent, on any model or provider, can continue from it alone.
+- **Durable memory:** facts, rules and lessons that outlive a task go in the maintainer's SilverBullet knowledge base, following its `playbooks/agent-memory.md`, under the SDK family's `agent-memory/video-sdk/`. Not in a provider's private memory, and not in this repository.
+
 ## Video SDK rules
 
 These follow from the standards; they're repeated here because they apply to almost every change in this repository.
@@ -44,8 +49,8 @@ These follow from the standards; they're repeated here because they apply to alm
 
 - **Hooks:** they run automatically: linting and a secret scan on commit, commit message checks, and `pnpm verify:fast` on push. Never use `--no-verify`. If a hook is wrong or too slow, fix it in its own pull request.
 - **CI is the gate** (Huss's decision of 2026-11-19: the repository is public, so GitHub Actions is free). It runs `pnpm verify` on Chromium, Firefox and WebKit, checks the pull request title, and checks for a changeset when the published package changes. All must pass on the pull request's current head before it's merged.
-- **Locally, before pushing,** run only what the pre-push hook runs, `pnpm verify:fast`, with the checks your change touches. Don't run the full `pnpm verify` or the three engines to prove a pull request; CI does.
+- **Locally, before pushing,** `pnpm verify:fast`, which the pre-push hook runs, is the local bar, with the checks your change touches. Don't run the full `pnpm verify` or the three engines to prove a pull request; CI does.
 - **Local browser runs** are for diagnosing a failure or measuring, and for capturing visual baselines, which produces them. The visual runner serves the examples as last built, so build first: `pnpm build && pnpm build:examples && pnpm test:visual:update`.
-- **CodeRabbit** reviews every pull request. Before asking for a merge, fix or answer each of its review threads, and resolve it: the merge is refused while any is open. Its walkthrough comments, such as "No actionable comments", need nothing.
+- **CodeRabbit** reviews every pull request. Before asking for a merge, fix or answer every one of its review threads, and resolve it: the merge is refused while any is open. Check again after each push, since it reviews a new head minutes later. Its walkthrough comments, such as "No actionable comments", need nothing.
 - **In the description,** report the CI run on the head. A CI failure is investigated, and an unexplained one blocks a release.
 - **Never weaken a check to make it pass.** That includes lint rules, size budgets, the API report, accessibility checks, file limits and the no-network assertion. Fix the cause, or propose the change in its own pull request with an ADR if the rule itself is wrong.
