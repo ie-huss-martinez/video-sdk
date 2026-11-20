@@ -16,7 +16,7 @@ You need Node 24 (see [`.node-version`](.node-version)) and pnpm. pnpm switches 
 
 ```sh
 pnpm install       # also installs the git hooks
-pnpm verify        # everything CI runs
+pnpm verify        # everything CI runs, for diagnosing a failure, not before every pull request
 pnpm verify:fast   # the subset the pre-push hook runs: the local bar
 ```
 

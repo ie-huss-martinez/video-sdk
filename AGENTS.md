@@ -26,7 +26,7 @@ It publishes `@hussmartinez/video-sdk`: a headless core for editing video, a Rea
 
 ## Task state and memory
 
-- **Task state:** keep the current task's state in `.local/HANDOFF.md`, uncommitted, with `.local/` listed in `.git/info/exclude`. It holds the goal and decisions, what's done (pull requests and commits), what's in progress with the exact next step, open questions, and where things live. Update it after every step, so that another agent, on any model or provider, can continue from it alone.
+- **Task state:** keep the current task's state in `.local/HANDOFF.md`, uncommitted, with `.local/` listed in the repository's exclude file, which `git rev-parse --git-path info/exclude` finds in a plain checkout and in a linked worktree alike. It holds the goal and decisions, what's done (pull requests and commits), what's in progress with the exact next step, open questions, and where things live. Update it after every step, so that another agent, on any model or provider, can continue from it alone.
 - **Durable memory:** facts, rules and lessons that outlive a task go in the maintainer's SilverBullet knowledge base, following its `playbooks/agent-memory.md`, under the SDK family's `agent-memory/video-sdk/`. Not in a provider's private memory, and not in this repository.
 
 ## Video SDK rules
