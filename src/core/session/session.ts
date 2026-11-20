@@ -92,10 +92,15 @@ export interface VideoSessionSnapshot {
  * An anonymous usage event for the host's `onEvent` (ADR 0003). It never
  * carries file names, frames, audio or metadata values.
  *
+ * `download` comes from the editor, not the session: the export dialog's
+ * Download handed the file to the browser (docs/adr/0007). `export` comes
+ * when the file is ready, before that. When the host passes `onExport`, the
+ * host saves the file, and no `download` comes.
+ *
  * @public
  */
 export interface VideoSessionEvent {
-  readonly type: "open" | "insert" | "execute" | "undo" | "redo" | "export";
+  readonly type: "open" | "insert" | "execute" | "undo" | "redo" | "export" | "download";
   readonly outcome: "done" | "failed" | "cancelled";
   /** The types of the commands applied or undone. */
   readonly commands: readonly VideoCommand["type"][];

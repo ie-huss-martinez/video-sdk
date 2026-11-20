@@ -14,6 +14,7 @@ import type {
   VideoExportResult,
   VideoProcessor,
 } from "../core/ports/video-processor.js";
+import type { VideoSessionEvent } from "../core/session/session.js";
 import { useVideoSession, VideoEditorProvider } from "./context.js";
 import { VideoEditor, type VideoEditorHandle } from "./VideoEditor.js";
 import { VideoExportDialog } from "./VideoExportDialog.js";
@@ -266,6 +267,39 @@ describe("the export dialog", () => {
     }
   });
 
+  it("reports a download when Download hands the file over, not when the file is ready", async () => {
+    const click = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
+    try {
+      const events: VideoSessionEvent[] = [];
+      const view = mount(
+        <VideoEditor initialFiles={[await fixture()]} onEvent={(event) => events.push(event)} />,
+      );
+      await eventually(
+        () => expect(exportTool(view).getAttribute("aria-disabled")).toBeNull(),
+        WORK_WAIT,
+      );
+      await press(exportTool(view));
+      await press(button(view, "Export") as HTMLButtonElement);
+      const download = await eventually(() => {
+        const found = button(view, "Download");
+        expect(found).toBeDefined();
+        return found as HTMLButtonElement;
+      }, WORK_WAIT);
+      // Ready isn't saved: export is reported, and no download yet.
+      expect(events.filter((event) => event.type === "export")).toEqual([
+        { type: "export", outcome: "done", commands: [] },
+      ]);
+      expect(events.some((event) => event.type === "download")).toBe(false);
+      await press(download);
+      expect(events.filter((event) => event.type === "download")).toEqual([
+        { type: "download", outcome: "done", commands: [] },
+      ]);
+      expect(events.at(-1)?.type).toBe("download");
+    } finally {
+      click.mockRestore();
+    }
+  });
+
   it("hands the file to the editor's onExport instead of a download, and closes", async () => {
     const clicks: string[] = [];
     const click = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(function (
@@ -275,10 +309,12 @@ describe("the export dialog", () => {
     });
     try {
       const exported: { blob: Blob; result: VideoExportResult }[] = [];
+      const events: VideoSessionEvent[] = [];
       const view = mount(
         <VideoEditor
           initialFiles={[await fixture()]}
           onExport={(blob, result) => exported.push({ blob, result })}
+          onEvent={(event) => events.push(event)}
         />,
       );
       await eventually(
@@ -296,6 +332,8 @@ describe("the export dialog", () => {
       await eventually(() => expect(dialogOf(view).open).toBe(false));
       expect(button(view, "Download")).toBeUndefined();
       expect(clicks).toEqual([]);
+      // The host saves the file: the editor reports no download.
+      expect(events.some((event) => event.type === "download")).toBe(false);
     } finally {
       click.mockRestore();
     }
