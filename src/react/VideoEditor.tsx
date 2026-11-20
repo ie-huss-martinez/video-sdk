@@ -69,7 +69,7 @@ export interface VideoEditorHandle {
   export(options?: VideoSessionExportOptions): Promise<VideoExportResult>;
 }
 
-const Shell = forwardRef<
+const Shell = /* @__PURE__ */ forwardRef<
   VideoEditorHandle,
   {
     readonly initialFiles?: readonly Blob[];

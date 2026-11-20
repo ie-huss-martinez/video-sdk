@@ -40,37 +40,40 @@ import { VideoError } from "./video-error.js";
  *
  * @public
  */
-export const videoLimitDefinitions = {
-  ...coreLimits,
-  maxFileSize: { ...coreLimits.maxFileSize, default: 4_000_000_000, warning: 1_000_000_000 },
-  maxDecodedSize: { ...coreLimits.maxDecodedSize, default: 1_000_000_000, warning: 400_000_000 },
-  maxFramePixels: {
-    code: "FRAME_TOO_LARGE",
-    unit: "pixels",
-    default: 3840 * 2160,
-    warning: 2560 * 1440,
-  },
-  maxFrameRate: { code: "FRAME_RATE_TOO_HIGH", unit: "hertz", default: 120 },
-  maxDuration: {
-    code: "DURATION_TOO_LONG",
-    unit: "milliseconds",
-    default: 3 * 60 * 60 * 1000,
-    warning: 60 * 60 * 1000,
-  },
-  maxBitrate: { code: "BITRATE_TOO_HIGH", unit: "bitsPerSecond", default: 200_000_000 },
-  maxPacketSize: { code: "PACKET_TOO_LARGE", unit: "bytes", default: 32_000_000 },
-  maxTracks: { code: "TOO_MANY_TRACKS", unit: "count", default: 16 },
-  maxIndexSize: { code: "INDEX_TOO_LARGE", unit: "bytes", default: 64_000_000 },
-  maxChannels: { code: "TOO_MANY_CHANNELS", unit: "count", default: 8 },
-  maxSampleRate: { code: "SAMPLE_RATE_TOO_HIGH", unit: "hertz", default: 192_000 },
-  maxSessionSize: {
-    code: "SESSION_TOO_LARGE",
-    unit: "bytes",
-    default: 512_000_000,
-    warning: 256_000_000,
-  },
-  maxClips: { code: "TOO_MANY_CLIPS", unit: "count", default: 2_000 },
-} as const;
+// In a function marked pure: a bundler keeps an object literal that spreads
+// another, since a spread can run a getter, and with it everything it uses.
+export const videoLimitDefinitions = /* @__PURE__ */ (() =>
+  ({
+    ...coreLimits,
+    maxFileSize: { ...coreLimits.maxFileSize, default: 4_000_000_000, warning: 1_000_000_000 },
+    maxDecodedSize: { ...coreLimits.maxDecodedSize, default: 1_000_000_000, warning: 400_000_000 },
+    maxFramePixels: {
+      code: "FRAME_TOO_LARGE",
+      unit: "pixels",
+      default: 3840 * 2160,
+      warning: 2560 * 1440,
+    },
+    maxFrameRate: { code: "FRAME_RATE_TOO_HIGH", unit: "hertz", default: 120 },
+    maxDuration: {
+      code: "DURATION_TOO_LONG",
+      unit: "milliseconds",
+      default: 3 * 60 * 60 * 1000,
+      warning: 60 * 60 * 1000,
+    },
+    maxBitrate: { code: "BITRATE_TOO_HIGH", unit: "bitsPerSecond", default: 200_000_000 },
+    maxPacketSize: { code: "PACKET_TOO_LARGE", unit: "bytes", default: 32_000_000 },
+    maxTracks: { code: "TOO_MANY_TRACKS", unit: "count", default: 16 },
+    maxIndexSize: { code: "INDEX_TOO_LARGE", unit: "bytes", default: 64_000_000 },
+    maxChannels: { code: "TOO_MANY_CHANNELS", unit: "count", default: 8 },
+    maxSampleRate: { code: "SAMPLE_RATE_TOO_HIGH", unit: "hertz", default: 192_000 },
+    maxSessionSize: {
+      code: "SESSION_TOO_LARGE",
+      unit: "bytes",
+      default: 512_000_000,
+      warning: 256_000_000,
+    },
+    maxClips: { code: "TOO_MANY_CLIPS", unit: "count", default: 2_000 },
+  }) as const)();
 
 /**
  * The type of {@link videoLimitDefinitions}.

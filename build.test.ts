@@ -1,5 +1,5 @@
 import { readdirSync } from "node:fs";
-import { mkdir, mkdtemp, readFile, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -156,6 +156,50 @@ describe("importing on a server", () => {
       expect(globalThis).not.toHaveProperty("customElements");
       const url = pathToFileURL(join(await temporaryBuild, entry)).href;
       await expect(import(url)).resolves.toBeTypeOf("object");
+    },
+  );
+});
+
+/**
+ * One import from a built entry, bundled and minified as a host's bundler
+ * would, with packages left out and lazy chunks apart (sdk-core ADR 0056):
+ * the code of the chunk that holds it.
+ */
+async function bundledImport(entry: string, name: string): Promise<string> {
+  const directory = await temporaryBuild;
+  const source = join(directory, `import-${name}.js`);
+  await writeFile(source, `export { ${name} } from "./${entry}";\n`);
+  const result = await build({
+    configFile: false,
+    logLevel: "silent",
+    root: directory,
+    build: {
+      write: false,
+      minify: true,
+      lib: { entry: source, formats: ["es"], fileName: `import-${name}` },
+      rolldownOptions: { external: (id) => /^(react|react-dom|@hussmartinez\/)/.test(id) },
+    },
+  });
+  const outputs = (Array.isArray(result) ? result : [result]).flatMap((output) =>
+    "output" in output ? output.output : [],
+  );
+  const main = outputs.find((output) => output.type === "chunk" && output.isEntry);
+  if (main?.type !== "chunk") throw new Error("expected the import's chunk");
+  return main.code;
+}
+
+describe("importing one part of the React entry", () => {
+  // Calls at a module's top level that a bundler can't prove free of side
+  // effects keep everything they use, so one hook brought the whole editor:
+  // they're marked pure, or wrapped in a function that is.
+  it.each(["useVideoSession", "useVideoOutput", "useVideoPlayhead"])(
+    "brings neither the editor's tools, its components nor its catalogue with %s",
+    async (name) => {
+      const code = await bundledImport("react.js", name);
+      expect(code).toContain(name === "useVideoPlayhead" ? "requestAnimationFrame" : "useContext");
+      expect(code).not.toContain("video.insert");
+      expect(code).not.toContain("hm-video-transport");
+      expect(code).not.toContain("Sound is off");
     },
   );
 });

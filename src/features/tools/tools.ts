@@ -94,14 +94,14 @@ const allMuted = (state: VideoToolState) =>
  * @internal
  */
 export const videoTools: readonly VideoTool[] = [
-  defineTool({
+  /* @__PURE__ */ defineTool({
     id: "video.insert",
     label: "tools.insert",
     icon: "add",
     group: "file",
     run: (context: VideoToolContext) => context.chooseFiles(),
   }),
-  defineTool({
+  /* @__PURE__ */ defineTool({
     id: "video.export",
     label: "tools.export",
     icon: "download",
@@ -110,7 +110,7 @@ export const videoTools: readonly VideoTool[] = [
     isEnabled: (state: VideoToolState) => frames(state) > 0,
     run: (context: VideoToolContext) => context.openExport(),
   }),
-  defineTool({
+  /* @__PURE__ */ defineTool({
     id: "video.undo",
     label: "tools.undo",
     icon: "undo",
@@ -119,7 +119,7 @@ export const videoTools: readonly VideoTool[] = [
     isEnabled: (state: VideoToolState) => state.canUndo,
     run: (context: VideoToolContext) => context.undo(),
   }),
-  defineTool({
+  /* @__PURE__ */ defineTool({
     id: "video.redo",
     label: "tools.redo",
     icon: "redo",
@@ -128,7 +128,7 @@ export const videoTools: readonly VideoTool[] = [
     isEnabled: (state: VideoToolState) => state.canRedo,
     run: (context: VideoToolContext) => context.redo(),
   }),
-  defineTool({
+  /* @__PURE__ */ defineTool({
     id: "video.split",
     label: "tools.split",
     icon: "split",
@@ -142,7 +142,7 @@ export const videoTools: readonly VideoTool[] = [
       }
     },
   }),
-  defineTool({
+  /* @__PURE__ */ defineTool({
     id: "video.delete",
     label: "tools.delete",
     icon: "delete",
@@ -152,7 +152,7 @@ export const videoTools: readonly VideoTool[] = [
     run: (context: VideoToolContext) =>
       context.execute({ type: "video.removeClips", keys: context.state.selectedClips }),
   }),
-  defineTool({
+  /* @__PURE__ */ defineTool({
     id: "video.mute",
     label: "tools.mute",
     icon: "muted",
@@ -167,7 +167,7 @@ export const videoTools: readonly VideoTool[] = [
         muted: !allMuted(context.state),
       }),
   }),
-  defineTool({
+  /* @__PURE__ */ defineTool({
     id: "video.play-pause",
     label: "tools.playPause",
     icon: "play",
@@ -177,7 +177,7 @@ export const videoTools: readonly VideoTool[] = [
     isActive: (state: VideoToolState) => state.playing,
     run: (context: VideoToolContext) => (context.state.playing ? context.pause() : context.play()),
   }),
-  defineTool({
+  /* @__PURE__ */ defineTool({
     id: "video.previous-frame",
     label: "tools.previousFrame",
     icon: "chevron-left",
@@ -186,7 +186,7 @@ export const videoTools: readonly VideoTool[] = [
     isEnabled: playable,
     run: (context: VideoToolContext) => context.step(-1),
   }),
-  defineTool({
+  /* @__PURE__ */ defineTool({
     id: "video.next-frame",
     label: "tools.nextFrame",
     icon: "chevron-right",
@@ -195,7 +195,7 @@ export const videoTools: readonly VideoTool[] = [
     isEnabled: playable,
     run: (context: VideoToolContext) => context.step(1),
   }),
-  defineTool({
+  /* @__PURE__ */ defineTool({
     id: "video.start",
     label: "tools.start",
     icon: "skip-back",
@@ -204,7 +204,7 @@ export const videoTools: readonly VideoTool[] = [
     isEnabled: playable,
     run: (context: VideoToolContext) => context.seek(0),
   }),
-  defineTool({
+  /* @__PURE__ */ defineTool({
     id: "video.end",
     label: "tools.end",
     icon: "skip-forward",
@@ -213,7 +213,7 @@ export const videoTools: readonly VideoTool[] = [
     isEnabled: playable,
     run: (context: VideoToolContext) => context.seek(Math.max(0, frames(context.state) - 1)),
   }),
-  defineTool({
+  /* @__PURE__ */ defineTool({
     id: "video.zoom-out",
     label: "tools.zoomOut",
     icon: "zoom-out",
@@ -223,7 +223,7 @@ export const videoTools: readonly VideoTool[] = [
     run: (context: VideoToolContext) =>
       context.setZoom(Math.max(1, context.state.zoom / ZOOM_STEP)),
   }),
-  defineTool({
+  /* @__PURE__ */ defineTool({
     id: "video.zoom-in",
     label: "tools.zoomIn",
     icon: "zoom-in",
@@ -233,7 +233,7 @@ export const videoTools: readonly VideoTool[] = [
     run: (context: VideoToolContext) =>
       context.setZoom(Math.min(context.state.maxZoom, context.state.zoom * ZOOM_STEP)),
   }),
-  defineTool({
+  /* @__PURE__ */ defineTool({
     id: "video.zoom-fit",
     label: "tools.zoomFit",
     icon: "fit",
