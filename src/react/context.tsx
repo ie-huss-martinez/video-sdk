@@ -88,6 +88,8 @@ export interface VideoEditorProviderProps {
 interface EditorContext {
   readonly engine: VideoEngine;
   readonly session: VideoSession;
+  /** Sends a usage event of the editor's own, such as `download`, to the host's `onEvent`. */
+  readonly reportEvent: (event: VideoSessionEvent) => void;
   readonly messages: VideoEditorMessages;
   readonly locale: string | undefined;
   readonly filePolicy: VideoFilePolicyOverrides | undefined;
@@ -269,10 +271,12 @@ export function VideoEditorProvider(props: VideoEditorProviderProps): ReactNode 
     [locale, props.messages],
   );
 
+  const reportEvent = useCallback((event: VideoSessionEvent) => onEvent.current?.(event), []);
   const value = useMemo(
     () => ({
       engine,
       session,
+      reportEvent,
       messages,
       locale,
       filePolicy,
@@ -298,6 +302,7 @@ export function VideoEditorProvider(props: VideoEditorProviderProps): ReactNode 
     [
       engine,
       session,
+      reportEvent,
       messages,
       locale,
       filePolicy,

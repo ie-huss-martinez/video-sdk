@@ -154,6 +154,7 @@ Focus always lands somewhere meaningful, and never on `<body>`:
   - **The choices:** a file type (automatic, MP4 or WebM) and a quality (smaller file, balanced or higher quality). The output's own settings belong to the inspector.
   - **While it runs:** a Stop button, and a status line when the file passes `maxFileSize`'s warning.
   - **When it's done:** Download, focused, and Done. A host's `onExport` takes the file instead, and the dialog closes.
+  - **As amended, the usage event of a download:** the session's `export` event comes when the file is ready, before anyone saves it, so a host that warns before leaving the page with unsaved work can't clear the warning on it. Download now reports `{ type: "download", outcome: "done", commands: [] }` to `onEvent` the moment it hands the file to the browser, through the editor, since the session never sees the click. Like every usage event, it carries no file name or size. With `onExport`, the host saves the file, so no `download` comes. image-sdk and audio-sdk report the same in their own events.
   - **Closing:** whatever closes the dialog, or unmounts it, stops its export and resets it, and a result that arrives after that is dropped, as image-sdk's dialog does.
   - **The processor:** the host's `processor`, or the editor's own, made from the SDK's engine on the first export. With a host's engine and no processor, the dialog says export isn't available.
 - **Announcements** go through `ui`'s Announcer, politely: inserts done or failed, export done, undo and redo, and audio blocked.

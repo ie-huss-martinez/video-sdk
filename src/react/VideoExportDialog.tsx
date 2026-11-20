@@ -72,7 +72,7 @@ const FIELDS: readonly (keyof VideoMetadata)[] = [
  */
 export function VideoExportDialog(props: VideoExportDialogProps): ReactNode {
   const { onExport, fileName } = props;
-  const { messages, locale, dialog, setDialog } = useVideoEditor();
+  const { messages, locale, dialog, setDialog, reportEvent } = useVideoEditor();
   const { session, snapshot } = useVideoSession();
   const announce = useAnnounce();
   const [choice, setChoice] = useState<Choice>("auto");
@@ -199,6 +199,8 @@ export function VideoExportDialog(props: VideoExportDialogProps): ReactNode {
     link.href = objectUrl.current;
     link.download = `${exportFileName(fileName, snapshot.plan?.metadata.title ?? "")}.${phase.result.container}`;
     link.click();
+    // The file is the browser's now: the usage event says so, after export's.
+    reportEvent({ type: "download", outcome: "done", commands: [] });
   };
 
   const { output } = plan;
