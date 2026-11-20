@@ -5,8 +5,9 @@ import {
   PauseIcon,
   PlayIcon,
   ToggleButton,
+  useAnnounce,
 } from "@hussmartinez/ui/react";
-import type { ReactNode } from "react";
+import { type ReactNode, useEffect, useRef } from "react";
 import { planFrames } from "../core/model/plan.js";
 import { frameTime } from "../core/model/time.js";
 import { useVideoEditor, useVideoOutput, useVideoPlayhead, useVideoSession } from "./context.js";
@@ -25,7 +26,9 @@ export interface VideoTransportProps {
 /**
  * Playback controls (docs/adr/0007): play and pause, the previous and next
  * frame, and the time as `position of length`. When the browser kept sound
- * from starting, a notice says how to turn it on.
+ * from starting, a notice says how to turn it on, and when the sound
+ * couldn't be decoded, a notice says the video plays without it. Each is
+ * announced politely when it appears, through the editor's announcer.
  *
  * @public
  */
@@ -45,6 +48,22 @@ export function VideoTransport(props: VideoTransportProps): ReactNode {
   const disabled = !output || frames === 0;
   const playing = playback?.state === "playing";
   const rate = plan?.output.frameRate ?? { num: 30, den: 1 };
+  const audio = playback?.audio ?? "ready";
+  const note =
+    audio === "blocked"
+      ? messages.t("transport.audioBlocked")
+      : audio === "undecodable"
+        ? messages.t("transport.audioUndecodable")
+        : null;
+  // Announced once each time it appears, through the editor's announcer: a
+  // live region that appears with its text isn't announced by every screen
+  // reader, so the note itself isn't one.
+  const announce = useAnnounce();
+  const announced = useRef<string | null>(null);
+  useEffect(() => {
+    if (note && note !== announced.current) announce(note);
+    announced.current = note;
+  }, [note, announce]);
   const time = messages.t("transport.time", {
     position: formatTimecode(frameTime(frame, rate), locale),
     length: formatTimecode(frameTime(frames, rate), locale),
@@ -84,13 +103,7 @@ export function VideoTransport(props: VideoTransportProps): ReactNode {
       <span className="hm-video-transport-time" aria-live="off">
         {time}
       </span>
-      {playback?.audio === "blocked" || playback?.audio === "undecodable" ? (
-        <p className="hm-video-transport-note" role="status">
-          {messages.t(
-            playback.audio === "blocked" ? "transport.audioBlocked" : "transport.audioUndecodable",
-          )}
-        </p>
-      ) : null}
+      {note ? <p className="hm-video-transport-note">{note}</p> : null}
     </fieldset>
   );
 }

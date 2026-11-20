@@ -35,6 +35,7 @@ Below a container width of 720 px the inspector moves under the timeline. Sizes 
 - **Inserting:** a Progress per file in the timeline's place for it, which can be cancelled.
 - **Error:** the catalogue's text for the code, where the action was, with the next step. An insert that fails leaves nothing behind ([ADR 0003](0003-clip-plan-document-model.md)).
 - **Audio blocked:** when the output's `audio` is `"blocked"` ([ADR 0006](0006-frame-scheduler.md)), a notice by the transport says sound needs a click on play.
+  - **As amended:** when it's `"undecodable"`, a notice says the video plays without its sound. Each notice is announced politely once as it appears, through the editor's announcer, as the stage's notices are. The notice itself isn't a live region: one that appears together with its text isn't announced by every screen reader, and two would announce it twice.
 
 ### The inspector
 
