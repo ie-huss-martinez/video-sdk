@@ -33,7 +33,7 @@ export function Editor() {
     <VideoEditor
       filePolicy={{ maxDuration: 30 * 60 * 1_000 }} // or leave it out for the defaults
       locale="en"
-      onEvent={(event) => analytics.track(event)} // anonymous: no names, frames, audio or metadata; "download" once the file is saved
+      onEvent={(event) => analytics.track(event)} // anonymous: no names, frames, audio or metadata; "download" when Download hands the file to the browser
     />
   );
 }
