@@ -1,5 +1,11 @@
 # @hussmartinez/video-sdk
 
+## 0.10.2
+
+### Patch Changes
+
+- [#155](https://github.com/ie-huss-martinez/video-sdk/pull/155) [`84efa56`](https://github.com/ie-huss-martinez/video-sdk/commit/84efa56c00c5c6107f8414b7097a11ad75d6e282) Thanks [@hussmartinez](https://github.com/hussmartinez)! - `VideoTimeline` no longer recomputes its waveform layout and re-checks the clip selection on every render while no video is open. Nothing visible changes.
+
 ## 0.10.1
 
 ### Patch Changes
