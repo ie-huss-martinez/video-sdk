@@ -1,5 +1,11 @@
 # @hussmartinez/video-sdk
 
+## 0.10.4
+
+### Patch Changes
+
+- [#159](https://github.com/ie-huss-martinez/video-sdk/pull/159) [`db50aec`](https://github.com/ie-huss-martinez/video-sdk/commit/db50aec086a4b1925b37704d63ac2b780eb0c3f5) Thanks [@hussmartinez](https://github.com/hussmartinez)! - The editor no longer writes refs while rendering, which React's concurrent rendering doesn't allow for. `VideoEditorProvider` keeps the host's latest `onEvent`, and its export processor, with `useLatest` from `@hussmartinez/ui`, which updates them as React commits. `VideoToolbar` registers its file picker with the editor through a function. Nothing changes for users.
+
 ## 0.10.3
 
 ### Patch Changes
