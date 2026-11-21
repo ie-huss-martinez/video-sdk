@@ -38,8 +38,11 @@ describe("an error's text", () => {
     expect(videoErrorText(messages, tooFast)).toBe(
       "That output has 120 frames per second, which is more than the limit of 60.",
     );
-    // The code's own text is about the file, which isn't what was refused.
-    expect(messages.error(tooLarge)).toContain("This video's picture");
+    // sdk-core's messages.error finds the reason's text itself (sdk-core
+    // 0.4.6), so it no longer falls back to the code's, which is about the
+    // file, not what was refused.
+    expect(messages.error(tooLarge)).toBe(videoErrorText(messages, tooLarge));
+    expect(messages.error(tooLarge)).not.toContain("This video's picture");
   });
 
   it("says an edit would make the video too long, rather than a file is", () => {

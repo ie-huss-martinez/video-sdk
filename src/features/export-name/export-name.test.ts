@@ -1,8 +1,9 @@
+import { MAX_FILE_NAME_LENGTH } from "@hussmartinez/sdk-core";
 import { describe, expect, it } from "vitest";
 import { exportFileName } from "./export-name.js";
 
-// The cleaning itself is the family's, tested in src/core/session; these
-// are the steps video adds after it.
+// The cleaning itself is sdk-core's cleanFileName, tested there; these are
+// the steps video adds after it, and that it's the family's cleaning.
 describe("the export's file name", () => {
   it("is the host's name, else the title, else video", () => {
     expect(exportFileName("Holiday", "Take 1")).toBe("Holiday");
@@ -29,6 +30,14 @@ describe("the export's file name", () => {
 
   it("cleans the title as it cleans a name", () => {
     expect(exportFileName(undefined, 'Take 1: "the beach"')).toBe("Take 1 the beach");
-    expect([...exportFileName(undefined, "🎬".repeat(200))]).toHaveLength(128);
+    expect([...exportFileName(undefined, "🎬".repeat(200))]).toHaveLength(MAX_FILE_NAME_LENGTH);
+  });
+
+  it("drops a lone surrogate, which no file system can store, and keeps a whole pair", () => {
+    // Half of a pair, as a name cut mid-character arrives: written out, it
+    // would fail or turn into a replacement character.
+    expect(exportFileName("clip\uD83C.mp4", "")).toBe("clip");
+    expect(exportFileName("\uDFAC", "Take 1")).toBe("Take 1");
+    expect(exportFileName("clip \uD83C\uDFAC.mp4", "")).toBe("clip \uD83C\uDFAC");
   });
 });
