@@ -189,8 +189,8 @@ catalogs:
       specifier: ^0.4.7
       version: 0.4.7
     '@hussmartinez/ui':
-      specifier: ^0.15.0
-      version: 0.15.0
+      specifier: ^0.16.0
+      version: 0.16.0
     '@microsoft/api-extractor':
       specifier: ^7.60.1
       version: 7.60.1
@@ -279,7 +279,7 @@ importers:
         version: 0.4.7
       '@hussmartinez/ui':
         specifier: 'catalog:'
-        version: 0.15.0(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
+        version: 0.16.0(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
     devDependencies:
       '@arethetypeswrong/cli':
         specifier: 'catalog:'
@@ -394,7 +394,7 @@ importers:
     dependencies:
       '@hussmartinez/ui':
         specifier: 'catalog:'
-        version: 0.15.0(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
+        version: 0.16.0(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       '@hussmartinez/video-sdk':
         specifier: workspace:*
         version: link:../..
@@ -425,7 +425,7 @@ importers:
     dependencies:
       '@hussmartinez/ui':
         specifier: 'catalog:'
-        version: 0.15.0(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
+        version: 0.16.0(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       '@hussmartinez/video-sdk':
         specifier: workspace:*
         version: link:../..
@@ -994,8 +994,8 @@ packages:
   '@hussmartinez/sdk-core@0.4.7':
     resolution: {integrity: sha512-mxuuu5iyKHl9NcooOihyFsd48MlY2uh/MUk00FQH+qkK/IHyQj9mzWmETmZGTM6ywtgDJ+JFV1uD62ccrnUMwg==}
 
-  '@hussmartinez/ui@0.15.0':
-    resolution: {integrity: sha512-oPjEBrdZKRfL74mNQIC76WXw/qCGC2mDsc9r48e/nmA9mWSDc2GjnixNmNPey8loSqNfFFUxHToHmzsaNlT8yw==}
+  '@hussmartinez/ui@0.16.0':
+    resolution: {integrity: sha512-lvDzBcM/8gNaZ6PuIohql51R5joU0USZ1YxobDnaiiSNRdNXci2y+q/Hg2IKcJ8hiFdWM6S874kFFFIC0NfH+w==}
     peerDependencies:
       react: '>=18.3'
       react-dom: '>=18.3'
@@ -3297,7 +3297,7 @@ snapshots:
 
   '@hussmartinez/sdk-core@0.4.7': {}
 
-  '@hussmartinez/ui@0.15.0(react-dom@19.3.1(react@19.3.1))(react@19.3.1)':
+  '@hussmartinez/ui@0.16.0(react-dom@19.3.1(react@19.3.1))(react@19.3.1)':
     dependencies:
       '@hussmartinez/sdk-core': 0.4.7
     optionalDependencies:

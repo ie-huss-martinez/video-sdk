@@ -1,5 +1,11 @@
 # @hussmartinez/video-sdk
 
+## 0.9.0
+
+### Minor Changes
+
+- [#137](https://github.com/ie-huss-martinez/video-sdk/pull/137) [`19d386d`](https://github.com/ie-huss-martinez/video-sdk/commit/19d386deb4629c23324f1b0751046b2921939536) Thanks [@hussmartinez](https://github.com/hussmartinez)! - Requires `@hussmartinez/ui` 0.16.0 or later, the version the family's editors now share. ui 0.16.0 adds heading levels (`HeadingLevel`, `Heading`) for editors that sit in someone else's page. The video editor renders no headings, so nothing changes in what it shows, and it has no `headingLevel` prop. If your app also depends on `@hussmartinez/ui`, update it to ^0.16.0, so there's one copy.
+
 ## 0.8.3
 
 ### Patch Changes
