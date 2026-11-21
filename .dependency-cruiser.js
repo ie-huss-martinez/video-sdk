@@ -1,27 +1,15 @@
-import preset from "@hussmartinez/sdk-config/dependency-cruiser";
+import { defineDependencyRules } from "@hussmartinez/sdk-config/dependency-cruiser";
 
 /**
- * mediabunny is bundled into the workers from an exactly pinned
- * devDependency, rather than installed by applications (docs/adr/0001).
- * Only its adapter may import it; everywhere else in src/, the preset's rule
- * against devDependencies applies as is.
+ * The family's rules, with the one engine this package bundles declared
+ * (sdk-core ADR 0061): mediabunny, built into the workers from an exactly
+ * pinned devDependency rather than installed by applications
+ * (docs/adr/0001). Only src/adapters/mediabunny/ may import it, as a value or
+ * as a type; everywhere else in src/, it's a devDependency like any other.
+ * `pnpm check:bundled-engines` checks the pin.
  */
-const ENGINE_ADAPTER = "(?:^|/)src/adapters/mediabunny/";
-const engine = "(?:^|/)node_modules/mediabunny/";
-
-const forbidden = preset.forbidden.flatMap((rule) => {
-  if (rule.name !== "not-to-dev-dep") return [rule];
-  return [
-    { ...rule, from: { ...rule.from, pathNot: [rule.from.pathNot, ENGINE_ADAPTER].flat() } },
-    {
-      ...rule,
-      name: "not-to-dev-dep-except-mediabunny",
-      comment:
-        "Only src/adapters/mediabunny/ may import mediabunny, the bundled engine (docs/adr/0001).",
-      from: { ...rule.from, path: ENGINE_ADAPTER },
-      to: { ...rule.to, pathNot: [rule.to.pathNot, engine].flat().filter(Boolean) },
-    },
-  ];
+const rules = defineDependencyRules({
+  bundledEngines: [{ packages: ["mediabunny"], from: "adapters/mediabunny" }],
 });
 
 /**
@@ -30,8 +18,8 @@ const forbidden = preset.forbidden.flatMap((rule) => {
  * their source, as for typecheck, so the layer rules check those edges too
  * (sdk-core ADR 0060).
  */
-export default {
-  ...preset,
-  forbidden,
-  options: { ...preset.options, tsConfig: { fileName: "tsconfig.json" } },
-};
+// Set on the configuration itself, not on a copy: a spread would drop the
+// declaration hm-check-bundled-engines reads from it.
+rules.options = { ...rules.options, tsConfig: { fileName: "tsconfig.json" } };
+
+export default rules;
