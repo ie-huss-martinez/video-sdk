@@ -1,3 +1,4 @@
+import { fontLaunchEnv } from "@hussmartinez/sdk-config/testing/fonts";
 import { webServersFor } from "@hussmartinez/sdk-config/testing/require-image";
 import { endToEndTimeouts } from "@hussmartinez/sdk-config/testing/timeouts";
 import { defineConfig, devices } from "@playwright/test";
@@ -22,7 +23,13 @@ export default defineConfig({
   // The family's timeouts (sdk-core ADR 0057): 60 s a test, 10 s an assertion
   // that waits. The slowest test, the export's, measured 7.8 s in WebKit.
   ...endToEndTimeouts,
-  use: { trace: "retain-on-failure" },
+  use: {
+    trace: "retain-on-failure",
+    // In the image, text in fonts with a real bold face, as the screenshots
+    // lay it out (sdk-core ADR 0062). The whole environment, not one variable:
+    // Playwright replaces the browser's.
+    launchOptions: { env: fontLaunchEnv() },
+  },
   projects: (
     [
       ["chromium", "Desktop Chrome"],
