@@ -158,6 +158,7 @@ export type {
 export { createVideoSession } from "./core/session/session.js";
 export type {
   VideoEditorCatalogue,
+  VideoEditorMessageCatalogue,
   VideoEditorMessageOverrides,
   VideoEditorMessages,
 } from "./messages/editor.js";

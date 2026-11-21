@@ -1,3 +1,4 @@
+import type { MessageOverrides } from "@hussmartinez/sdk-core";
 import type { EditorElementContext, MountedEditor } from "@hussmartinez/sdk-core/element";
 import { type ReactNode, type RefCallback, useEffect, useMemo, useRef } from "react";
 import { createRoot } from "react-dom/client";
@@ -7,7 +8,7 @@ import type { VideoSourceInfo } from "../../core/model/source.js";
 import type { VideoEngine } from "../../core/ports/video-engine.js";
 import type { VideoExportResult, VideoProcessor } from "../../core/ports/video-processor.js";
 import type { VideoSessionExportOptions } from "../../core/session/session.js";
-import type { VideoEditorMessageOverrides } from "../../messages/editor.js";
+import type { VideoEditorMessageCatalogue } from "../../messages/editor.js";
 import { VideoEditor, type VideoEditorHandle } from "../VideoEditor.js";
 import { ElementListenersContext, type VideoExportReport } from "./listeners.js";
 
@@ -37,7 +38,7 @@ export interface VideoEditorElementProps {
   /** Where the application serves the package's `dist/assets/` directory. */
   assetsUrl?: string | URL;
   /** Text overrides, typed against the English catalogue. */
-  messages?: VideoEditorMessageOverrides;
+  messages?: MessageOverrides<VideoEditorMessageCatalogue>;
   engine?: VideoEngine;
   processor?: VideoProcessor;
 }

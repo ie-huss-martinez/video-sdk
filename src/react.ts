@@ -23,6 +23,7 @@ export {
   useVideoPlayhead,
   useVideoSession,
   VideoEditorProvider,
+  videoEditorMessages,
 } from "./react/context.js";
 export type { VideoEditorHandle, VideoEditorProps } from "./react/VideoEditor.js";
 export { VideoEditor } from "./react/VideoEditor.js";
