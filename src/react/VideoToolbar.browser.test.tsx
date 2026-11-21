@@ -113,6 +113,16 @@ describe("the editor's tools", () => {
     expect(result.violations.map((each) => `${each.id}: ${each.help}`)).toEqual([]);
   });
 
+  it("opens the toolbar's file picker from the insert tool", async () => {
+    const view = render({});
+    const picker = view.querySelector(".hm-video-toolbar-picker") as HTMLInputElement;
+    // The browser's own picker isn't opened in a test: only the call is counted.
+    const opened = vi.spyOn(picker, "click").mockImplementation(() => {});
+    await eventually(() => expect(tool(view, "video.insert")).not.toBeNull());
+    await userEvent.click(tool(view, "video.insert") as HTMLButtonElement);
+    expect(opened).toHaveBeenCalledTimes(1);
+  });
+
   it("splits, mutes and deletes from the keys, moving focus as the edits do, and undoes with an announcement", async () => {
     const { view, handle } = await editorWith(1);
     act(() => handle.seek(45));

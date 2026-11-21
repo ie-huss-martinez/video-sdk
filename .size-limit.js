@@ -12,19 +12,6 @@
 import { entryBudget, importBudget } from "@hussmartinez/sdk-config/size";
 
 /**
- * An import budget, bundled as a host's bundler would: without this
- * repository's tsconfig, whose paths point the package's own imports, such
- * as #hm-video-media-worker, at the source for TypeScript. A host resolves
- * them through package.json's imports, to the lazy chunks the budget leaves
- * out (sdk-core ADR 0060).
- */
-const forHosts = (budget) =>
-  importBudget({
-    ...budget,
-    modifyEsbuildConfig: (config) => ({ ...config, tsconfigRaw: "{}" }),
-  });
-
-/**
  * An application's import from the core entry, as sdk-config's
  * `importBudget` measures it (sdk-core ADR 0056): bundled and minified with
  * esbuild, without React, the family's packages and the lazy workers,
@@ -32,11 +19,11 @@ const forHosts = (budget) =>
  * 0.1 kB, and is never raised; the others round up to the next 0.5 kB.
  */
 const coreImport = (name, imports, limit) =>
-  forHosts({ name, entry: "dist/index.js", imports, limit });
+  importBudget({ name, entry: "dist/index.js", imports, limit });
 
 /** An application's import from the React entry, measured the same way. */
 const reactImport = (name, imports, limit) =>
-  forHosts({ name, entry: "dist/react.js", imports, limit });
+  importBudget({ name, entry: "dist/react.js", imports, limit });
 
 export default [
   // 20 kB since the portable plan format (sdk-core ADR 0045): its strict
@@ -130,26 +117,29 @@ export default [
   // What applications import (sdk-core ADR 0056), measured by size-limit
   // with @size-limit/esbuild. A floor catches code that leaks into every
   // import: one that moves is a regression to fix, never a limit to raise.
+  // Measured with sdk-config 0.13.3, which bundles without this repository's
+  // tsconfig and cuts the names a bundle imports and never uses: most React
+  // scenarios measured 0.35 to 0.46 kB less than with 0.13.0.
   // The core's floor, measured 70 B: the error class. Since sdk-config 0.12.1
   // a scenario counts only the names an import keeps (it was 78 B before).
   coreImport("Import: the floor, VideoError", "{ VideoError }", "0.1 kB"),
-  // Measured 7.69 kB: the session, the plan's reducer and history, the
+  // Measured 7.62 kB: the session, the plan's reducer and history, the
   // limits, and the text of errors and warnings. It was 10.58 kB while the
   // catalogue leaked into every core import (#139).
   coreImport("Import: createVideoSession", "{ createVideoSession }", "8 kB"),
-  // Measured 4.52 kB: the commands and the plan's validation.
-  coreImport("Import: createVideoReducer", "{ createVideoReducer }", "5 kB"),
-  // Measured 3.57 kB: playback's page side, its clock and the lazy audio
+  // Measured 4.40 kB: the commands and the plan's validation.
+  coreImport("Import: createVideoReducer", "{ createVideoReducer }", "4.5 kB"),
+  // Measured 3.48 kB: playback's page side, its clock and the lazy audio
   // player's loader (docs/adr/0006).
-  coreImport("Import: createVideoOutput", "{ createVideoOutput }", "4 kB"),
+  coreImport("Import: createVideoOutput", "{ createVideoOutput }", "3.5 kB"),
   // Measured 1.47 kB: the English catalogue of what the headless API hands a
   // host to show, sdk-core's text and the SDK's errors and warnings. It was
   // 3.45 kB with the editor's interface text (sdk-core ADR 0059), and 1.56 kB
   // before sdk-config 0.12.1 counted only the names it keeps.
   coreImport("Import: videoMessages", "{ videoMessages }", "1.5 kB"),
-  // Measured 2.85 kB: reading hm-video-plan documents (sdk-core ADR 0045).
+  // Measured 2.72 kB: reading hm-video-plan documents (sdk-core ADR 0045).
   coreImport("Import: readVideoPlanDocument", "{ readVideoPlanDocument }", "3 kB"),
-  // Measured 2.17 kB: the engine's page side, which starts the media worker.
+  // Measured 2.15 kB: the engine's page side, which starts the media worker.
   coreImport("Import: createVideoEngine", "{ createVideoEngine }", "2.5 kB"),
   // Measured 12.11 kB: what a headless editor imports, shared code counted
   // once. It was 14.08 kB with the editor's interface text in the catalogue.
@@ -163,23 +153,23 @@ export default [
   // chunk imports and never uses, which sdk-config 0.12.1 stopped, and
   // 18.57 kB before the entry came apart (#131).
   reactImport("Import: the floor, useVideoSession (./react)", "{ useVideoSession }", "0.2 kB"),
-  // Measured 1.78 kB: the toolbar and the tool registry it renders. It was
+  // Measured 1.75 kB: the toolbar and the tool registry it renders. It was
   // 2.05 kB before sdk-config 0.12.1.
   reactImport("Import: VideoToolbar (./react)", "{ VideoToolbar }", "2 kB"),
-  // Measured 2.71 kB: playback's controls and their notices.
-  reactImport("Import: VideoTransport (./react)", "{ VideoTransport }", "3 kB"),
-  // Measured 3.35 kB: the export dialog, its summary and progress. It was
+  // Measured 2.22 kB: playback's controls and their notices.
+  reactImport("Import: VideoTransport (./react)", "{ VideoTransport }", "2.5 kB"),
+  // Measured 2.90 kB: the export dialog, its summary and progress. It was
   // 6.26 kB before sdk-core ADR 0059's split.
-  reactImport("Import: VideoExportDialog (./react)", "{ VideoExportDialog }", "3.5 kB"),
-  // Measured 4.32 kB: the timeline, its clips, trimming and the waveform.
-  reactImport("Import: VideoTimeline (./react)", "{ VideoTimeline }", "4.5 kB"),
-  // Measured 5.42 kB: the stage, its canvas and output, the drop zone and
+  reactImport("Import: VideoExportDialog (./react)", "{ VideoExportDialog }", "3 kB"),
+  // Measured 3.88 kB: the timeline, its clips, trimming and the waveform.
+  reactImport("Import: VideoTimeline (./react)", "{ VideoTimeline }", "4 kB"),
+  // Measured 5.02 kB: the stage, its canvas and output, the drop zone and
   // the notices. It was 8.37 kB before sdk-core ADR 0059's split.
   reactImport("Import: VideoStage (./react)", "{ VideoStage }", "5.5 kB"),
-  // Measured 6.07 kB: the inspector's sound, picture and metadata.
-  reactImport("Import: VideoInspector (./react)", "{ VideoInspector }", "6.5 kB"),
-  // Measured 13.96 kB: the provider, which makes the session and the engine.
+  // Measured 5.68 kB: the inspector's sound, picture and metadata.
+  reactImport("Import: VideoInspector (./react)", "{ VideoInspector }", "6 kB"),
+  // Measured 13.59 kB: the provider, which makes the session and the engine.
   reactImport("Import: VideoEditorProvider (./react)", "{ VideoEditorProvider }", "14 kB"),
-  // Measured 26.08 kB: the whole editor, what a typical application imports.
+  // Measured 26.13 kB: the whole editor, what a typical application imports.
   reactImport("Import: VideoEditor, the whole editor (./react)", "{ VideoEditor }", "26.5 kB"),
 ];
