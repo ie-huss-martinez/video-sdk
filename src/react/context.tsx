@@ -134,8 +134,13 @@ interface EditorContext {
   readonly insertFiles: (files: readonly Blob[]) => void;
   /** Cancels the inserts in progress. */
   readonly cancelInsert: () => void;
-  /** Where the toolbar registers its file picker, for the insert tool. */
-  readonly fileChooser: { current: (() => void) | null };
+  /**
+   * Registers the toolbar's file picker, for the insert tool, and returns
+   * what unregisters it. A later registration replaces an earlier one.
+   */
+  readonly registerFileChooser: (chooser: () => void) => () => void;
+  /** Opens the registered file picker, if there is one. */
+  readonly chooseFiles: () => void;
   /** The editor's open dialog, if any. */
   readonly dialog: VideoEditorDialog | null;
   readonly setDialog: (dialog: VideoEditorDialog | null) => void;
@@ -204,6 +209,13 @@ export function VideoEditorProvider(props: VideoEditorProviderProps): ReactNode 
   const [zoom, setZoom] = useState(1);
   const [maxZoom, setMaxZoom] = useState(1);
   const fileChooser = useRef<(() => void) | null>(null);
+  const registerFileChooser = useCallback((chooser: () => void) => {
+    fileChooser.current = chooser;
+    return () => {
+      if (fileChooser.current === chooser) fileChooser.current = null;
+    };
+  }, []);
+  const chooseFiles = useCallback(() => fileChooser.current?.(), []);
   const [dialog, setDialog] = useState<VideoEditorDialog | null>(null);
   const ownProcessor = useRef<VideoProcessor | null>(null);
   const givenProcessor = props.processor;
@@ -309,7 +321,8 @@ export function VideoEditorProvider(props: VideoEditorProviderProps): ReactNode 
       shortcuts,
       insertFiles,
       cancelInsert,
-      fileChooser,
+      registerFileChooser,
+      chooseFiles,
       dialog,
       setDialog,
       processor,
@@ -330,6 +343,8 @@ export function VideoEditorProvider(props: VideoEditorProviderProps): ReactNode 
       shortcuts,
       insertFiles,
       cancelInsert,
+      registerFileChooser,
+      chooseFiles,
       dialog,
       processor,
     ],

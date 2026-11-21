@@ -7,6 +7,5 @@ export default await defineReactLint({
   // turns it back on:
   // - refs, 3 in react/context.tsx: the latest-ref pattern, once ui has
   //   useLatest.
-  // - immutability, 2 in VideoToolbar.tsx: the file chooser's ref.
-  off: ["refs", "immutability"],
+  off: ["refs"],
 });

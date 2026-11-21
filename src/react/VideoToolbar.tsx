@@ -71,17 +71,11 @@ const GROUP_LABELS = {
  * @public
  */
 export function VideoToolbar(props: VideoToolbarProps): ReactNode {
-  const { messages, tools, fileChooser, insertFiles } = useVideoEditor();
+  const { messages, tools, registerFileChooser, insertFiles } = useVideoEditor();
   const { flags, run, ariaKeyShortcuts, labelWithKeys } = useVideoTools();
   const picker = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    const chooser = () => picker.current?.click();
-    fileChooser.current = chooser;
-    return () => {
-      if (fileChooser.current === chooser) fileChooser.current = null;
-    };
-  }, [fileChooser]);
+  useEffect(() => registerFileChooser(() => picker.current?.click()), [registerFileChooser]);
 
   return (
     <>
