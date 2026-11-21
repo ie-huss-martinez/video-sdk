@@ -9,37 +9,21 @@
  * their own budgets when they're added. The feature pull requests revisit
  * these against real sizes.
  */
-import { existsSync, readFileSync } from "node:fs";
-import { dirname, join, normalize } from "node:path";
+import { entryBudget, importBudget } from "@hussmartinez/sdk-config/size";
 
 /**
- * The built files an entry loads up front: the entry, and every chunk it
- * imports statically, directly or through other chunks. Counting only these,
- * rather than every shared chunk, keeps one entry's budget from paying for
- * code that only another entry loads, such as the React editor's in the
- * core's. Chunks loaded with `import()`, in `lazy/`, have budgets of their
- * own, as in ai-core.
+ * An application's import from the core entry, as sdk-config's
+ * `importBudget` measures it (sdk-core ADR 0056): bundled and minified with
+ * esbuild, without React, the family's packages and the lazy workers,
+ * compressed with brotli. A floor's limit is its size rounded up to the next
+ * 0.1 kB, and is never raised; the others round up to the next 0.5 kB.
  */
-function loadedFiles(file) {
-  const seen = new Set();
-  const visit = (path) => {
-    if (seen.has(path) || !existsSync(path)) return;
-    seen.add(path);
-    const code = readFileSync(path, "utf8");
-    for (const [, specifier] of code.matchAll(/(?:from\s*|import\s+)"(\.{1,2}\/[^"]+\.js)"/g)) {
-      visit(normalize(join(dirname(path), specifier)));
-    }
-  };
-  visit(join("dist", file));
-  return [...seen];
-}
+const coreImport = (name, imports, limit) =>
+  importBudget({ name, entry: "dist/index.js", imports, limit });
 
-const entry = (name, file, limit) => ({
-  name: `${name}, with the shared code it loads`,
-  path: loadedFiles(file),
-  brotli: true,
-  limit,
-});
+/** An application's import from the React entry, measured the same way. */
+const reactImport = (name, imports, limit) =>
+  importBudget({ name, entry: "dist/react.js", imports, limit });
 
 export default [
   // 20 kB since the portable plan format (sdk-core ADR 0045): its strict
@@ -48,16 +32,31 @@ export default [
   // background with getPeaks, and peakColumns took it from 19.84 to 20.34 kB.
   // 21 kB since session.open (ADR 0003): opening a file in place of the plan,
   // as audio-sdk's session does, took it from 20.36 to 20.55 kB.
-  entry("Server-safe core (.)", "index.js", "21 kB"),
-  entry("React entry (./react)", "react.js", "40 kB"),
-  entry("Element entry (./element)", "element.js", "40 kB"),
+  entryBudget({
+    name: "Server-safe core (.), with the shared code it loads",
+    entry: "dist/index.js",
+    limit: "21 kB",
+  }),
+  entryBudget({
+    name: "React entry (./react), with the shared code it loads",
+    entry: "dist/react.js",
+    limit: "40 kB",
+  }),
+  entryBudget({
+    name: "Element entry (./element), with the shared code it loads",
+    entry: "dist/element.js",
+    limit: "40 kB",
+  }),
   {
+    // As built, as a file: not bundled again by size-limit's esbuild plugin.
+    disablePlugins: ["@size-limit/esbuild"],
     name: "Stylesheet (./styles.css)",
     path: "dist/styles.css",
     brotli: true,
     limit: "10 kB",
   },
   {
+    disablePlugins: ["@size-limit/esbuild"],
     // The media worker, inlined as a minified string and loaded on the first
     // call (docs/adr/0002): the front check, the packet walk, mediabunny's
     // MP4 and Matroska readers (docs/adr/0001), decoding, and playback's
@@ -68,6 +67,7 @@ export default [
     limit: "60 kB",
   },
   {
+    disablePlugins: ["@size-limit/esbuild"],
     // The media worker as self-hosted under assetsUrl (sdk-core ADR 0038):
     // the same code as the inlined one, as one file.
     name: "Media worker, self-hosted",
@@ -76,12 +76,14 @@ export default [
     limit: "60 kB",
   },
   {
+    disablePlugins: ["@size-limit/esbuild"],
     name: "Export worker, self-hosted",
     path: "dist/assets/video/export.worker.js",
     brotli: true,
     limit: "90 kB",
   },
   {
+    disablePlugins: ["@size-limit/esbuild"],
     // The export worker, inlined and loaded on the first export
     // (docs/adr/0002, docs/adr/0005): the readers and decoders as in the
     // media worker, the compose step and mixer, and mediabunny's MP4 and
@@ -92,6 +94,7 @@ export default [
     limit: "90 kB",
   },
   {
+    disablePlugins: ["@size-limit/esbuild"],
     // The page's side of an export, loaded on the first export: the worker
     // client and the stall-based processing time.
     name: "Export runner (lazy)",
@@ -100,6 +103,7 @@ export default [
     limit: "2 kB",
   },
   {
+    disablePlugins: ["@size-limit/esbuild"],
     // The page's audio player, loaded on the first play of a plan with audio
     // (docs/adr/0006): scheduling windows, the lead, gapless switches and the
     // watchdog. It measures about 1.7 kB.
@@ -108,4 +112,51 @@ export default [
     brotli: true,
     limit: "4 kB",
   },
+  // What applications import (sdk-core ADR 0056), measured by size-limit
+  // with @size-limit/esbuild. A floor catches code that leaks into every
+  // import: one that moves is a regression to fix, never a limit to raise.
+  // The core's floor, measured 78 B: the error class.
+  coreImport("Import: the floor, VideoError", "{ VideoError }", "0.1 kB"),
+  // Measured 7.69 kB: the session, the plan's reducer and history, the
+  // limits, and the text of errors and warnings. It was 10.58 kB while the
+  // catalogue leaked into every core import (#139).
+  coreImport("Import: createVideoSession", "{ createVideoSession }", "8 kB"),
+  // Measured 4.52 kB: the commands and the plan's validation.
+  coreImport("Import: createVideoReducer", "{ createVideoReducer }", "5 kB"),
+  // Measured 3.57 kB: playback's page side, its clock and the lazy audio
+  // player's loader (docs/adr/0006).
+  coreImport("Import: createVideoOutput", "{ createVideoOutput }", "4 kB"),
+  // Measured 3.45 kB: the English catalogue, sdk-core's and the SDK's, which
+  // ADR 0059's follow-up moves out of this entry.
+  coreImport("Import: videoMessages", "{ videoMessages }", "3.5 kB"),
+  // Measured 2.85 kB: reading hm-video-plan documents (sdk-core ADR 0045).
+  coreImport("Import: readVideoPlanDocument", "{ readVideoPlanDocument }", "3 kB"),
+  // Measured 2.17 kB: the engine's page side, which starts the media worker.
+  coreImport("Import: createVideoEngine", "{ createVideoEngine }", "2.5 kB"),
+  // Measured 14.08 kB: what a headless editor imports, shared code counted once.
+  coreImport(
+    "Import: an editor's set",
+    "{ createVideoSession, createVideoEngine, createVideoProcessor, createVideoOutput, videoMessages }",
+    "14.5 kB",
+  ),
+  // The React entry's floor, measured 634 B: a hook and the editor's
+  // context. It was 18.57 kB before the entry came apart (#131).
+  reactImport("Import: the floor, useVideoSession (./react)", "{ useVideoSession }", "0.7 kB"),
+  // Measured 2.04 kB: the toolbar and the tool registry it renders.
+  reactImport("Import: VideoToolbar (./react)", "{ VideoToolbar }", "2.5 kB"),
+  // Measured 2.71 kB: playback's controls and their notices.
+  reactImport("Import: VideoTransport (./react)", "{ VideoTransport }", "3 kB"),
+  // Measured 6.26 kB: the export dialog, its summary and progress.
+  reactImport("Import: VideoExportDialog (./react)", "{ VideoExportDialog }", "6.5 kB"),
+  // Measured 4.32 kB: the timeline, its clips, trimming and the waveform.
+  reactImport("Import: VideoTimeline (./react)", "{ VideoTimeline }", "4.5 kB"),
+  // Measured 8.37 kB: the stage, its canvas and output, the drop zone and
+  // the notices.
+  reactImport("Import: VideoStage (./react)", "{ VideoStage }", "8.5 kB"),
+  // Measured 6.07 kB: the inspector's sound, picture and metadata.
+  reactImport("Import: VideoInspector (./react)", "{ VideoInspector }", "6.5 kB"),
+  // Measured 13.96 kB: the provider, which makes the session and the engine.
+  reactImport("Import: VideoEditorProvider (./react)", "{ VideoEditorProvider }", "14 kB"),
+  // Measured 26.08 kB: the whole editor, what a typical application imports.
+  reactImport("Import: VideoEditor, the whole editor (./react)", "{ VideoEditor }", "26.5 kB"),
 ];
