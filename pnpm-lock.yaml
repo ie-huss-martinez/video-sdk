@@ -237,7 +237,7 @@ catalogs:
       specifier: ^17.6.0
       version: 17.6.0
     mediabunny:
-      specifier: ^1.65.2
+      specifier: 1.65.2
       version: 1.65.2
     next:
       specifier: ^16.4.0
