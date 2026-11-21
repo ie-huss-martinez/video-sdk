@@ -1,5 +1,17 @@
 # @hussmartinez/video-sdk
 
+## 0.9.2
+
+### Patch Changes
+
+- [#144](https://github.com/ie-huss-martinez/video-sdk/pull/144) [`88c58c7`](https://github.com/ie-huss-martinez/video-sdk/commit/88c58c7560ee454863b9988639316392ad916450) Thanks [@hussmartinez](https://github.com/hussmartinez)! - `videoErrorText` and `videoWarningText` are deprecated. Call `messages.error(error)` and `messages.warning(warning)` on the catalogue's `Messages` instead: since `@hussmartinez/sdk-core` 0.4.6 they give the same text, an error's by its code and reason, and a warning's by its limit or type. Both functions keep working as one-line calls to them, so nothing you show changes.
+  
+  ```ts
+  const messages = createMessages(videoMessages, { locale: "en" });
+  showError(messages.error(error));           // was videoErrorText(messages, error)
+  show(messages.warning(snapshot.warnings[0])); // was videoWarningText(messages, warning)
+  ```
+
 ## 0.9.1
 
 ### Patch Changes
