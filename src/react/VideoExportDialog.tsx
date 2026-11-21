@@ -90,19 +90,20 @@ export function VideoExportDialog(props: VideoExportDialogProps): ReactNode {
   const frames = plan ? planFrames(plan) : 0;
   const open = dialog === "export" && plan !== null && frames > 0;
 
-  // Opening starts fresh: the last opening's choices and result are dropped
-  // as it renders, React's pattern for state that resets when a value
-  // changes. On opening rather than closing, so a result that arrives after
-  // the dialog closed can't outlast the reset.
+  // Reset as it renders when it opens or closes, React's pattern for state
+  // that resets when a value changes. Closing drops the result, which holds
+  // the exported file, so a closed dialog keeps no video in memory; a result
+  // that arrives after that finds the phase isn't "exporting" any more, and
+  // is dropped. Opening starts fresh, with the choices back to their defaults.
   const [wasOpen, setWasOpen] = useState(open);
   if (wasOpen !== open) {
     setWasOpen(open);
+    setPhase({ kind: "choose" });
+    setError(null);
     if (open) {
       setChoice("auto");
       setQuality("medium");
       setWithoutSound(false);
-      setPhase({ kind: "choose" });
-      setError(null);
     }
   }
 
@@ -181,7 +182,8 @@ export function VideoExportDialog(props: VideoExportDialogProps): ReactNode {
         close();
         return;
       }
-      setPhase({ kind: "done", result });
+      // Only over this export's progress: closing reset the phase.
+      setPhase((now) => (now.kind === "exporting" ? { kind: "done", result } : now));
     } catch (reason) {
       // Closed while it ran: the reset dialog shows nothing of it.
       if (controller.current !== running) return;
