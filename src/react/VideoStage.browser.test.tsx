@@ -15,9 +15,14 @@ import { VideoEditor, type VideoEditorHandle } from "./VideoEditor.js";
 // when a worker call fails: paused, with the error in its snapshot. A real
 // decoder can't be made to fail on demand, so the output is a fake here; the
 // engine, the session and the rest of the editor are real.
+// Set by a test to make the output fail as it's created, for a reason the
+// stage's check can't foresee.
+const creation = vi.hoisted(() => ({ fails: false }));
+
 vi.mock("../adapters/video-output.js", () => ({
   canCreateVideoOutput: () => true,
   createVideoOutput: (): VideoOutput => {
+    if (creation.fails) throw new Error("The playback worker didn't start.");
     const { output } = createFakeOutput();
     let failure: VideoError | null = null;
     let inner = output.getSnapshot();
@@ -55,6 +60,7 @@ beforeEach(() => {
   (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 });
 afterEach(async () => {
+  creation.fails = false;
   act(() => root?.unmount());
   root = undefined;
   container?.remove();
@@ -94,5 +100,25 @@ describe("the stage", () => {
     expect(error()?.getAttribute("role")).toBe("alert");
     const result = await axe.run(view);
     expect(result.violations.map((each) => `${each.id}: ${each.help}`)).toEqual([]);
+  });
+  it("says the preview isn't available when the output fails as it's created, and doesn't throw", async () => {
+    creation.fails = true;
+    container = document.createElement("div");
+    document.body.append(container);
+    const errors: unknown[] = [];
+    act(() => {
+      root = createRoot(container as HTMLElement, {
+        onUncaughtError: (error) => errors.push(error),
+      });
+      root.render(<VideoEditor />);
+    });
+    const view = container;
+    await vi.waitFor(() =>
+      expect(view.querySelector(".hm-video-stage-note")?.textContent).toBe(
+        "The preview isn't available with this engine.",
+      ),
+    );
+    expect(view.querySelector("canvas")).toBeNull();
+    expect(errors).toEqual([]);
   });
 });

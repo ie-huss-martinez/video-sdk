@@ -1,5 +1,12 @@
 import { Button, FileDropZone, ProgressBar } from "@hussmartinez/ui/react";
-import { type ReactNode, useContext, useEffect, useRef, useSyncExternalStore } from "react";
+import {
+  type ReactNode,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import { canCreateVideoOutput, createVideoOutput } from "../adapters/video-output.js";
 import { videoLimits } from "../core/errors/video-limits.js";
 import { planFrames } from "../core/model/plan.js";
@@ -52,11 +59,15 @@ export function VideoStage(props: VideoStageProps): ReactNode {
   // Another engine, or a browser that can't draw in workers: known from the
   // engine and the browser, never from a failed attempt. Available on the
   // server, which renders no canvas, so hydration matches.
-  const unavailable = useSyncExternalStore(
+  const unsupported = useSyncExternalStore(
     subscribeToNothing,
     () => !canCreateVideoOutput(engine),
     () => false,
   );
+  // Or the output failed for a reason that check can't foresee, such as a
+  // worker that wouldn't start: the same notice, never a thrown effect.
+  const [failed, setFailed] = useState(false);
+  const unavailable = unsupported || failed;
   // No output will come, as with a host's own engine: the element's play()
   // stops waiting for one (docs/adr/0007).
   const { onPreviewSettled } = useContext(ElementListenersContext);
@@ -76,13 +87,19 @@ export function VideoStage(props: VideoStageProps): ReactNode {
     canvas.width = Math.max(1, Math.round(width));
     canvas.height = Math.max(1, Math.round(height));
     container.append(canvas);
-    // A fresh canvas, which hasn't been transferred: with the checks above,
-    // nothing is left for this to fail on.
-    const created = createVideoOutput({
-      engine,
-      canvas,
-      filePolicy: videoLimits.resolve(filePolicy),
-    });
+    let created: ReturnType<typeof createVideoOutput>;
+    try {
+      created = createVideoOutput({
+        engine,
+        canvas,
+        filePolicy: videoLimits.resolve(filePolicy),
+      });
+    } catch {
+      canvas.remove();
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- an external call failed; nothing to derive during render
+      setFailed(true);
+      return;
+    }
     canvasRef.current = canvas;
     setOutput(created);
 
