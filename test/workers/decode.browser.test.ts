@@ -114,7 +114,7 @@ describe("decoding video frames in a worker", () => {
       holdMs: FLUSH_STALL_TIMEOUT + 500,
     });
     expect(timestamps.length).toBeGreaterThan(1);
-  }, 20_000);
+  });
 
   it("stops after a limit", async () => {
     expect((await decode({ limit: 1 })).timestamps).toHaveLength(1);

@@ -13,7 +13,6 @@ import type { VideoEditorElementMethods, VideoEditorElementProps } from "./mount
 // tests watch it from outside, as audio-sdk's and image-sdk's element tests
 // do, not through React's act(). Waits on the UI get 15 s, and waits on
 // work, such as a file opening or an export, 30 s, as in the other files.
-vi.setConfig({ testTimeout: 60_000 });
 const UI_WAIT = 15_000;
 const WORK_WAIT = 30_000;
 
@@ -87,6 +86,9 @@ describe("<hm-video-editor> (docs/adr/0007, sdk-core ADR 0040)", () => {
     expect(editor.querySelector("section")?.getAttribute("aria-label")).toBe("Video editor");
   });
 
+  // The one test here that does long work: it opens and inserts real videos,
+  // plays, seeks and exports. It measured 29.1 s in one engine, half the
+  // family's 60 s (sdk-core ADR 0057), so it keeps a longer limit.
   it("opens its file property, fires change with the plan, and forwards the handle's methods", async () => {
     const editor = create();
     const events = record(editor);
@@ -147,7 +149,7 @@ describe("<hm-video-editor> (docs/adr/0007, sdk-core ADR 0040)", () => {
     // A host's usage events: anonymous, and never the file's name.
     expect(events.some((event) => event.name === "event")).toBe(true);
     for (const event of events) expect(event.json).not.toContain("private-holiday");
-  });
+  }, 120_000);
 
   it("inserts through insert() as soon as it's connected, before its first render", async () => {
     const editor = create();

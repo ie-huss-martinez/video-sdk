@@ -24,12 +24,8 @@ import { VideoToolbar } from "./VideoToolbar.js";
 // The waits inside name a hang, not the test's timeout: one that waits on
 // the UI gets 15 s, and one that waits on a file opening, an export or its
 // unwind gets 30 s, each well before WebKit's page died in verify run
-// 44410142740, about 44 s after its last progress. Measured in Firefox: the
-// slowest test took 6.4 s on CI's runners, and 9.6 s on the shared review
-// machine at load 26, where a burst of load also held three export tests
-// past 20 s. So the test's own timeout is a generous 60 s, which a hang
-// inside a wait never reaches, and clicks wait at most 15 s too.
-vi.setConfig({ testTimeout: 60_000 });
+// 44410142740, about 44 s after its last progress, and before the family's
+// 60 s a test (sdk-core ADR 0057). Clicks wait at most 15 s too.
 
 /** How long a wait on the UI gets. */
 const UI_WAIT = 15_000;

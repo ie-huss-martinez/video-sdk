@@ -37,12 +37,8 @@ import type {
 // Real decoding and playback run in workers, and a loaded machine slows them.
 // The waits inside name a hang, not the test's timeout: each waits on frames
 // being decoded and drawn, and gets 30 s, well before WebKit's page died in
-// verify run 44410142740, about 44 s after its last progress. Measured: the
-// slowest test here took 5.1-5.5 s on CI's runners, and 7.2 s locally with
-// WebKit sharing two cores with CPU burners, and the shared review machine's
-// bursts of load run tests several times slower. So the test's own timeout is
-// a generous 60 s, which a hang inside a wait never reaches.
-vi.setConfig({ testTimeout: 60_000 });
+// verify run 44410142740, about 44 s after its last progress, and before
+// the family's 60 s a test (sdk-core ADR 0057).
 
 /** How long a wait on frames being decoded and drawn gets. */
 const WORK_WAIT = 30_000;

@@ -274,14 +274,14 @@ describe("an export's file", () => {
     expect((error as VideoError).details).toMatchObject({ track: "audio" });
     // Two audio codecs probed, each given up after the flush's timeout.
     expect(seconds).toBeLessThan((2 * FLUSH_STALL_TIMEOUT) / 1_000 + 5);
-  }, 30_000);
+  });
 
   it("fails with UNSUPPORTED_CODEC for the picture when the video encoder stalls in its probe", async () => {
     const { error, seconds } = await exportWithStuck("video-encoder");
     expect(isVideoError(error, "UNSUPPORTED_CODEC")).toBe(true);
     expect((error as VideoError).details).toMatchObject({ track: "video" });
     expect(seconds).toBeLessThan((3 * FLUSH_STALL_TIMEOUT) / 1_000 + 5);
-  }, 30_000);
+  });
 
   it("goes on to another candidate when the AAC probe's decoder stalls", async () => {
     // Only where AAC encodes, as in WebKit, does the probe decode AAC: there
@@ -289,7 +289,7 @@ describe("an export's file", () => {
     const { outcome, error } = await exportWithStuck("aac-decoder");
     expect(error).toBeUndefined();
     expect(outcome?.file.size).toBeGreaterThan(0);
-  }, 30_000);
+  });
 
   it("holds no frame or audio after an export is cancelled partway", async () => {
     const engine = createVideoEngine({ startTimeout: DEV_WORKER_START_TIMEOUT });

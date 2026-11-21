@@ -16,11 +16,6 @@ import { VideoInspector } from "./VideoInspector.js";
 import { VideoStage } from "./VideoStage.js";
 import { VideoTimeline } from "./VideoTimeline.js";
 
-// Real probing and opening run in workers, and a heavily loaded machine
-// slows them several times over: a minute per test, so that load fails a
-// test only through its own checks.
-vi.setConfig({ testTimeout: 60_000 });
-
 // The inspector's clip panel (docs/adr/0008): volume, mute and fades of the
 // selected clips, as a building block beside the timeline, over the SDK's
 // real session. `landscape.webm` has Opus audio; `silent-vp8.webm` has none.
