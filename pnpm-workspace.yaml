@@ -32,6 +32,9 @@ catalog:
   ajv: ^8.20.0
   axe-core: ^4.11.0
   dependency-cruiser: ^18.7.2
+  # For build.test.ts's tree-shaking guard, which bundles as a host's
+  # esbuild would (sdk-config's keptCode), and the import budgets.
+  esbuild: ^0.28.2
   fast-check: ^4.10.2
   husky: ^9.1.7
   lint-staged: ^17.6.0
@@ -52,6 +55,9 @@ catalog:
 # Supply-chain hardening (ADR 0012).
 # Dependency install scripts are blocked unless allowlisted here.
 allowBuilds:
+  # esbuild finds its binary through its optional platform package without its
+  # postinstall.
+  esbuild: false
   # Next.js's optional image optimiser; the examples don't use next/image.
   sharp: false
 # Fail the install when an unapproved package wants to run a build script.
