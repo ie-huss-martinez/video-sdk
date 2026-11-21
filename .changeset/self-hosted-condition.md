@@ -1,5 +1,5 @@
 ---
-"@hussmartinez/video-sdk": minor
+"@hussmartinez/video-sdk": patch
 ---
 
 Apps that self-host the workers can now leave the inlined copies out of their build, about 605 kB minified, with the `hm-self-hosted` resolve condition (sdk-core ADR 0060). It's opt-in: without it, nothing changes.
