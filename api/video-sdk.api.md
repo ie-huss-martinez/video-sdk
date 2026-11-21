@@ -9,7 +9,7 @@ import { FilePolicy } from '@hussmartinez/sdk-core';
 import { FilePolicyOverrides } from '@hussmartinez/sdk-core';
 import { Limits } from '@hussmartinez/sdk-core';
 import type { MessageOverrides } from '@hussmartinez/sdk-core';
-import { Messages } from '@hussmartinez/sdk-core';
+import type { Messages } from '@hussmartinez/sdk-core';
 import { Reducer } from '@hussmartinez/sdk-core';
 import { SdkCoreErrorCode } from '@hussmartinez/sdk-core';
 import { SdkError } from '@hussmartinez/sdk-core';
@@ -427,7 +427,7 @@ export class VideoError extends SdkError<VideoErrorCode> {
 // @public
 export type VideoErrorCode = SdkCoreErrorCode | "INVALID_VIDEO" | "UNSUPPORTED_FORMAT" | "UNSUPPORTED_CODEC" | "DECODE_FAILED" | "ENCODE_FAILED" | "INVALID_COMMAND" | "INVALID_DOCUMENT" | "BUSY" | "FRAME_TOO_LARGE" | "FRAME_RATE_TOO_HIGH" | "DURATION_TOO_LONG" | "BITRATE_TOO_HIGH" | "PACKET_TOO_LARGE" | "TOO_MANY_TRACKS" | "INDEX_TOO_LARGE" | "TOO_MANY_CHANNELS" | "SAMPLE_RATE_TOO_HIGH" | "SESSION_TOO_LARGE" | "TOO_MANY_CLIPS";
 
-// @public
+// @public @deprecated
 export function videoErrorText(messages: Messages<VideoMessageCatalogue>, error: unknown): string;
 
 // @public
@@ -1151,7 +1151,7 @@ export interface VideoTransform {
 // @public
 export type VideoWarning = VideoLimitWarning | VideoAudioUndecodableWarning;
 
-// @public
+// @public @deprecated
 export function videoWarningText(messages: Messages<VideoMessageCatalogue>, warning: VideoWarning): string;
 
 // @public

@@ -1,6 +1,5 @@
 import { CloseIcon, IconButton, useAnnounce } from "@hussmartinez/ui/react";
 import { type ReactNode, useEffect, useRef, useState } from "react";
-import { videoWarningText } from "../messages/text.js";
 import { useVideoEditor, useVideoSession } from "./context.js";
 
 /**
@@ -27,7 +26,7 @@ export function StageNotices({ hidden }: { readonly hidden: boolean }): ReactNod
   for (const warning of snapshot.warnings) {
     const kind = warning.type === "limit" ? `limit:${warning.limit}` : warning.type;
     const texts = kinds.get(kind) ?? new Set<string>();
-    texts.add(videoWarningText(messages, warning));
+    texts.add(messages.warning(warning));
     kinds.set(kind, texts);
   }
   const items = [...kinds]
