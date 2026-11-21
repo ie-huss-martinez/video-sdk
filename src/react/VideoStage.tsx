@@ -3,7 +3,6 @@ import { type ReactNode, useContext, useEffect, useRef, useState } from "react";
 import { createVideoOutput } from "../adapters/video-output.js";
 import { videoLimits } from "../core/errors/video-limits.js";
 import { planFrames } from "../core/model/plan.js";
-import { videoErrorText } from "../messages/text.js";
 import { useVideoEditor, useVideoOutput, useVideoPlayhead, useVideoSession } from "./context.js";
 import { ElementListenersContext } from "./element/listeners.js";
 import { ACCEPT } from "./files.js";
@@ -136,7 +135,7 @@ export function VideoStage(props: VideoStageProps): ReactNode {
   const empty = snapshot.plan === null || frames === 0;
   const error = snapshot.error ? (
     <p className="hm-video-stage-error" role="alert">
-      {videoErrorText(messages, snapshot.error)}
+      {messages.error(snapshot.error)}
     </p>
   ) : null;
   // A playback failure, such as a decoder that stopped: playback pauses, and
@@ -144,7 +143,7 @@ export function VideoStage(props: VideoStageProps): ReactNode {
   // Playing again clears it.
   const playbackError = playback?.error ? (
     <p className="hm-video-stage-error" role="alert">
-      {videoErrorText(messages, playback.error)}
+      {messages.error(playback.error)}
     </p>
   ) : null;
   return (

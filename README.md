@@ -86,9 +86,7 @@ import {
   createVideoOutput,
   createVideoProcessor,
   createVideoSession,
-  videoErrorText,
   videoMessages,
-  videoWarningText,
 } from "@hussmartinez/video-sdk";
 import { createMessages } from "@hussmartinez/sdk-core";
 
@@ -128,13 +126,13 @@ try {
   const { blob, peakDb, clippedFrames } = await session.export({ container: "mp4", signal });
   offerDownload(blob); // a Blob: the SDK never downloads anything itself
   if (clippedFrames > 0) warnTooLoud(peakDb); // the sound was clamped at full scale, by this much
-  for (const warning of session.getSnapshot().warnings) show(videoWarningText(messages, warning));
+  for (const warning of session.getSnapshot().warnings) show(messages.warning(warning));
 } catch (error) {
-  showError(videoErrorText(messages, error)); // text by code and reason, never the error's message
+  showError(messages.error(error)); // text by code and reason, never the error's message
 }
 ```
 
-- **The snapshot** has the `plan` (the output's size and rates, the clips, and the metadata), the `sources`, `canUndo` and `canRedo`, how many files are being inserted, the last `error`, and `warnings`: limits past their warning thresholds, as `{ type: "limit", limit, actual, source? }`, whose text `videoWarningText` gives.
+- **The snapshot** has the `plan` (the output's size and rates, the clips, and the metadata), the `sources`, `canUndo` and `canRedo`, how many files are being inserted, the last `error`, and `warnings`: limits past their warning thresholds, as `{ type: "limit", limit, actual, source? }`, whose text `messages.warning(warning)` gives. `videoErrorText` and `videoWarningText` are deprecated: sdk-core's `messages.error` and `messages.warning` give the same text.
 - **Commands** are plain data, such as `video.trimClip`, `video.moveClips`, `video.setMuted` or `video.setTransform`, with an exact inverse for undo. One that doesn't apply throws `INVALID_COMMAND` with a stable `details.reason`, such as `unknown-clip`.
 - **Times** are whole microseconds, and positions on the timeline are output frames, so every edit lands on a whole frame ([ADR 0003](docs/adr/0003-clip-plan-document-model.md)).
 - **Audio:** each clip has a volume, a mute and fades, and its sound stays with its picture through every edit. Playback uses the audio as its clock, so sound and picture stay within a frame of each other ([ADR 0005](docs/adr/0005-playback-and-export.md)).

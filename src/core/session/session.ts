@@ -76,7 +76,7 @@ export interface VideoSessionSnapshot {
   /**
    * What the user should know about what's open: the limits the last insert
    * or edit came near, at or above their warnings, each with its value and,
-   * for a file's own limits, its source. Show them with `videoWarningText`.
+   * for a file's own limits, its source. Show them with `messages.warning(warning)`.
    */
   readonly warnings: readonly VideoWarning[];
   /** The last failure, until the next successful insert or edit. */

@@ -209,7 +209,8 @@ export const videoOwnMessages = /* @__PURE__ */ defineMessages({
     other: "A video can have up to {maximum, number} clips. Join or delete clips, and try again.",
   }),
   // Texts for one reason of a code, which take its place when the error
-  // carries that reason: see videoErrorText. An output's limits, and the
+  // carries that reason, which messages.error looks up first (sdk-core ADR
+  // 0050). An output's limits, and the
   // edited video's length, aren't a file the user opened.
   "errors.FRAME_TOO_LARGE.output":
     "That output size has {actual, number} pixels, which is more than the {maximum, number} a picture can have. Choose a smaller size.",

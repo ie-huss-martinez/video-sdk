@@ -18,7 +18,7 @@ export interface VideoLimitWarning {
 
 /**
  * Something the user should know about what's open, though it opened or
- * applied (ADR 0004). Show its text with `videoWarningText`, from
+ * applied (ADR 0004). Show its text with `messages.warning(warning)`, from
  * `warnings.<limit>` for a limit, or `warnings.<type>` for the others.
  * The family's warnings share this shape: a `type`, and for a limit, the
  * limit and its value.
