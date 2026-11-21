@@ -3,5 +3,12 @@
   "extends": ["@hussmartinez/sdk-config/biome"],
   "files": {
     "includes": ["**", "!conformance"]
+  },
+  "linter": {
+    "rules": {
+      "correctness": {
+        "useExhaustiveDependencies": "error"
+      }
+    }
   }
 }
