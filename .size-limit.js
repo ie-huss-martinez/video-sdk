@@ -130,7 +130,8 @@ export default [
   // What applications import (sdk-core ADR 0056), measured by size-limit
   // with @size-limit/esbuild. A floor catches code that leaks into every
   // import: one that moves is a regression to fix, never a limit to raise.
-  // The core's floor, measured 78 B: the error class.
+  // The core's floor, measured 70 B: the error class. Since sdk-config 0.12.1
+  // a scenario counts only the names an import keeps (it was 78 B before).
   coreImport("Import: the floor, VideoError", "{ VideoError }", "0.1 kB"),
   // Measured 7.69 kB: the session, the plan's reducer and history, the
   // limits, and the text of errors and warnings. It was 10.58 kB while the
@@ -141,10 +142,11 @@ export default [
   // Measured 3.57 kB: playback's page side, its clock and the lazy audio
   // player's loader (docs/adr/0006).
   coreImport("Import: createVideoOutput", "{ createVideoOutput }", "4 kB"),
-  // Measured 1.56 kB: the English catalogue of what the headless API hands a
+  // Measured 1.47 kB: the English catalogue of what the headless API hands a
   // host to show, sdk-core's text and the SDK's errors and warnings. It was
-  // 3.45 kB with the editor's interface text (sdk-core ADR 0059).
-  coreImport("Import: videoMessages", "{ videoMessages }", "2 kB"),
+  // 3.45 kB with the editor's interface text (sdk-core ADR 0059), and 1.56 kB
+  // before sdk-config 0.12.1 counted only the names it keeps.
+  coreImport("Import: videoMessages", "{ videoMessages }", "1.5 kB"),
   // Measured 2.85 kB: reading hm-video-plan documents (sdk-core ADR 0045).
   coreImport("Import: readVideoPlanDocument", "{ readVideoPlanDocument }", "3 kB"),
   // Measured 2.17 kB: the engine's page side, which starts the media worker.
@@ -156,11 +158,14 @@ export default [
     "{ createVideoSession, createVideoEngine, createVideoProcessor, createVideoOutput, videoMessages }",
     "12.5 kB",
   ),
-  // The React entry's floor, measured 634 B: a hook and the editor's
-  // context. It was 18.57 kB before the entry came apart (#131).
-  reactImport("Import: the floor, useVideoSession (./react)", "{ useVideoSession }", "0.7 kB"),
-  // Measured 2.04 kB: the toolbar and the tool registry it renders.
-  reactImport("Import: VideoToolbar (./react)", "{ VideoToolbar }", "2.5 kB"),
+  // The React entry's floor, measured 154 B: a hook and the editor's
+  // context. It measured 646 B while scenarios counted the names a shared
+  // chunk imports and never uses, which sdk-config 0.12.1 stopped, and
+  // 18.57 kB before the entry came apart (#131).
+  reactImport("Import: the floor, useVideoSession (./react)", "{ useVideoSession }", "0.2 kB"),
+  // Measured 1.78 kB: the toolbar and the tool registry it renders. It was
+  // 2.05 kB before sdk-config 0.12.1.
+  reactImport("Import: VideoToolbar (./react)", "{ VideoToolbar }", "2 kB"),
   // Measured 2.71 kB: playback's controls and their notices.
   reactImport("Import: VideoTransport (./react)", "{ VideoTransport }", "3 kB"),
   // Measured 3.35 kB: the export dialog, its summary and progress. It was
