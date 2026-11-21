@@ -24,7 +24,7 @@ updates:
   # The browser test image, in its only copy (ADR 0025): both workflows read
   # it from ci/Dockerfile through sdk-ci's image action, so this one update
   # changes CI and releases together. Its tag must move together with the playwright package;
-  # test/ci-image.test.ts fails until both match. The short directory keeps
+  # `pnpm check:playwright-image` fails until both match. The short directory keeps
   # titles such as "ci: bump playwright from v1.65.0-noble to v1.66.0-noble in
   # /ci" within the 65-character limit, as Dependabot always appends
   # "in /<directory>".
