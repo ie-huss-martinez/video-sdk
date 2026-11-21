@@ -45,7 +45,7 @@ catalog:
   husky: ^9.1.7
   lint-staged: ^17.6.0
   # Pinned exactly, bundled unmodified into the workers (ADR 0001).
-  mediabunny: 1.65.2
+  mediabunny: 1.66.0
   next: ^16.4.0
   playwright: 1.65.1
   publint: ^0.3.25
