@@ -72,6 +72,9 @@ export default defineConfig(({ mode }) => {
             // changes fail tests at random: run them through hm-in-image (sdk-core
             // ADR 0049). HM_ALLOW_HOST_BROWSER=1 allows one debugging run.
             globalSetup: ["@hussmartinez/sdk-config/testing/require-image"],
+            // Playwright's Firefox 159 crashes a page whose ariaLabelledByElements
+            // userEvent and axe both read; the guard removes it, in Firefox only.
+            setupFiles: ["@hussmartinez/sdk-config/testing/firefox-labelled-by/setup"],
             include: ["src/**/*.browser.test.{ts,tsx}", "test/**/*.browser.test.ts"],
             browser: {
               enabled: true,
