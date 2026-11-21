@@ -47,8 +47,6 @@ vi.mock("../adapters/video-output.js", () => ({
   },
 }));
 
-vi.setConfig({ testTimeout: 60_000 });
-
 let root: Root | undefined;
 let container: HTMLElement | undefined;
 

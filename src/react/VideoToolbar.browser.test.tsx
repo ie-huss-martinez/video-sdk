@@ -9,11 +9,6 @@ import { userEvent } from "vitest/browser";
 import landscapeVp8 from "../../test/fixtures/video/landscape-vp8.webm?url";
 import { VideoEditor, type VideoEditorHandle, type VideoEditorProps } from "./VideoEditor.js";
 
-// The editor runs real decoding and playback in workers, and a heavily
-// loaded machine slows them several times over: a minute per test, so that
-// load fails a test only through its own checks.
-vi.setConfig({ testTimeout: 60_000 });
-
 // The editor's tools (docs/adr/0007, sdk-core ADR 0030): the toolbar, the
 // shortcuts on the editor's root, focus after edits, and one Messages object
 // for the SDK's text and ui's (sdk-core ADR 0046). The fixture is 60 frames

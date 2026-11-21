@@ -1,5 +1,5 @@
 import { createWorkerClient } from "@hussmartinez/sdk-core";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import { createVideoEngine } from "../src/adapters/video-engine.js";
 import { createVideoProcessor } from "../src/adapters/video-processor.js";
 import { VideoError, type VideoPlan } from "../src/index.js";
@@ -11,11 +11,9 @@ import { unreadable } from "./support/codecs.js";
 import { DEV_WORKER_START_TIMEOUT } from "./support/load.js";
 import type { InspectContract } from "./workers/inspect.worker.js";
 
-// Real decoding, playback and export run in workers, and a heavily loaded
-// machine slows them several times over: a minute per test, so that load
-// fails a test only through its own checks. Waits inside get their own
-// timeouts, so no step runs on a nearly spent budget.
-vi.setConfig({ testTimeout: 60_000 });
+// Real decoding, playback and export run in workers. Waits inside get their
+// own timeouts, under the family's 60 s a test (sdk-core ADR 0057), so no
+// step runs on a nearly spent budget.
 
 // What an export contains, read from its bytes (docs/adr/0005): nothing from
 // a source but the plan's frames and audio, no audio that was cut, and

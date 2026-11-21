@@ -1,4 +1,5 @@
 import { webServersFor } from "@hussmartinez/sdk-config/testing/require-image";
+import { endToEndTimeouts } from "@hussmartinez/sdk-config/testing/timeouts";
 import { defineConfig, devices } from "@playwright/test";
 
 const ci = Boolean(process.env["CI"]);
@@ -18,9 +19,9 @@ export default defineConfig({
   forbidOnly: ci,
   retries: 0,
   reporter: ci ? "line" : "list",
-  // Real decoding and export in workers: room for a loaded machine.
-  timeout: 120_000,
-  expect: { timeout: 20_000 },
+  // The family's timeouts (sdk-core ADR 0057): 60 s a test, 10 s an assertion
+  // that waits. The slowest test, the export's, measured 7.8 s in WebKit.
+  ...endToEndTimeouts,
   use: { trace: "retain-on-failure" },
   projects: (
     [

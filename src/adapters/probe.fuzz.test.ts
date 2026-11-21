@@ -113,7 +113,7 @@ describe("the probe against garbage", () => {
       }),
       { numRuns: 400 },
     );
-  }, 120_000);
+  });
 
   it("settles for hand-built box and element trees with wrong sizes", async () => {
     const isoTree = fc
@@ -176,5 +176,5 @@ describe("the probe against garbage", () => {
       }),
       { numRuns: 400 },
     );
-  }, 120_000);
+  });
 });

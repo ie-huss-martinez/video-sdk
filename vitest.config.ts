@@ -1,4 +1,5 @@
 import { browserInstances } from "@hussmartinez/sdk-config/testing/browser-instances";
+import { browserTimeouts, unitTimeouts } from "@hussmartinez/sdk-config/testing/timeouts";
 import { playwright } from "@vitest/browser-playwright";
 import { defineConfig } from "vitest/config";
 import { testAssets, versionDefine } from "./tools/self-hosted-workers.js";
@@ -18,6 +19,9 @@ export default defineConfig(({ mode }) => {
         {
           test: {
             name: "unit",
+            // The family's timeouts (sdk-core ADR 0057): a test fails only
+            // when it hangs, not because the machine was busy.
+            ...unitTimeouts,
             // build.test.ts checks the built package, so it sits next to the
             // Vite config rather than in src/. test/ holds the repository's
             // own checks, such as the CI image.
@@ -48,6 +52,7 @@ export default defineConfig(({ mode }) => {
           },
           test: {
             name: "browser",
+            ...browserTimeouts,
             // Whether the tests run in the pinned browser image of ci/Dockerfile
             // (ADR 0025 in sdk-core), as in CI and locally through hm-in-image: the
             // environment the capability matrix describes (docs/capabilities.md).

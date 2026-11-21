@@ -1,5 +1,5 @@
 import { createWorkerClient, type WorkerLike } from "@hussmartinez/sdk-core";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import { createEngine, createVideoEngine, engineInternals } from "../src/adapters/video-engine.js";
 import { createVideoSession, isVideoError, VideoError, videoLimits } from "../src/index.js";
 import { clipOf, planOf } from "./contracts/helpers.js";
@@ -8,11 +8,6 @@ import silentVp8 from "./fixtures/video/silent-vp8.webm?url";
 import { DEV_WORKER_START_TIMEOUT } from "./support/load.js";
 import type { InspectContract } from "./workers/inspect.worker.js";
 import type { NoAudioCodecsContract } from "./workers/no-audio-codecs.worker.js";
-
-// Real decoding and export run in workers, and a heavily loaded machine
-// slows them several times over: a minute per test, so that load fails a
-// test only through its own checks.
-vi.setConfig({ testTimeout: 60_000 });
 
 // A browser without WebCodecs' audio decoder or encoder (docs/adr/0008):
 // every engine in the test image has both, so these run the SDK's own

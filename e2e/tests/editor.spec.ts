@@ -159,8 +159,11 @@ for (const target of targets) {
       const dialog = page.getByRole("dialog", { name: "Export the video" });
       await explained(page, "export", async () => {
         await dialog.getByRole("button", { name: "Export", exact: true }).click();
+        // A real export, the one long wait here: longer than the family's
+        // 10 s an assertion (sdk-core ADR 0057). The whole test measured 7.8 s
+        // in WebKit, its slowest engine.
         await expect(dialog.getByRole("button", { name: "Download" })).toBeFocused({
-          timeout: 90_000,
+          timeout: 30_000,
         });
       });
       await expect(dialog).toContainText(/video is ready/);
