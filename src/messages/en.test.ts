@@ -3,6 +3,7 @@ import { uiMessages } from "@hussmartinez/ui";
 import { describe, expect, it } from "vitest";
 import { VideoError, type VideoErrorCode } from "../core/errors/video-error.js";
 import { videoLimitDefinitions, videoLimits } from "../core/errors/video-limits.js";
+import { videoEditorText } from "./editor-en.js";
 import { videoMessages, videoOwnMessages } from "./en.js";
 
 // Listing every code here makes the type checker fail when a code is added
@@ -115,5 +116,31 @@ describe("videoMessages", () => {
     expect(de.t("warnings.maxTracks", { actual: 1_200 })).toBe(
       "This file has 1.200 tracks. Only one video and one audio track are used.",
     );
+  });
+});
+
+describe("what the server-safe entry's catalogue holds (sdk-core ADR 0059)", () => {
+  // Only text for what the headless API hands a host to show: sdk-core's,
+  // and errors' and warnings' text. Interface text is the editor's.
+  const headless = (key: string) =>
+    key in sdkCoreMessages || key.startsWith("errors.") || key.startsWith("warnings.");
+
+  it("holds only sdk-core's text, and errors' and warnings'", () => {
+    expect(Object.keys(videoMessages).filter((key) => !headless(key))).toEqual([]);
+  });
+
+  it("keeps errors' and warnings' text out of the editor's interface text", () => {
+    expect(
+      Object.keys(videoEditorText).filter(
+        (key) => key.startsWith("errors.") || key.startsWith("warnings."),
+      ),
+    ).toEqual([]);
+  });
+
+  it("takes no key twice across the SDK's text, sdk-core's and ui's (sdk-core ADR 0046)", () => {
+    const editor = Object.keys(videoEditorText);
+    expect(editor.filter((key) => key in videoOwnMessages)).toEqual([]);
+    expect(editor.filter((key) => key in sdkCoreMessages)).toEqual([]);
+    expect(editor.filter((key) => key in uiMessages)).toEqual([]);
   });
 });

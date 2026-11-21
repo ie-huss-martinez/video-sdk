@@ -32,10 +32,12 @@ export default [
   // background with getPeaks, and peakColumns took it from 19.84 to 20.34 kB.
   // 21 kB since session.open (ADR 0003): opening a file in place of the plan,
   // as audio-sdk's session does, took it from 20.36 to 20.55 kB.
+  // 19 kB since the editor's interface text left this entry (sdk-core ADR
+  // 0059): its 139 keys took it from 20.53 to 18.58 kB.
   entryBudget({
     name: "Server-safe core (.), with the shared code it loads",
     entry: "dist/index.js",
-    limit: "21 kB",
+    limit: "19 kB",
   }),
   entryBudget({
     name: "React entry (./react), with the shared code it loads",
@@ -126,18 +128,20 @@ export default [
   // Measured 3.57 kB: playback's page side, its clock and the lazy audio
   // player's loader (docs/adr/0006).
   coreImport("Import: createVideoOutput", "{ createVideoOutput }", "4 kB"),
-  // Measured 3.45 kB: the English catalogue, sdk-core's and the SDK's, which
-  // ADR 0059's follow-up moves out of this entry.
-  coreImport("Import: videoMessages", "{ videoMessages }", "3.5 kB"),
+  // Measured 1.56 kB: the English catalogue of what the headless API hands a
+  // host to show, sdk-core's text and the SDK's errors and warnings. It was
+  // 3.45 kB with the editor's interface text (sdk-core ADR 0059).
+  coreImport("Import: videoMessages", "{ videoMessages }", "2 kB"),
   // Measured 2.85 kB: reading hm-video-plan documents (sdk-core ADR 0045).
   coreImport("Import: readVideoPlanDocument", "{ readVideoPlanDocument }", "3 kB"),
   // Measured 2.17 kB: the engine's page side, which starts the media worker.
   coreImport("Import: createVideoEngine", "{ createVideoEngine }", "2.5 kB"),
-  // Measured 14.08 kB: what a headless editor imports, shared code counted once.
+  // Measured 12.11 kB: what a headless editor imports, shared code counted
+  // once. It was 14.08 kB with the editor's interface text in the catalogue.
   coreImport(
     "Import: an editor's set",
     "{ createVideoSession, createVideoEngine, createVideoProcessor, createVideoOutput, videoMessages }",
-    "14.5 kB",
+    "12.5 kB",
   ),
   // The React entry's floor, measured 634 B: a hook and the editor's
   // context. It was 18.57 kB before the entry came apart (#131).
@@ -146,13 +150,14 @@ export default [
   reactImport("Import: VideoToolbar (./react)", "{ VideoToolbar }", "2.5 kB"),
   // Measured 2.71 kB: playback's controls and their notices.
   reactImport("Import: VideoTransport (./react)", "{ VideoTransport }", "3 kB"),
-  // Measured 6.26 kB: the export dialog, its summary and progress.
-  reactImport("Import: VideoExportDialog (./react)", "{ VideoExportDialog }", "6.5 kB"),
+  // Measured 3.35 kB: the export dialog, its summary and progress. It was
+  // 6.26 kB before sdk-core ADR 0059's split.
+  reactImport("Import: VideoExportDialog (./react)", "{ VideoExportDialog }", "3.5 kB"),
   // Measured 4.32 kB: the timeline, its clips, trimming and the waveform.
   reactImport("Import: VideoTimeline (./react)", "{ VideoTimeline }", "4.5 kB"),
-  // Measured 8.37 kB: the stage, its canvas and output, the drop zone and
-  // the notices.
-  reactImport("Import: VideoStage (./react)", "{ VideoStage }", "8.5 kB"),
+  // Measured 5.42 kB: the stage, its canvas and output, the drop zone and
+  // the notices. It was 8.37 kB before sdk-core ADR 0059's split.
+  reactImport("Import: VideoStage (./react)", "{ VideoStage }", "5.5 kB"),
   // Measured 6.07 kB: the inspector's sound, picture and metadata.
   reactImport("Import: VideoInspector (./react)", "{ VideoInspector }", "6.5 kB"),
   // Measured 13.96 kB: the provider, which makes the session and the engine.

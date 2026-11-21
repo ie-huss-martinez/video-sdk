@@ -2,6 +2,8 @@ import {
   createMessages,
   createShortcutRegistry,
   createToolRegistry,
+  type MessageOverrides,
+  type Messages,
   type ShortcutRegistry,
   type ToolRegistry,
 } from "@hussmartinez/sdk-core";
@@ -33,24 +35,31 @@ import {
   type VideoSessionSnapshot,
 } from "../core/session/session.js";
 import { defaultVideoToolbar, type VideoTool, videoTools } from "../features/tools/tools.js";
-import type {
-  VideoEditorCatalogue,
-  VideoEditorMessageOverrides,
-  VideoEditorMessages,
-} from "../messages/editor.js";
+import type { VideoEditorMessageCatalogue } from "../messages/editor.js";
+import { videoEditorText } from "../messages/editor-en.js";
 import { videoMessages } from "../messages/en.js";
 
 /**
- * The editor's catalogue. A host overrides `ui`'s text, such as
- * `fileDropZone.choose`, through the same `messages` prop.
+ * The editor's catalogue: the SDK's messages, `ui`'s for its components, and
+ * the editor's interface text, as one catalogue for one `Messages` object
+ * (sdk-core ADR 0046, ADR 0059). Every component, the provider and the
+ * element build their `Messages` from it; a host overrides any of its keys,
+ * `ui`'s such as `fileDropZone.choose` included, through the `messages` prop.
  *
- * @internal
+ * @example
+ * ```ts
+ * const messages = createMessages(videoEditorMessages, { locale: "en" });
+ * messages.t("transport.play"); // "Play"
+ * ```
+ *
+ * @public
  */
 // In a function marked pure, as a bundler keeps an object literal that
 // spreads another, and with it the whole catalogue, for any import.
-export const editorCatalogue: VideoEditorCatalogue = /* @__PURE__ */ (() => ({
+export const videoEditorMessages: VideoEditorMessageCatalogue = /* @__PURE__ */ (() => ({
   ...videoMessages,
   ...uiMessages,
+  ...videoEditorText,
 }))();
 
 /**
@@ -71,7 +80,7 @@ export interface VideoEditorProviderProps {
   /** Where the application serves the package's `dist/assets/`, to self-host the workers. */
   readonly assetsUrl?: string | URL;
   /** Text overrides. */
-  readonly messages?: VideoEditorMessageOverrides;
+  readonly messages?: MessageOverrides<VideoEditorMessageCatalogue>;
   /** The locale numbers, sizes and times are formatted for. */
   readonly locale?: string;
   /** Anonymous usage events: never file names or contents. */
@@ -95,7 +104,7 @@ interface EditorContext {
   readonly session: VideoSession;
   /** Sends a usage event of the editor's own, such as `download`, to the host's `onEvent`. */
   readonly reportEvent: (event: VideoSessionEvent) => void;
-  readonly messages: VideoEditorMessages;
+  readonly messages: Messages<VideoEditorMessageCatalogue>;
   readonly locale: string | undefined;
   readonly filePolicy: VideoFilePolicyOverrides | undefined;
   readonly output: VideoOutput | null;
@@ -269,7 +278,7 @@ export function VideoEditorProvider(props: VideoEditorProviderProps): ReactNode 
     () =>
       // One object for the SDK's text and ui's (sdk-core ADR 0046). A host's
       // overrides are checked for unknown keys and placeholders here.
-      createMessages(editorCatalogue, {
+      createMessages(videoEditorMessages, {
         ...(locale ? { locale } : {}),
         ...(props.messages ? { overrides: props.messages } : {}),
       }),

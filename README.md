@@ -167,6 +167,8 @@ Neither mode needs `'unsafe-eval'`, `'wasm-unsafe-eval'` or `'unsafe-inline'` st
 
 Every failure is a `VideoError` with a stable `code` and structured `details`; `isVideoError(error, code)` checks one, across workers and copies of the package. Show people the text for the code from `videoMessages` through `createMessages`, never `error.message`.
 
+`videoMessages` holds only what the headless API hands you to show: sdk-core's text, and errors' and warnings' text. The editor's interface text, its labels, titles and announcements, is in `videoEditorMessages`, from `@hussmartinez/video-sdk/react`, with `ui`'s text and `videoMessages`. Type overrides of the editor's text, for its `messages` prop or the element's, with `MessageOverrides<VideoEditorMessageCatalogue>` ([sdk-core ADR 0059](https://github.com/ie-huss-martinez/sdk-core/blob/main/docs/adr/0059-interface-text-outside-the-server-safe-entry.md)).
+
 | Code | When |
 |---|---|
 | `INVALID_VIDEO` | A file is malformed, its headers disagree with its packets, or it decodes to more than its probe allows |

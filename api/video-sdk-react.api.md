@@ -7,7 +7,7 @@
 import { FilePolicy } from '@hussmartinez/sdk-core';
 import { FilePolicyOverrides } from '@hussmartinez/sdk-core';
 import { ForwardRefExoticComponent } from 'react';
-import type { MessageOverrides } from '@hussmartinez/sdk-core';
+import { MessageOverrides } from '@hussmartinez/sdk-core';
 import { ReactNode } from 'react';
 import { RefAttributes } from 'react';
 import { SdkCoreErrorCode } from '@hussmartinez/sdk-core';
@@ -66,6 +66,11 @@ export interface VideoEditorHandle {
     undo(): boolean;
 }
 
+// Warning: (ae-forgotten-export) The symbol "VideoEditorMessageCatalogue" needs to be exported by the entry point react.d.ts
+//
+// @public
+export const videoEditorMessages: VideoEditorMessageCatalogue;
+
 // @public
 export interface VideoEditorProps extends Omit<VideoEditorProviderProps, "children"> {
     readonly className?: string;
@@ -87,8 +92,7 @@ export interface VideoEditorProviderProps {
     // Warning: (ae-forgotten-export) The symbol "VideoFilePolicyOverrides" needs to be exported by the entry point react.d.ts
     readonly filePolicy?: VideoFilePolicyOverrides;
     readonly locale?: string;
-    // Warning: (ae-forgotten-export) The symbol "VideoEditorMessageOverrides" needs to be exported by the entry point react.d.ts
-    readonly messages?: VideoEditorMessageOverrides;
+    readonly messages?: MessageOverrides<VideoEditorMessageCatalogue>;
     // Warning: (ae-forgotten-export) The symbol "VideoSessionEvent" needs to be exported by the entry point react.d.ts
     readonly onEvent?: (event: VideoSessionEvent) => void;
     // Warning: (ae-forgotten-export) The symbol "VideoProcessor" needs to be exported by the entry point react.d.ts

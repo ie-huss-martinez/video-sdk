@@ -48,8 +48,8 @@ export interface VideoEditorElementProps {
     // (undocumented)
     filePolicy?: VideoFilePolicyOverrides;
     locale?: string;
-    // Warning: (ae-forgotten-export) The symbol "VideoEditorMessageOverrides" needs to be exported by the entry point element.d.ts
-    messages?: VideoEditorMessageOverrides;
+    // Warning: (ae-forgotten-export) The symbol "VideoEditorMessageCatalogue" needs to be exported by the entry point element.d.ts
+    messages?: MessageOverrides<VideoEditorMessageCatalogue>;
     // Warning: (ae-forgotten-export) The symbol "VideoProcessor" needs to be exported by the entry point element.d.ts
     //
     // (undocumented)

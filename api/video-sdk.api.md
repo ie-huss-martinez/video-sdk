@@ -394,14 +394,19 @@ export interface VideoCrop {
 // @public
 export type VideoDocumentRejection = Exclude<VideoCommandRejection, "malformed-command"> | "malformed-document" | "unknown-format" | "unknown-format-version";
 
-// @public
-export type VideoEditorCatalogue = typeof videoMessages & typeof uiMessages;
+// @public @deprecated
+export type VideoEditorCatalogue = VideoEditorMessageCatalogue;
 
+// Warning: (ae-forgotten-export) The symbol "videoEditorText" needs to be exported by the entry point index.d.ts
+//
 // @public
-export type VideoEditorMessageOverrides = MessageOverrides<VideoEditorCatalogue>;
+export type VideoEditorMessageCatalogue = typeof videoMessages & typeof uiMessages & typeof videoEditorText;
 
-// @public
-export type VideoEditorMessages = Messages<VideoEditorCatalogue>;
+// @public @deprecated
+export type VideoEditorMessageOverrides = MessageOverrides<VideoEditorMessageCatalogue>;
+
+// @public @deprecated
+export type VideoEditorMessages = Messages<VideoEditorMessageCatalogue>;
 
 // @public
 export interface VideoEngine {
@@ -594,170 +599,6 @@ export type VideoMessageCatalogue = typeof videoMessages;
 
 // @public
 export const videoMessages: {
-    readonly "editor.label": "Video editor";
-    readonly "stage.label": "Video preview, frame {frame, number} of {frames, number}";
-    readonly "stage.empty": "Add a video to start editing.";
-    readonly "stage.unavailable": "The preview isn't available with this engine.";
-    readonly "stage.notices": "Notices";
-    readonly "stage.dismiss": "Dismiss";
-    readonly "insert.progress": {
-        readonly $plural: "count";
-    } & {
-        readonly one: "Adding a video";
-        readonly other: "Adding {count, number} videos";
-    };
-    readonly "insert.cancel": "Cancel";
-    readonly "transport.label": "Playback";
-    readonly "transport.play": "Play";
-    readonly "transport.pause": "Pause";
-    readonly "transport.previousFrame": "Previous frame";
-    readonly "transport.nextFrame": "Next frame";
-    readonly "transport.time": "{position} of {length}";
-    readonly "transport.audioBlocked": "Sound is off: press play to turn it on.";
-    readonly "transport.audioUndecodable": "The sound couldn't be decoded, so the video plays without it.";
-    readonly "timeline.label": "Timeline";
-    readonly "timeline.tools": "Timeline tools";
-    readonly "timeline.clips": "Clips";
-    readonly "timeline.playhead": "Playhead";
-    readonly "timeline.clip": "Clip {index, number} of {count, number}, {start} to {end}";
-    readonly "timeline.clipMuted": "Clip {index, number} of {count, number}, {start} to {end}, muted";
-    readonly "timeline.clipTitle": "Clip {index, number}";
-    readonly "timeline.trimStart": "Trim the clip's start to the playhead";
-    readonly "timeline.trimEnd": "Trim the clip's end to the playhead";
-    readonly "timeline.snap": "Snap to clip edges and the playhead";
-    readonly "inspector.label": "Inspector";
-    readonly "inspector.empty": "Select a clip to change its sound and picture. With none selected, these settings are for the whole video.";
-    readonly "inspector.sound": {
-        readonly $plural: "count";
-    } & {
-        readonly one: "Sound of the selected clip";
-        readonly other: "Sound of the {count, number} selected clips";
-    };
-    readonly "inspector.noSound": {
-        readonly $plural: "count";
-    } & {
-        readonly one: "This clip has no sound.";
-        readonly other: "These clips have no sound.";
-    };
-    readonly "inspector.mixed": "The selected clips have different settings. A change applies to all of them.";
-    readonly "inspector.volume": "Volume";
-    readonly "inspector.volumeExact": "Volume in decibels";
-    readonly "inspector.decibels": "{db, number} dB";
-    readonly "inspector.mute": "Mute";
-    readonly "inspector.fadeIn": "Fade in, in seconds";
-    readonly "inspector.fadeOut": "Fade out, in seconds";
-    readonly "inspector.fadeInShape": "Fade in shape";
-    readonly "inspector.fadeOutShape": "Fade out shape";
-    readonly "inspector.curves.linear": "Straight";
-    readonly "inspector.curves.equalPower": "Smooth";
-    readonly "inspector.picture": {
-        readonly $plural: "count";
-    } & {
-        readonly one: "Picture of the selected clip";
-        readonly other: "Picture of the {count, number} selected clips";
-    };
-    readonly "inspector.rotation": "Rotation";
-    readonly "inspector.degrees": "{degrees, number}°";
-    readonly "inspector.rotationMixed": "Different for each clip";
-    readonly "inspector.rotateLeft": "Rotate left";
-    readonly "inspector.rotateRight": "Rotate right";
-    readonly "inspector.fit": "Fit in the frame";
-    readonly "inspector.fits.contain": "Show all";
-    readonly "inspector.fits.cover": "Fill";
-    readonly "inspector.cropLeft": "Crop from the left, in pixels";
-    readonly "inspector.cropTop": "Crop from the top, in pixels";
-    readonly "inspector.cropWidth": "Crop width, in pixels";
-    readonly "inspector.cropHeight": "Crop height, in pixels";
-    readonly "inspector.cropReset": "Remove the crop";
-    readonly "inspector.cropOne": "Select one clip to crop it.";
-    readonly "inspector.output": "The exported video";
-    readonly "inspector.outputNote": "What an export is made at. Every clip is fitted to it.";
-    readonly "inspector.width": "Width, in pixels";
-    readonly "inspector.height": "Height, in pixels";
-    readonly "inspector.outputTooLarge": "That's more than the {maximum, number} pixels a picture can have here. Choose a smaller size.";
-    readonly "inspector.frameRate": "Frames per second";
-    readonly "inspector.frameRateNote": "Each clip's end moves to the nearest whole frame.";
-    readonly "inspector.rateTooHigh": "That's more than the {maximum, number} frames per second allowed here.";
-    readonly "inspector.sampleRate": "Sound quality";
-    readonly "inspector.kilohertz": "{rate, number} kHz";
-    readonly "inspector.outputSound": "Sound channels";
-    readonly "inspector.mono": "Mono";
-    readonly "inspector.stereo": "Stereo";
-    readonly "inspector.channels": "{count, number} channels";
-    readonly "inspector.metadata": "Details in the file";
-    readonly "inspector.metadataNote": "Only these are written into the exported file. Nothing is copied from your original files.";
-    readonly "inspector.metadataFields.title": "Title";
-    readonly "inspector.metadataFields.artist": "Artist";
-    readonly "inspector.metadataFields.date": "Date";
-    readonly "inspector.metadataFields.description": "Description";
-    readonly "inspector.metadataFields.comment": "Comment";
-    readonly "inspector.dateNote": "As year-month-day, such as 2026-11-18.";
-    readonly "inspector.notADate": "Enter a date as year-month-day, such as 2026-11-18, or leave it empty.";
-    readonly "inspector.tooLong": "Use at most 1,000 characters.";
-    readonly "toolbar.label": "Editing tools";
-    readonly "toolbar.file": "File";
-    readonly "toolbar.history": "History";
-    readonly "toolbar.edit": "Edit";
-    readonly "toolbar.playback": "Playback";
-    readonly "toolbar.view": "View";
-    readonly "toolbar.withKeys": "{label} ({keys})";
-    readonly "tools.insert": "Add videos";
-    readonly "tools.export": "Export the video";
-    readonly "tools.undo": "Undo";
-    readonly "tools.redo": "Redo";
-    readonly "tools.playPause": "Play or pause";
-    readonly "tools.previousFrame": "Previous frame";
-    readonly "tools.nextFrame": "Next frame";
-    readonly "tools.start": "Go to the start";
-    readonly "tools.end": "Go to the end";
-    readonly "tools.split": "Split at the playhead";
-    readonly "tools.delete": "Delete the selected clips";
-    readonly "tools.mute": "Mute the selected clips";
-    readonly "tools.zoomIn": "Zoom in";
-    readonly "tools.zoomOut": "Zoom out";
-    readonly "tools.zoomFit": "Fit the whole video";
-    readonly "export.title": "Export the video";
-    readonly "export.description": "Creates a new video file from your edits, here on this device.";
-    readonly "export.summary": "What the file will hold";
-    readonly "export.picture": "{width, number} × {height, number} pixels, {rate} frames per second, {length} long";
-    readonly "export.audio": {
-        readonly $plural: "channels";
-    } & {
-        readonly one: "Mono audio at {sampleRate, number} Hz";
-        readonly other: "{channels, number}-channel audio at {sampleRate, number} Hz";
-    };
-    readonly "export.private": "Nothing else from your original files is copied into it: no location, camera details or other metadata.";
-    readonly "export.kept": "Also written, as you set it: {fields}.";
-    readonly "export.field.title": "title";
-    readonly "export.field.description": "description";
-    readonly "export.field.artist": "artist";
-    readonly "export.field.date": "date";
-    readonly "export.field.comment": "comment";
-    readonly "export.dateNotWritten": "The date isn't written: it must be a real day, written year-month-day, such as 2026-11-18.";
-    readonly "export.container": "File type";
-    readonly "export.containers.auto": "Automatic";
-    readonly "export.containers.mp4": "MP4";
-    readonly "export.containers.webm": "WebM";
-    readonly "export.quality": "Quality";
-    readonly "export.qualities.low": "Smaller file";
-    readonly "export.qualities.medium": "Balanced";
-    readonly "export.qualities.high": "Higher quality";
-    readonly "export.confirm": "Export";
-    readonly "export.cancel": "Cancel";
-    readonly "export.stop": "Stop";
-    readonly "export.progress": "Exporting";
-    readonly "export.largeFile": "This file is getting large. Very large files may be slow to save and share.";
-    readonly "export.ready": "Your {container} video is ready: {size, fileSize}.";
-    readonly "export.cancelled": "Export stopped.";
-    readonly "export.noSoundEncoder": "This browser can't save this video's sound. You can export it without sound, or try another browser to keep the sound.";
-    readonly "export.withoutSound": "Export without sound";
-    readonly "export.noSound": "No sound: this browser can't save it";
-    readonly "export.clipped": "Some of the sound was louder than a file can hold, by up to {db, number} dB, so it was cut off at full volume. Lower the volume of the loudest clips and export again to avoid it.";
-    readonly "export.download": "Download";
-    readonly "export.done": "Done";
-    readonly "export.unavailable": "Exporting isn't available with this engine.";
-    readonly "announce.undone": "Undone.";
-    readonly "announce.redone": "Redone.";
     readonly "errors.INVALID_VIDEO": "This file isn't a valid video, or it's too damaged to open.";
     readonly "errors.UNSUPPORTED_FORMAT": "This video format isn't supported. Try converting the file to MP4 or WebM, then open it again.";
     readonly "errors.UNSUPPORTED_CODEC": "This browser can't play or save this kind of video. Try another browser, or convert the file to MP4.";
