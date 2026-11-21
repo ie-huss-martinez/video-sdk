@@ -8,7 +8,5 @@ export default await defineReactLint({
   // - refs, 3 in react/context.tsx: the latest-ref pattern, once ui has
   //   useLatest.
   // - immutability, 2 in VideoToolbar.tsx: the file chooser's ref.
-  // - set-state-in-effect, 3 in VideoExportDialog, VideoInspector and
-  //   VideoStage: state that follows a prop.
-  off: ["refs", "immutability", "set-state-in-effect"],
+  off: ["refs", "immutability"],
 });

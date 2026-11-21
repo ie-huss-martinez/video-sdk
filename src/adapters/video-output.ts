@@ -89,6 +89,22 @@ export interface OutputEnvironment {
 }
 
 /**
+ * Whether {@link createVideoOutput} can draw from `engine` in this browser:
+ * the engine is one `createVideoEngine` made, and a canvas can be handed to a
+ * worker. These are the two reasons it fails on a fresh canvas, so the
+ * editor knows while rendering, before it makes one.
+ *
+ * @internal
+ */
+export function canCreateVideoOutput(engine: VideoEngine): boolean {
+  return (
+    engineInternals(engine) !== undefined &&
+    typeof HTMLCanvasElement === "function" &&
+    typeof HTMLCanvasElement.prototype.transferControlToOffscreen === "function"
+  );
+}
+
+/**
  * Creates the SDK's playback output (docs/adr/0005, docs/adr/0006). It plays
  * the sources open in `engine` into `canvas`, which it transfers to a media
  * worker of its own: frames are decoded and drawn there, and never reach the

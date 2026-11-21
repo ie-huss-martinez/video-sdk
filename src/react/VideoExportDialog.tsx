@@ -90,9 +90,26 @@ export function VideoExportDialog(props: VideoExportDialogProps): ReactNode {
   const frames = plan ? planFrames(plan) : 0;
   const open = dialog === "export" && plan !== null && frames > 0;
 
-  // Whatever closes the dialog ends its export and drops its choices and
-  // result, so it reopens fresh. The controller is cleared before the
-  // abort, so the export's own handlers know it isn't theirs any more.
+  // Reset as it renders when it opens or closes, React's pattern for state
+  // that resets when a value changes. Closing drops the result, which holds
+  // the exported file, so a closed dialog keeps no video in memory; a result
+  // that arrives after that finds the phase isn't "exporting" any more, and
+  // is dropped. Opening starts fresh, with the choices back to their defaults.
+  const [wasOpen, setWasOpen] = useState(open);
+  if (wasOpen !== open) {
+    setWasOpen(open);
+    setPhase({ kind: "choose" });
+    setError(null);
+    if (open) {
+      setChoice("auto");
+      setQuality("medium");
+      setWithoutSound(false);
+    }
+  }
+
+  // Whatever closes the dialog ends its export and frees a download's URL.
+  // The controller is cleared before the abort, so the export's own handlers
+  // know it isn't theirs any more.
   useEffect(() => {
     if (open) return;
     const running = controller.current;
@@ -100,11 +117,6 @@ export function VideoExportDialog(props: VideoExportDialogProps): ReactNode {
     running?.abort();
     if (objectUrl.current) URL.revokeObjectURL(objectUrl.current);
     objectUrl.current = null;
-    setChoice("auto");
-    setQuality("medium");
-    setWithoutSound(false);
-    setPhase((now) => (now.kind === "choose" ? now : { kind: "choose" }));
-    setError(null);
     // The plan emptied under an open dialog: close it for good.
     if (dialog === "export") setDialog(null);
   }, [open, dialog, setDialog]);
@@ -170,7 +182,8 @@ export function VideoExportDialog(props: VideoExportDialogProps): ReactNode {
         close();
         return;
       }
-      setPhase({ kind: "done", result });
+      // Only over this export's progress: closing reset the phase.
+      setPhase((now) => (now.kind === "exporting" ? { kind: "done", result } : now));
     } catch (reason) {
       // Closed while it ran: the reset dialog shows nothing of it.
       if (controller.current !== running) return;

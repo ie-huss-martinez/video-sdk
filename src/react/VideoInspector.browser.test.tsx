@@ -216,6 +216,25 @@ describe("the inspector's clip panel", () => {
     expect(planClips()[0]?.volumeDb).toBe(0);
   });
 
+  it("shows a volume changed from elsewhere at once, over a gesture's value", async () => {
+    const view = await inspectorWith(1);
+    await select(view, 1);
+    const slider = byLabel(view, "Volume");
+    slider.focus();
+    await userEvent.keyboard("{ArrowLeft}");
+    await eventually(() => expect(planClips()[0]?.volumeDb).toBe(-1));
+    // A gesture under way shows its own value, not yet committed.
+    await userEvent.keyboard("{ArrowLeft>2}");
+    await eventually(() => expect(slider.getAttribute("aria-valuetext")).toBe("-3 dB"));
+    // An undo from elsewhere drops it: the slider shows the plan's value.
+    act(() => {
+      (session as VideoSession).undo();
+    });
+    expect(planClips()[0]?.volumeDb).toBe(0);
+    await eventually(() => expect(slider.getAttribute("aria-valuetext")).toBe("0 dB"));
+    await userEvent.keyboard("{/ArrowLeft}");
+  });
+
   it("sets the volume once when a drag of the slider ends, and when focus leaves mid-run", async () => {
     const view = await inspectorWith(1);
     await select(view, 1);
