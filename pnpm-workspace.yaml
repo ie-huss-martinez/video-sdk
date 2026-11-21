@@ -17,7 +17,7 @@ catalog:
   "@changesets/cli": ^3.0.3
   "@biomejs/biome": ^2.6.5
   "@commitlint/cli": ^21.2.4
-  "@hussmartinez/sdk-config": ^0.12.3
+  "@hussmartinez/sdk-config": ^0.13.0
   "@hussmartinez/sdk-core": ^0.4.7
   "@hussmartinez/ui": ^0.16.0
   # The browser test image's version (ci/Dockerfile), so the end-to-end suite
@@ -27,6 +27,9 @@ catalog:
   "@size-limit/esbuild": ^14.3.0
   "@size-limit/file": ^14.3.0
   "@types/node": ^24.19.2
+  # The React lint (sdk-core ADR 0063): ESLint runs only React's plugin, and
+  # its three packages are pinned exactly.
+  "@typescript-eslint/parser": 8.73.0
   "@types/react": ^19.3.0
   "@types/react-dom": ^19.3.0
   "@vitest/browser-playwright": 5.1.0
@@ -36,6 +39,8 @@ catalog:
   # For build.test.ts's tree-shaking guard, which bundles as a host's
   # esbuild would (sdk-config's keptCode), and the import budgets.
   esbuild: ^0.28.2
+  eslint: 10.15.0
+  eslint-plugin-react-hooks: 7.1.1
   fast-check: ^4.10.2
   husky: ^9.1.7
   lint-staged: ^17.6.0

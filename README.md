@@ -214,6 +214,7 @@ Browser tests, the end-to-end tests and the screenshots run in the pinned browse
 |---|---|---|
 | Format and lint | `lint` | Biome |
 | CSS rules | `lint:css` | stylelint, with the `hm-` namespace and token rules |
+| React rendering rules | `lint:react` | React's own ESLint plugin and nothing else, through `hm-lint-react` ([sdk-core ADR 0063](https://github.com/ie-huss-martinez/sdk-core/blob/main/docs/adr/0063-a-lint-for-what-react-components-do-while-rendering.md)) |
 | Types | `typecheck` | TypeScript |
 | Dependency rules | `lint:deps` | dependency-cruiser, through `hm-lint-deps` |
 | Build | `build` | Vite, then api-extractor for the type declarations |
