@@ -1,5 +1,15 @@
 # @hussmartinez/video-sdk
 
+## 0.10.3
+
+### Patch Changes
+
+- [#157](https://github.com/ie-huss-martinez/video-sdk/pull/157) [`a0afd8c`](https://github.com/ie-huss-martinez/video-sdk/commit/a0afd8cf0ff4ea9a72c732678149d8d18ada95ea) Thanks [@hussmartinez](https://github.com/hussmartinez)! - Some editor state now resets while the editor renders, instead of in an effect after the screen has updated:
+  
+  - `VideoInspector` drops a volume gesture's value in the same update as an undo or another change to the volume, so the old value no longer shows for a frame.
+  - `VideoExportDialog` resets as it opens and closes. Closing drops a finished export's file, so a closed dialog keeps no video in memory. Opening starts fresh.
+  - `VideoStage` tells from the engine and the browser whether the preview is available, before it creates a canvas. If creating the preview still fails, it shows the same notice as before.
+
 ## 0.10.2
 
 ### Patch Changes
