@@ -112,7 +112,8 @@ export function VideoWaveform({
   const canvas = useRef<HTMLCanvasElement>(null);
   const scale = useTimelineScale();
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: peaksVersion says new peaks arrived, which peaksOf returns.
+  // peaksVersion is the trigger: it says new peaks arrived, which peaksOf
+  // returns.
   useEffect(() => {
     const element = canvas.current;
     if (!element) return;

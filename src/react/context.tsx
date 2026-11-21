@@ -224,13 +224,13 @@ export function VideoEditorProvider(props: VideoEditorProviderProps): ReactNode 
   // The props are plain data, often written inline: compare them by value.
   const toolsKey = JSON.stringify(props.tools ?? null);
   const toolbarKey = JSON.stringify(props.toolbar ?? null);
-  // biome-ignore lint/correctness/useExhaustiveDependencies: by value, through the keys
   const tools = useMemo(
     () =>
       createToolRegistry(videoTools, {
         ...(props.tools ? { tools: props.tools } : {}),
         toolbar: props.toolbar ?? toolbarOf(props.tools),
       }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- by value, through the keys
     [toolsKey, toolbarKey],
   );
   const shortcuts = useMemo(
@@ -265,6 +265,7 @@ export function VideoEditorProvider(props: VideoEditorProviderProps): ReactNode 
     return () => {
       // StrictMode unmounts and mounts again at once; only a real unmount releases.
       queueMicrotask(() => {
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- the count when the microtask runs is the point: a remount has changed it
         if (mounts.current !== mount) return;
         void session.destroy();
         void ownProcessor.current?.destroy();
