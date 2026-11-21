@@ -8,7 +8,7 @@ import {
   type ToolRegistry,
 } from "@hussmartinez/sdk-core";
 import { uiMessages } from "@hussmartinez/ui";
-import { usePlatform } from "@hussmartinez/ui/react";
+import { useLatest, usePlatform } from "@hussmartinez/ui/react";
 import {
   createContext,
   type ReactNode,
@@ -176,8 +176,8 @@ const Context = /* @__PURE__ */ createContext<EditorContext | null>(null);
  */
 export function VideoEditorProvider(props: VideoEditorProviderProps): ReactNode {
   const { engine: given, assetsUrl, filePolicy, locale } = props;
-  const onEvent = useRef(props.onEvent);
-  onEvent.current = props.onEvent;
+  // The host's latest onEvent, for the session's events and the editor's own.
+  const onEvent = useLatest(props.onEvent);
   const [engine] = useState(
     () =>
       given ??
@@ -186,17 +186,26 @@ export function VideoEditorProvider(props: VideoEditorProviderProps): ReactNode 
       // hydrates, takes the assetsUrl (sdk-core ADR 0007).
       createVideoEngine(assetsUrl && typeof location !== "undefined" ? { assetsUrl } : {}),
   );
-  // The session exports through the editor's processor, which is made on
-  // the first export: this calls it then (ADR 0005).
-  const exporter = useRef<() => VideoProcessor>(() => {
-    throw new TypeError("The editor has no processor yet.");
-  });
+  const ownProcessor = useRef<VideoProcessor | null>(null);
+  const givenProcessor = props.processor;
+  const processor = useCallback(() => {
+    if (givenProcessor) return givenProcessor;
+    ownProcessor.current ??= createVideoProcessor({
+      engine,
+      filePolicy: videoLimits.resolve(filePolicy),
+      ...(assetsUrl ? { assetsUrl } : {}),
+    });
+    return ownProcessor.current;
+  }, [givenProcessor, engine, filePolicy, assetsUrl]);
+  // The latest processor, which the session calls on an export.
+  const exporter = useLatest(processor);
   const [session] = useState(() =>
     createVideoSession({
       engine,
       ...(filePolicy ? { filePolicy } : {}),
       onEvent: (event) => onEvent.current?.(event),
       processor: {
+        // The editor's processor, which is made on the first export (ADR 0005).
         export: (job, exportOptions) => exporter.current().export(job, exportOptions),
         // The editor's own processor is released with the editor, below.
         destroy: async () => {},
@@ -217,18 +226,6 @@ export function VideoEditorProvider(props: VideoEditorProviderProps): ReactNode 
   }, []);
   const chooseFiles = useCallback(() => fileChooser.current?.(), []);
   const [dialog, setDialog] = useState<VideoEditorDialog | null>(null);
-  const ownProcessor = useRef<VideoProcessor | null>(null);
-  const givenProcessor = props.processor;
-  const processor = useCallback(() => {
-    if (givenProcessor) return givenProcessor;
-    ownProcessor.current ??= createVideoProcessor({
-      engine,
-      filePolicy: videoLimits.resolve(filePolicy),
-      ...(assetsUrl ? { assetsUrl } : {}),
-    });
-    return ownProcessor.current;
-  }, [givenProcessor, engine, filePolicy, assetsUrl]);
-  exporter.current = processor;
   const inserts = useRef(new Set<AbortController>());
   const mounts = useRef(0);
   const platform = usePlatform();
@@ -298,7 +295,10 @@ export function VideoEditorProvider(props: VideoEditorProviderProps): ReactNode 
     [locale, props.messages],
   );
 
-  const reportEvent = useCallback((event: VideoSessionEvent) => onEvent.current?.(event), []);
+  const reportEvent = useCallback(
+    (event: VideoSessionEvent) => onEvent.current?.(event),
+    [onEvent],
+  );
   const value = useMemo(
     () => ({
       engine,

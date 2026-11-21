@@ -168,8 +168,8 @@ export default [
   reactImport("Import: VideoStage (./react)", "{ VideoStage }", "5.5 kB"),
   // Measured 5.68 kB: the inspector's sound, picture and metadata.
   reactImport("Import: VideoInspector (./react)", "{ VideoInspector }", "6 kB"),
-  // Measured 13.63 kB: the provider, which makes the session and the engine.
+  // Measured 13.59 kB: the provider, which makes the session and the engine.
   reactImport("Import: VideoEditorProvider (./react)", "{ VideoEditorProvider }", "14 kB"),
-  // Measured 26.14 kB: the whole editor, what a typical application imports.
+  // Measured 26.13 kB: the whole editor, what a typical application imports.
   reactImport("Import: VideoEditor, the whole editor (./react)", "{ VideoEditor }", "26.5 kB"),
 ];

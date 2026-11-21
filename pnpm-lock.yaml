@@ -183,14 +183,14 @@ catalogs:
       specifier: ^21.2.4
       version: 21.2.4
     '@hussmartinez/sdk-config':
-      specifier: ^0.13.3
-      version: 0.13.3
+      specifier: ^0.13.4
+      version: 0.13.4
     '@hussmartinez/sdk-core':
       specifier: ^0.4.7
       version: 0.4.7
     '@hussmartinez/ui':
-      specifier: ^0.16.0
-      version: 0.16.0
+      specifier: ^0.16.3
+      version: 0.16.3
     '@microsoft/api-extractor':
       specifier: ^7.60.1
       version: 7.60.1
@@ -291,7 +291,7 @@ importers:
         version: 0.4.7
       '@hussmartinez/ui':
         specifier: 'catalog:'
-        version: 0.16.0(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
+        version: 0.16.3(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
     devDependencies:
       '@arethetypeswrong/cli':
         specifier: 'catalog:'
@@ -310,7 +310,7 @@ importers:
         version: 21.2.4(conventional-commits-parser@7.1.4)(typescript@6.0.3)
       '@hussmartinez/sdk-config':
         specifier: 'catalog:'
-        version: 0.13.3(@biomejs/biome@2.6.6)(@commitlint/cli@21.2.4(conventional-commits-parser@7.1.4)(typescript@6.0.3))(@microsoft/api-extractor@7.60.1(@types/node@24.19.2))(@playwright/test@1.65.1)(@typescript-eslint/parser@8.73.0(eslint@10.15.0(jiti@2.7.0)(supports-color@10.2.2))(supports-color@10.2.2)(typescript@6.0.3))(@vitest/browser-playwright@5.1.0)(ajv@8.20.0)(dependency-cruiser@18.7.2)(esbuild@0.28.2)(eslint-plugin-react-hooks@7.1.1(eslint@10.15.0(jiti@2.7.0)(supports-color@10.2.2))(supports-color@10.2.2))(eslint@10.15.0(jiti@2.7.0)(supports-color@10.2.2))(lint-staged@17.6.0)(secretlint@13.1.0(supports-color@10.2.2))(stylelint@18.0.0)(typescript@6.0.3)(vite@8.3.8(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1))(vitest@5.1.0)
+        version: 0.13.4(@biomejs/biome@2.6.6)(@commitlint/cli@21.2.4(conventional-commits-parser@7.1.4)(typescript@6.0.3))(@microsoft/api-extractor@7.60.1(@types/node@24.19.2))(@playwright/test@1.65.1)(@typescript-eslint/parser@8.73.0(eslint@10.15.0(jiti@2.7.0)(supports-color@10.2.2))(supports-color@10.2.2)(typescript@6.0.3))(@vitest/browser-playwright@5.1.0)(ajv@8.20.0)(dependency-cruiser@18.7.2)(esbuild@0.28.2)(eslint-plugin-react-hooks@7.1.1(eslint@10.15.0(jiti@2.7.0)(supports-color@10.2.2))(supports-color@10.2.2))(eslint@10.15.0(jiti@2.7.0)(supports-color@10.2.2))(lint-staged@17.6.0)(secretlint@13.1.0(supports-color@10.2.2))(stylelint@18.0.0)(typescript@6.0.3)(vite@8.3.8(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1))(vitest@5.1.0)
       '@microsoft/api-extractor':
         specifier: 'catalog:'
         version: 7.60.1(@types/node@24.19.2)
@@ -403,7 +403,7 @@ importers:
         version: 4.14.0(playwright-core@1.65.1)
       '@hussmartinez/sdk-config':
         specifier: 'catalog:'
-        version: 0.13.3(@biomejs/biome@2.6.6)(@commitlint/cli@21.2.4(conventional-commits-parser@7.1.4)(typescript@6.0.3))(@microsoft/api-extractor@7.60.1(@types/node@24.19.2))(@playwright/test@1.65.1)(@typescript-eslint/parser@8.73.0(eslint@10.15.0(jiti@2.7.0)(supports-color@10.2.2))(supports-color@10.2.2)(typescript@6.0.3))(@vitest/browser-playwright@5.1.0)(ajv@8.20.0)(dependency-cruiser@18.7.2)(esbuild@0.28.2)(eslint-plugin-react-hooks@7.1.1(eslint@10.15.0(jiti@2.7.0)(supports-color@10.2.2))(supports-color@10.2.2))(eslint@10.15.0(jiti@2.7.0)(supports-color@10.2.2))(lint-staged@17.6.0)(secretlint@13.1.0(supports-color@10.2.2))(stylelint@18.0.0)(typescript@6.0.3)(vite@8.3.8(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1))(vitest@5.1.0)
+        version: 0.13.4(@biomejs/biome@2.6.6)(@commitlint/cli@21.2.4(conventional-commits-parser@7.1.4)(typescript@6.0.3))(@microsoft/api-extractor@7.60.1(@types/node@24.19.2))(@playwright/test@1.65.1)(@typescript-eslint/parser@8.73.0(eslint@10.15.0(jiti@2.7.0)(supports-color@10.2.2))(supports-color@10.2.2)(typescript@6.0.3))(@vitest/browser-playwright@5.1.0)(ajv@8.20.0)(dependency-cruiser@18.7.2)(esbuild@0.28.2)(eslint-plugin-react-hooks@7.1.1(eslint@10.15.0(jiti@2.7.0)(supports-color@10.2.2))(supports-color@10.2.2))(eslint@10.15.0(jiti@2.7.0)(supports-color@10.2.2))(lint-staged@17.6.0)(secretlint@13.1.0(supports-color@10.2.2))(stylelint@18.0.0)(typescript@6.0.3)(vite@8.3.8(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1))(vitest@5.1.0)
       '@playwright/test':
         specifier: 'catalog:'
         version: 1.65.1
@@ -418,7 +418,7 @@ importers:
     dependencies:
       '@hussmartinez/ui':
         specifier: 'catalog:'
-        version: 0.16.0(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
+        version: 0.16.3(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       '@hussmartinez/video-sdk':
         specifier: workspace:*
         version: link:../..
@@ -449,7 +449,7 @@ importers:
     dependencies:
       '@hussmartinez/ui':
         specifier: 'catalog:'
-        version: 0.16.0(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
+        version: 0.16.3(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       '@hussmartinez/video-sdk':
         specifier: workspace:*
         version: link:../..
@@ -462,7 +462,7 @@ importers:
     devDependencies:
       '@hussmartinez/sdk-config':
         specifier: 'catalog:'
-        version: 0.13.3(@biomejs/biome@2.6.6)(@commitlint/cli@21.2.4(conventional-commits-parser@7.1.4)(typescript@6.0.3))(@microsoft/api-extractor@7.60.1(@types/node@24.19.2))(@playwright/test@1.65.1)(@typescript-eslint/parser@8.73.0(eslint@10.15.0(jiti@2.7.0)(supports-color@10.2.2))(supports-color@10.2.2)(typescript@6.0.3))(@vitest/browser-playwright@5.1.0)(ajv@8.20.0)(dependency-cruiser@18.7.2)(esbuild@0.28.2)(eslint-plugin-react-hooks@7.1.1(eslint@10.15.0(jiti@2.7.0)(supports-color@10.2.2))(supports-color@10.2.2))(eslint@10.15.0(jiti@2.7.0)(supports-color@10.2.2))(lint-staged@17.6.0)(secretlint@13.1.0(supports-color@10.2.2))(stylelint@18.0.0)(typescript@6.0.3)(vite@8.3.8(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1))(vitest@5.1.0)
+        version: 0.13.4(@biomejs/biome@2.6.6)(@commitlint/cli@21.2.4(conventional-commits-parser@7.1.4)(typescript@6.0.3))(@microsoft/api-extractor@7.60.1(@types/node@24.19.2))(@playwright/test@1.65.1)(@typescript-eslint/parser@8.73.0(eslint@10.15.0(jiti@2.7.0)(supports-color@10.2.2))(supports-color@10.2.2)(typescript@6.0.3))(@vitest/browser-playwright@5.1.0)(ajv@8.20.0)(dependency-cruiser@18.7.2)(esbuild@0.28.2)(eslint-plugin-react-hooks@7.1.1(eslint@10.15.0(jiti@2.7.0)(supports-color@10.2.2))(supports-color@10.2.2))(eslint@10.15.0(jiti@2.7.0)(supports-color@10.2.2))(lint-staged@17.6.0)(secretlint@13.1.0(supports-color@10.2.2))(stylelint@18.0.0)(typescript@6.0.3)(vite@8.3.8(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1))(vitest@5.1.0)
       '@types/node':
         specifier: 'catalog:'
         version: 24.19.2
@@ -1081,8 +1081,8 @@ packages:
     resolution: {integrity: sha512-bV0Tgo9K4hfPCek+aMAn81RppFKv2ySDQeMoSZuvTASywNTnVJCArCZE2FWqpvIatKu7VMRLWlR1EazvVhDyhQ==}
     engines: {node: '>=18.18'}
 
-  '@hussmartinez/sdk-config@0.13.3':
-    resolution: {integrity: sha512-JoM7+TJ1Nl/1anILa9fhIlVsmuU6bioaCMCNWEPOYOxyEssfbVMCc85lCQjr/SSKcw0rLhYjWe+aiNdgQetOXA==}
+  '@hussmartinez/sdk-config@0.13.4':
+    resolution: {integrity: sha512-kEhMBP1Q/tEcL3HIMkly6PiiaEdpFeQnzgZvSBep6XtYExJP5T42xZGc8PpWDjgkbnkTwJU7+TuEOaiXpPQ1GQ==}
     engines: {node: '>=24'}
     hasBin: true
     peerDependencies:
@@ -1142,8 +1142,8 @@ packages:
   '@hussmartinez/sdk-core@0.4.7':
     resolution: {integrity: sha512-mxuuu5iyKHl9NcooOihyFsd48MlY2uh/MUk00FQH+qkK/IHyQj9mzWmETmZGTM6ywtgDJ+JFV1uD62ccrnUMwg==}
 
-  '@hussmartinez/ui@0.16.0':
-    resolution: {integrity: sha512-lvDzBcM/8gNaZ6PuIohql51R5joU0USZ1YxobDnaiiSNRdNXci2y+q/Hg2IKcJ8hiFdWM6S874kFFFIC0NfH+w==}
+  '@hussmartinez/ui@0.16.3':
+    resolution: {integrity: sha512-5EjqlXhW8EpQ+slFfzs2hWo6T5nS6VJt13b9X7nd/uxkumh+OXuDLUUT10YPcL5ZJalVuw9uM+QrQjNO3IIKsA==}
     peerDependencies:
       react: '>=18.3'
       react-dom: '>=18.3'
@@ -3897,7 +3897,7 @@ snapshots:
 
   '@humanwhocodes/retry@0.4.3': {}
 
-  '@hussmartinez/sdk-config@0.13.3(@biomejs/biome@2.6.6)(@commitlint/cli@21.2.4(conventional-commits-parser@7.1.4)(typescript@6.0.3))(@microsoft/api-extractor@7.60.1(@types/node@24.19.2))(@playwright/test@1.65.1)(@typescript-eslint/parser@8.73.0(eslint@10.15.0(jiti@2.7.0)(supports-color@10.2.2))(supports-color@10.2.2)(typescript@6.0.3))(@vitest/browser-playwright@5.1.0)(ajv@8.20.0)(dependency-cruiser@18.7.2)(esbuild@0.28.2)(eslint-plugin-react-hooks@7.1.1(eslint@10.15.0(jiti@2.7.0)(supports-color@10.2.2))(supports-color@10.2.2))(eslint@10.15.0(jiti@2.7.0)(supports-color@10.2.2))(lint-staged@17.6.0)(secretlint@13.1.0(supports-color@10.2.2))(stylelint@18.0.0)(typescript@6.0.3)(vite@8.3.8(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1))(vitest@5.1.0)':
+  '@hussmartinez/sdk-config@0.13.4(@biomejs/biome@2.6.6)(@commitlint/cli@21.2.4(conventional-commits-parser@7.1.4)(typescript@6.0.3))(@microsoft/api-extractor@7.60.1(@types/node@24.19.2))(@playwright/test@1.65.1)(@typescript-eslint/parser@8.73.0(eslint@10.15.0(jiti@2.7.0)(supports-color@10.2.2))(supports-color@10.2.2)(typescript@6.0.3))(@vitest/browser-playwright@5.1.0)(ajv@8.20.0)(dependency-cruiser@18.7.2)(esbuild@0.28.2)(eslint-plugin-react-hooks@7.1.1(eslint@10.15.0(jiti@2.7.0)(supports-color@10.2.2))(supports-color@10.2.2))(eslint@10.15.0(jiti@2.7.0)(supports-color@10.2.2))(lint-staged@17.6.0)(secretlint@13.1.0(supports-color@10.2.2))(stylelint@18.0.0)(typescript@6.0.3)(vite@8.3.8(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1))(vitest@5.1.0)':
     dependencies:
       '@commitlint/config-conventional': 21.2.4
       '@secretlint/secretlint-rule-preset-recommend': 13.1.0
@@ -3925,7 +3925,7 @@ snapshots:
 
   '@hussmartinez/sdk-core@0.4.7': {}
 
-  '@hussmartinez/ui@0.16.0(react-dom@19.3.1(react@19.3.1))(react@19.3.1)':
+  '@hussmartinez/ui@0.16.3(react-dom@19.3.1(react@19.3.1))(react@19.3.1)':
     dependencies:
       '@hussmartinez/sdk-core': 0.4.7
     optionalDependencies:
