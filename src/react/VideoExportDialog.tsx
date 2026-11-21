@@ -90,9 +90,25 @@ export function VideoExportDialog(props: VideoExportDialogProps): ReactNode {
   const frames = plan ? planFrames(plan) : 0;
   const open = dialog === "export" && plan !== null && frames > 0;
 
-  // Whatever closes the dialog ends its export and drops its choices and
-  // result, so it reopens fresh. The controller is cleared before the
-  // abort, so the export's own handlers know it isn't theirs any more.
+  // Opening starts fresh: the last opening's choices and result are dropped
+  // as it renders, React's pattern for state that resets when a value
+  // changes. On opening rather than closing, so a result that arrives after
+  // the dialog closed can't outlast the reset.
+  const [wasOpen, setWasOpen] = useState(open);
+  if (wasOpen !== open) {
+    setWasOpen(open);
+    if (open) {
+      setChoice("auto");
+      setQuality("medium");
+      setWithoutSound(false);
+      setPhase({ kind: "choose" });
+      setError(null);
+    }
+  }
+
+  // Whatever closes the dialog ends its export and frees a download's URL.
+  // The controller is cleared before the abort, so the export's own handlers
+  // know it isn't theirs any more.
   useEffect(() => {
     if (open) return;
     const running = controller.current;
@@ -100,11 +116,6 @@ export function VideoExportDialog(props: VideoExportDialogProps): ReactNode {
     running?.abort();
     if (objectUrl.current) URL.revokeObjectURL(objectUrl.current);
     objectUrl.current = null;
-    setChoice("auto");
-    setQuality("medium");
-    setWithoutSound(false);
-    setPhase((now) => (now.kind === "choose" ? now : { kind: "choose" }));
-    setError(null);
     // The plan emptied under an open dialog: close it for good.
     if (dialog === "export") setDialog(null);
   }, [open, dialog, setDialog]);

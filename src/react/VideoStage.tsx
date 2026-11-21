@@ -1,6 +1,6 @@
 import { Button, FileDropZone, ProgressBar } from "@hussmartinez/ui/react";
-import { type ReactNode, useContext, useEffect, useRef, useState } from "react";
-import { createVideoOutput } from "../adapters/video-output.js";
+import { type ReactNode, useContext, useEffect, useRef, useSyncExternalStore } from "react";
+import { canCreateVideoOutput, createVideoOutput } from "../adapters/video-output.js";
 import { videoLimits } from "../core/errors/video-limits.js";
 import { planFrames } from "../core/model/plan.js";
 import { useVideoEditor, useVideoOutput, useVideoPlayhead, useVideoSession } from "./context.js";
@@ -16,6 +16,9 @@ import { StageNotices } from "./StageNotices.js";
 export interface VideoStageProps {
   readonly className?: string;
 }
+
+/** What a browser's capabilities change through: nothing, while a page lives. */
+const subscribeToNothing = () => () => {};
 
 /**
  * The preview (docs/adr/0007): the canvas the output draws into, letterboxed
@@ -46,7 +49,14 @@ export function VideoStage(props: VideoStageProps): ReactNode {
   const frames = snapshot.plan ? planFrames(snapshot.plan) : 0;
   const surface = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const [unavailable, setUnavailable] = useState(false);
+  // Another engine, or a browser that can't draw in workers: known from the
+  // engine and the browser, never from a failed attempt. Available on the
+  // server, which renders no canvas, so hydration matches.
+  const unavailable = useSyncExternalStore(
+    subscribeToNothing,
+    () => !canCreateVideoOutput(engine),
+    () => false,
+  );
   // No output will come, as with a host's own engine: the element's play()
   // stops waiting for one (docs/adr/0007).
   const { onPreviewSettled } = useContext(ElementListenersContext);
@@ -56,7 +66,9 @@ export function VideoStage(props: VideoStageProps): ReactNode {
 
   useEffect(() => {
     const container = surface.current;
-    if (!container) return;
+    // Checked here too, not taken from the render: hydration commits the
+    // server's answer first.
+    if (!container || !canCreateVideoOutput(engine)) return;
     const canvas = document.createElement("canvas");
     canvas.className = "hm-video-stage-canvas";
     canvas.setAttribute("role", "img");
@@ -64,19 +76,13 @@ export function VideoStage(props: VideoStageProps): ReactNode {
     canvas.width = Math.max(1, Math.round(width));
     canvas.height = Math.max(1, Math.round(height));
     container.append(canvas);
-    let created: ReturnType<typeof createVideoOutput>;
-    try {
-      created = createVideoOutput({
-        engine,
-        canvas,
-        filePolicy: videoLimits.resolve(filePolicy),
-      });
-    } catch {
-      // Another engine, or a browser that can't draw in workers.
-      canvas.remove();
-      setUnavailable(true);
-      return;
-    }
+    // A fresh canvas, which hasn't been transferred: with the checks above,
+    // nothing is left for this to fail on.
+    const created = createVideoOutput({
+      engine,
+      canvas,
+      filePolicy: videoLimits.resolve(filePolicy),
+    });
     canvasRef.current = canvas;
     setOutput(created);
 

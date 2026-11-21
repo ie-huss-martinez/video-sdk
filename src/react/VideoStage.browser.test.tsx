@@ -16,6 +16,7 @@ import { VideoEditor, type VideoEditorHandle } from "./VideoEditor.js";
 // decoder can't be made to fail on demand, so the output is a fake here; the
 // engine, the session and the rest of the editor are real.
 vi.mock("../adapters/video-output.js", () => ({
+  canCreateVideoOutput: () => true,
   createVideoOutput: (): VideoOutput => {
     const { output } = createFakeOutput();
     let failure: VideoError | null = null;

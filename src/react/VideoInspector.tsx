@@ -6,7 +6,7 @@ import {
   Slider,
   ToggleButton,
 } from "@hussmartinez/ui/react";
-import { type ReactNode, useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
+import { type ReactNode, useCallback, useId, useMemo, useRef, useState } from "react";
 import {
   type VideoClip,
   type VideoFadeCurve,
@@ -176,10 +176,15 @@ function SoundControls({
   // preview ends with it.
   const committed = state.volumeDb ?? lead.volumeDb;
   const [draft, setDraft] = useState<number | null>(null);
+  // A change from elsewhere, such as an undo, shows at once: the draft is
+  // dropped as the new value renders, React's pattern for state that resets
+  // when a value changes. Object.is, so a NaN can't reset on every render.
+  const [draftOf, setDraftOf] = useState(committed);
+  if (!Object.is(draftOf, committed)) {
+    setDraftOf(committed);
+    setDraft(null);
+  }
   const shown = draft ?? committed;
-  // A change from elsewhere, such as an undo, shows at once.
-  // The committed value is the trigger, not an input.
-  useEffect(() => setDraft(null), [committed]);
   const commitVolume = (volumeDb: number) => {
     setDraft(null);
     endPreview();
