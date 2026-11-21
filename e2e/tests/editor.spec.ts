@@ -1,5 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
-import { expect, type Page, test } from "@playwright/test";
+import type { Page } from "@playwright/test";
+import { expect, test } from "../fixtures.js";
 import { targets, video, WORKER_PATHS } from "../targets.js";
 import { explained, readPlayback, recordPlayback } from "./playback-diagnostics.js";
 
