@@ -10,8 +10,5 @@ export default await defineReactLint({
   // - immutability, 2 in VideoToolbar.tsx: the file chooser's ref.
   // - set-state-in-effect, 3 in VideoExportDialog, VideoInspector and
   //   VideoStage: state that follows a prop.
-  // - exhaustive-deps, 6 in VideoTimeline, context.tsx and tools.ts:
-  //   dependencies made anew on every render. Biome's rule checks dependency
-  //   lists meanwhile (biome.json).
-  off: ["refs", "immutability", "set-state-in-effect", "exhaustive-deps"],
+  off: ["refs", "immutability", "set-state-in-effect"],
 });

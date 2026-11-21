@@ -12,7 +12,8 @@ import {
   TrimStartIcon,
 } from "@hussmartinez/ui/react";
 import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { frameTime } from "../core/model/time.js";
+import type { VideoClip } from "../core/model/plan.js";
+import { type FrameRate, frameTime } from "../core/model/time.js";
 import type { VideoCommand } from "../core/operations/commands.js";
 import { useVideoEditor, useVideoOutput, useVideoPlayhead, useVideoSession } from "./context.js";
 import { formatTimecode } from "./timecode.js";
@@ -38,6 +39,11 @@ export interface VideoTimelineProps {
 /** The closest zoom, in CSS pixels per output frame. */
 const MAX_PIXELS_PER_FRAME = 48;
 
+// With no plan, the same values on every render, so the memos and the
+// effect that depend on them don't run again for nothing.
+const NO_CLIPS: readonly VideoClip[] = [];
+const DEFAULT_RATE: FrameRate = { num: 30, den: 1 };
+
 /**
  * The timeline (docs/adr/0007), on `ui`'s `Timeline` (ui ADR 0011): the
  * plan's clips on one track, as a horizontal listbox with roving focus, the
@@ -58,8 +64,8 @@ export function VideoTimeline(props: VideoTimelineProps): ReactNode {
   const { output, snapshot: playback } = useVideoOutput();
   const playhead = useVideoPlayhead();
   const plan = snapshot.plan;
-  const clips = plan?.clips ?? [];
-  const rate = plan?.output.frameRate ?? { num: 30, den: 1 };
+  const clips = plan?.clips ?? NO_CLIPS;
+  const rate = plan?.output.frameRate ?? DEFAULT_RATE;
   const offsets = useMemo(() => (plan ? offsetsOf(plan) : [0]), [plan]);
   const frames = offsets[offsets.length - 1] ?? 0;
 

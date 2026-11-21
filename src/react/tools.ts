@@ -87,7 +87,7 @@ export function useVideoTools(): VideoTools {
   const computed = flagsAt(stateAt(output?.position() ?? 0));
   const key = JSON.stringify([...computed]);
   // The same Map while nothing changes, so a toolbar doesn't render for nothing.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: by value, through the key
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- by value, through the key
   const flags = useMemo(() => computed, [key]);
   const rendered = useRef(key);
   rendered.current = key;

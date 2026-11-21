@@ -119,7 +119,7 @@ export function VideoStage(props: VideoStageProps): ReactNode {
     if (output && shown) output.load(shown);
   }, [output, shown]);
   // Every edit ends a preview: it was of the plan before.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: the plan is the trigger, not an input
+  // The plan is the trigger, not an input.
   useEffect(() => setPreview(null), [snapshot.plan, setPreview]);
 
   // Named while paused, not every frame while playing: the time display is the live text.

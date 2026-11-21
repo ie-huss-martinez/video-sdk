@@ -178,7 +178,7 @@ function SoundControls({
   const [draft, setDraft] = useState<number | null>(null);
   const shown = draft ?? committed;
   // A change from elsewhere, such as an undo, shows at once.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: the committed value is the trigger
+  // The committed value is the trigger, not an input.
   useEffect(() => setDraft(null), [committed]);
   const commitVolume = (volumeDb: number) => {
     setDraft(null);
