@@ -246,8 +246,8 @@ catalogs:
       specifier: ^17.6.0
       version: 17.6.0
     mediabunny:
-      specifier: 1.65.2
-      version: 1.65.2
+      specifier: 1.66.0
+      version: 1.66.0
     next:
       specifier: ^16.4.0
       version: 16.4.6
@@ -364,7 +364,7 @@ importers:
         version: 17.6.0
       mediabunny:
         specifier: 'catalog:'
-        version: 1.65.2
+        version: 1.66.0
       playwright:
         specifier: 'catalog:'
         version: 1.65.1
@@ -2549,8 +2549,8 @@ packages:
   mdn-data@2.27.1:
     resolution: {integrity: sha512-9Yubnt3e8A0OKwxYSXyhLymGW4sCufcLG6VdiDdUGVkPhpqLxlvP5vl1983gQjJl3tqbrM731mjaZaP68AgosQ==}
 
-  mediabunny@1.65.2:
-    resolution: {integrity: sha512-goZpibvo/5hkc/56WVNm93Ini+o7K4y8aXA20c/BN1B+m3L5aHQa8MTvO+S1APg/YI8kMILtrX6QCqUtxLW7bA==}
+  mediabunny@1.66.0:
+    resolution: {integrity: sha512-0Zff/qLkY1ZRyjBEt2vQjLeMigmU/dFKwJLpiPyCiskIel2f2R2kqMxaLYbeHN+rmyz4PVwwLSnU9anjUHHeJQ==}
 
   minimatch@10.2.3:
     resolution: {integrity: sha512-Rwi3pnapEqirPSbWbrZaa6N3nmqq4Xer/2XooiOKyV3q12ML06f7MOuc5DVH8ONZIFhwIYQ3yzPH4nt7iWHaTg==}
@@ -5231,7 +5231,7 @@ snapshots:
 
   mdn-data@2.27.1: {}
 
-  mediabunny@1.65.2:
+  mediabunny@1.66.0:
     dependencies:
       '@types/dom-mediacapture-transform': 0.1.12
       '@types/dom-webcodecs': 0.1.13
