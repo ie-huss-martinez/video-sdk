@@ -1,5 +1,5 @@
 import { createWorkerClient, type WorkerClient, type WorkerLike } from "@hussmartinez/sdk-core";
-import { asVideoError } from "../../core/errors/error-helpers.js";
+import { asVideoError, startFailureOf } from "../../core/errors/error-helpers.js";
 import { VideoError } from "../../core/errors/video-error.js";
 import type { VideoFilePolicy } from "../../core/errors/video-limits.js";
 import type { VideoExportOptions } from "../../core/ports/video-processor.js";
@@ -98,7 +98,8 @@ export function createExportRunner(
           },
         );
       } catch (error) {
-        throw error instanceof TypeError ? error : asVideoError(error);
+        if (error instanceof TypeError) throw error;
+        throw startFailureOf(error) ?? asVideoError(error);
       } finally {
         stall.dispose();
       }

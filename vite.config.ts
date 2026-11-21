@@ -17,7 +17,20 @@ export const externalPackages = [
   ...Object.keys(manifest.dependencies ?? {}),
   ...Object.keys(manifest.peerDependencies ?? {}),
 ];
+/**
+ * The package's own imports of its inlined workers, by the names in
+ * package.json's imports. They stay imports in the build, so the host's
+ * bundler resolves each one: to the built chunk by default, or to a stub with
+ * the hm-self-hosted condition, which leaves the inlined workers out of a
+ * build that self-hosts them (sdk-core ADR 0060).
+ */
+export const selfHostedImports = {
+  "#hm-video-media-worker": "src/adapters/media-worker/inline-worker.ts",
+  "#hm-video-export-worker": "src/adapters/export-worker/export-inline-worker.ts",
+} as const;
+
 const isExternal = (id: string): boolean =>
+  Object.hasOwn(selfHostedImports, id) ||
   externalPackages.some((name) => id === name || id.startsWith(`${name}/`));
 
 /** One built file per public entry point (ADR 0004). */
@@ -26,6 +39,17 @@ export const entries = {
   react: "src/react.ts",
   element: "src/element.ts",
   styles: "src/styles.css",
+} as const;
+
+/**
+ * The targets of package.json's imports, built under stable names in lazy/,
+ * where its imports map points (sdk-core ADR 0060): each inlined worker, and
+ * the stub that stands in for both.
+ */
+const lazyEntries = {
+  "lazy/inline-media-worker": selfHostedImports["#hm-video-media-worker"],
+  "lazy/inline-export-worker": selfHostedImports["#hm-video-export-worker"],
+  "lazy/no-inline-workers": "src/adapters/no-inline-workers.ts",
 } as const;
 
 const entryFiles = new Set(
@@ -85,7 +109,7 @@ export default defineConfig({
   },
   build: {
     lib: {
-      entry: entries,
+      entry: { ...entries, ...lazyEntries },
       formats: ["es"],
     },
     // Required for a CSS file as an entry; it's then emitted as its own file.

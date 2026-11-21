@@ -2,7 +2,14 @@
   "extends": "@hussmartinez/sdk-config/tsconfig/browser",
   "compilerOptions": {
     "noEmit": true,
-    "jsx": "react-jsx"
+    "jsx": "react-jsx",
+    // The inlined workers, which package.json's imports map to the built
+    // chunks, or to a stub with the hm-self-hosted condition (sdk-core ADR
+    // 0060). The source is typed from the modules themselves.
+    "paths": {
+      "#hm-video-media-worker": ["./src/adapters/media-worker/inline-worker.ts"],
+      "#hm-video-export-worker": ["./src/adapters/export-worker/export-inline-worker.ts"]
+    }
   },
   "include": ["src"],
   "exclude": ["src/**/*.test.ts", "src/**/*.test.tsx", "src/**/fixtures", "src/test"]

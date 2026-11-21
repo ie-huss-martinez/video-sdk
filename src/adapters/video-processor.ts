@@ -86,7 +86,9 @@ export function createVideoProcessor(options: VideoProcessorOptions): VideoProce
           internals.startTimeout,
         );
       }
-      const { createInlineExportWorker } = await import("./export-worker/export-inline-worker.js");
+      // The inlined worker, or a stub with the hm-self-hosted condition (sdk-core
+      // ADR 0060), through package.json's imports.
+      const { createInlineExportWorker } = await import("#hm-video-export-worker");
       return createExportRunner(
         createInlineExportWorker as () => WorkerLike,
         undefined,

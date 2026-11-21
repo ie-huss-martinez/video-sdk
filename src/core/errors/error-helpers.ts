@@ -1,5 +1,5 @@
 import { createErrorHelpers } from "@hussmartinez/sdk-core";
-import { VideoError } from "./video-error.js";
+import { isVideoError, VideoError } from "./video-error.js";
 
 /**
  * The family's error helpers for `VideoError` (sdk-core ADR 0034): failures
@@ -19,6 +19,19 @@ const helpers = /* @__PURE__ */ createErrorHelpers(VideoError, {
  */
 export function asVideoError(reason: unknown, message?: string): VideoError {
   return helpers.adapt(reason, message);
+}
+
+/**
+ * A worker's own reason for not starting, when the worker client reports it
+ * as the cause of its own: such as a build that left the inlined worker out
+ * with the hm-self-hosted condition (sdk-core ADR 0060), which says so, and
+ * that `assetsUrl` is needed. `undefined` otherwise.
+ *
+ * @internal
+ */
+export function startFailureOf(error: unknown): VideoError | undefined {
+  const cause = error instanceof Error ? error.cause : undefined;
+  return isVideoError(cause, "WORKER_START_FAILED") ? cause : undefined;
 }
 
 /**

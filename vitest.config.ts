@@ -1,8 +1,10 @@
+import { fileURLToPath } from "node:url";
 import { browserInstances } from "@hussmartinez/sdk-config/testing/browser-instances";
 import { browserTimeouts, unitTimeouts } from "@hussmartinez/sdk-config/testing/timeouts";
 import { playwright } from "@vitest/browser-playwright";
 import { defineConfig } from "vitest/config";
 import { testAssets, versionDefine } from "./tools/self-hosted-workers.js";
+import { selfHostedImports } from "./vite.config.js";
 
 const ALL_BROWSERS = ["chromium", "firefox", "webkit"] as const;
 
@@ -14,6 +16,14 @@ export default defineConfig(({ mode }) => {
   return {
     define: versionDefine(),
     plugins: [testAssets()],
+    // The tests run the source: package.json's imports name the built files
+    // (sdk-core ADR 0060), so each one points at its module here.
+    resolve: {
+      alias: Object.entries(selfHostedImports).map(([find, path]) => ({
+        find,
+        replacement: fileURLToPath(new URL(path, import.meta.url)),
+      })),
+    },
     test: {
       projects: [
         {

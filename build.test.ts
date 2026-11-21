@@ -1,10 +1,12 @@
 import { readdirSync } from "node:fs";
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { cp, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { keptCode } from "@hussmartinez/sdk-config/size";
-import { build, type Rolldown } from "vite";
+import { build as esbuild } from "esbuild";
+import { build, defaultClientConditions, type Rolldown } from "vite";
 import { afterAll, describe, expect, it } from "vitest";
 import { externalPackages } from "./vite.config.js";
 
@@ -162,6 +164,29 @@ describe("importing on a server", () => {
 });
 
 /**
+ * This build laid out as an installed package holds it: its files under
+ * dist/, and a package.json with its exports and imports, so imports such as
+ * `#hm-video-media-worker` resolve as they do for a host (sdk-core ADR 0060).
+ */
+const installedPackage = (async () => {
+  // Outside the repository, so no tsconfig.json of ours maps the imports to
+  // the source, as a host's build has none.
+  const directory = await mkdtemp(join(tmpdir(), "hm-video-sdk-installed-"));
+  await cp(await temporaryBuild, join(directory, "dist"), { recursive: true });
+  const manifest = JSON.parse(await readFile(new URL("package.json", import.meta.url), "utf8"));
+  const { name, type, exports, imports } = manifest;
+  await writeFile(
+    join(directory, "package.json"),
+    JSON.stringify({ name, type, exports, imports }),
+  );
+  return directory;
+})();
+
+afterAll(async () => {
+  await rm(await installedPackage, { recursive: true, force: true });
+});
+
+/**
  * One import from a built entry, bundled and minified as a host's bundler
  * would, with packages left out and lazy chunks apart (sdk-core ADR 0056):
  * the code of the chunk that holds it.
@@ -196,10 +221,97 @@ describe("importing one part of the core entry (sdk-core ADR 0056)", () => {
   it.each(["{ frameTime }", "{ createPlan, planFrames }", "{ createVideoSession }"])(
     "leaves the message catalogue out of %s",
     async (imports) => {
-      const { calls } = await keptCode(join(await temporaryBuild, "index.js"), imports);
+      const { calls } = await keptCode(join(await installedPackage, "dist/index.js"), imports);
       expect(calls.map(({ call }) => call)).not.toContain("defineMessages");
     },
   );
+});
+
+describe("the hm-self-hosted condition (sdk-core ADR 0060)", () => {
+  /**
+   * Bundles an application that self-hosts the workers, passing assetsUrl,
+   * against this build laid out as an installed package, with esbuild and
+   * `conditions`. Returns the code of every output file.
+   */
+  async function bundle(conditions: string[]): Promise<string[]> {
+    const directory = await mkdtemp(join(tmpdir(), "hm-video-sdk-condition-"));
+    try {
+      const entry = JSON.stringify(join(await installedPackage, "dist/index.js"));
+      await writeFile(
+        join(directory, "app.js"),
+        [
+          `import { createVideoEngine, createVideoProcessor } from ${entry};`,
+          'export const engine = createVideoEngine({ assetsUrl: "/video-sdk/" });',
+          'export const processor = createVideoProcessor({ engine, assetsUrl: "/video-sdk/" });',
+        ].join("\n"),
+      );
+      const result = await esbuild({
+        absWorkingDir: directory,
+        entryPoints: ["app.js"],
+        bundle: true,
+        format: "esm",
+        splitting: true,
+        outdir: "out",
+        write: false,
+        logLevel: "silent",
+        conditions,
+        external: [...externalPackages, "@hussmartinez/*"],
+      });
+      return result.outputFiles.map((output) => output.text);
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
+  }
+
+  /** An inlined worker: Vite turns it into a blob that revokes its own URL. */
+  const inlinedWorker = (code: string) => code.includes("URL.revokeObjectURL(import.meta.url);");
+
+  it("leaves both inlined workers out of a build that sets it", async () => {
+    const outputs = await bundle(["hm-self-hosted"]);
+    expect(outputs.filter(inlinedWorker)).toEqual([]);
+    expect(outputs.join("\n")).not.toContain("Vanilagy");
+    expect(outputs.join("\n")).toContain("left the video SDK's inlined workers out");
+  });
+
+  it("leaves them out of a Vite build that sets it in resolve.conditions", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "hm-video-sdk-vite-"));
+    try {
+      const entry = JSON.stringify(join(await installedPackage, "dist/index.js"));
+      await writeFile(
+        join(directory, "app.js"),
+        [
+          `import { createVideoEngine, createVideoProcessor } from ${entry};`,
+          'export const engine = createVideoEngine({ assetsUrl: "/video-sdk/" });',
+          'export const processor = createVideoProcessor({ engine, assetsUrl: "/video-sdk/" });',
+        ].join("\n"),
+      );
+      const result = await build({
+        configFile: false,
+        logLevel: "silent",
+        root: directory,
+        resolve: { conditions: ["hm-self-hosted", ...defaultClientConditions] },
+        build: {
+          write: false,
+          minify: false,
+          lib: { entry: join(directory, "app.js"), formats: ["es"], fileName: "app" },
+          rolldownOptions: { external: (id) => /^(react|react-dom|@hussmartinez\/)/.test(id) },
+        },
+      });
+      const code = (Array.isArray(result) ? result : [result])
+        .flatMap((output) => ("output" in output ? output.output : []))
+        .flatMap((output) => (output.type === "chunk" ? [output.code] : []));
+      expect(code.filter(inlinedWorker)).toEqual([]);
+      expect(code.join("\n")).toContain("left the video SDK's inlined workers out");
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
+  });
+
+  it("keeps them in a build that doesn't, as before", async () => {
+    const outputs = await bundle([]);
+    expect(outputs.filter(inlinedWorker)).toHaveLength(2);
+    expect(outputs.join("\n")).not.toContain("left the video SDK's inlined workers out");
+  });
 });
 
 describe("importing one part of the React entry", () => {
@@ -226,7 +338,7 @@ const CODE_GENERATION = /(?<![\w$.])eval\s*\(|(?<![\w$.])(?:new\s+)?Function\s*\
 
 describe("the media worker (docs/adr/0001, docs/adr/0002)", () => {
   const chunkFile = () => {
-    const found = files.find((file) => /^lazy\/inline-worker-[\w-]+\.js$/.test(file.fileName));
+    const found = files.find((file) => file.fileName === "lazy/inline-media-worker.js");
     if (found?.type !== "chunk") throw new Error("the inlined worker chunk wasn't built");
     return found;
   };
@@ -248,7 +360,9 @@ describe("the media worker (docs/adr/0001, docs/adr/0002)", () => {
         entry,
       ).toEqual([]);
     }
-    expect(lazyImports("index.js")).toContain(chunkFile().fileName);
+    // The entries load it through package.json's imports, which the host's
+    // bundler resolves: to this chunk, or to the stub (sdk-core ADR 0060).
+    expect(lazyImports("index.js")).toContain("#hm-video-media-worker");
   });
 
   it("loads the page's audio player lazily, never in the entries (docs/adr/0006)", () => {
@@ -295,9 +409,7 @@ describe("the media worker (docs/adr/0001, docs/adr/0002)", () => {
 
 describe("the export worker (docs/adr/0002, docs/adr/0005)", () => {
   const exportChunk = () => {
-    const found = files.find((file) =>
-      /^lazy\/export-inline-worker-[\w-]+\.js$/.test(file.fileName),
-    );
+    const found = files.find((file) => file.fileName === "lazy/inline-export-worker.js");
     if (found?.type !== "chunk") throw new Error("the inlined export worker chunk wasn't built");
     return found;
   };
@@ -305,13 +417,13 @@ describe("the export worker (docs/adr/0002, docs/adr/0005)", () => {
   it("is inlined in its own lazy chunk, loaded with the export runner on the first export", () => {
     expect(exportChunk().code).toContain("hm-video-export");
     const lazy = lazyImports("index.js");
-    expect(lazy).toContain(exportChunk().fileName);
+    expect(lazy).toContain("#hm-video-export-worker");
     expect(lazy.filter((name) => name.startsWith("lazy/runner-"))).toHaveLength(1);
     expect(entryCode("index.js")).not.toContain("src/adapters/export-worker/export-plan.ts");
   });
 
   it("bundles mediabunny's muxers, with its licence notice, and can't make requests or start workers", () => {
-    const code = workerCode("export-inline-worker");
+    const code = workerCode("inline-export-worker");
     expect(code).toMatch(
       /\/\*![\s\S]*?Vanilagy and contributors[\s\S]*?Mozilla Public[\s\S]*?\*\//,
     );
@@ -394,8 +506,8 @@ describe("mediabunny's licence (docs/adr/0001)", () => {
 
 /** The media worker's own source, which Vite inlines as a string literal. */
 /** The source of an inlined worker, from its lazy chunk: the media worker's by default. */
-function workerCode(name = "inline-worker"): string {
-  const found = files.find((file) => new RegExp(`^lazy/${name}-[\\w-]+\\.js$`).test(file.fileName));
+function workerCode(name = "inline-media-worker"): string {
+  const found = files.find((file) => file.fileName === `lazy/${name}.js`);
   if (found?.type !== "chunk") throw new Error(`the inlined ${name} chunk wasn't built`);
   const code = found.code;
   const start = code.indexOf("var jsContent = ") + "var jsContent = ".length;
