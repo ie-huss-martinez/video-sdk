@@ -1,5 +1,11 @@
 # @hussmartinez/video-sdk
 
+## 0.9.1
+
+### Patch Changes
+
+- [#139](https://github.com/ie-huss-martinez/video-sdk/pull/139) [`3f74f3f`](https://github.com/ie-huss-martinez/video-sdk/commit/3f74f3f457604c8e94bc362c18a54314caf058f9) Thanks [@hussmartinez](https://github.com/hussmartinez)! - Importing part of the core entry no longer brings the whole message catalogue into your bundle. A helper such as `frameTime` ships about 0.65 kB instead of 3.5 kB, and `createVideoSession` 7.7 kB instead of 10.6 kB, brotli-compressed with your bundler minifying. The catalogue, `videoMessages`, was built in a way some bundlers, such as esbuild, couldn't drop when unused. Nothing changes at run time.
+
 ## 0.9.0
 
 ### Minor Changes
