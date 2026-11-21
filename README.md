@@ -163,6 +163,18 @@ Neither mode needs `'unsafe-eval'`, `'wasm-unsafe-eval'` or `'unsafe-inline'` st
 
 **Copy `dist/assets` again after every upgrade.** A self-hosted worker from another version of the SDK is refused with `WORKER_START_FAILED`, whose `details` name the file and both versions.
 
+**Leave the inlined workers out of a self-hosted build** with the `hm-self-hosted` resolve condition ([sdk-core ADR 0060](https://github.com/ie-huss-martinez/sdk-core/blob/main/docs/adr/0060-leaving-inlined-workers-out-of-a-self-hosted-build.md)). Without it, an app that passes `assetsUrl` still bundles both inlined workers, about 605 kB minified, which it never loads. With it, the package's `#hm-video-media-worker` and `#hm-video-export-worker` imports resolve to a small stub instead. It's opt-in, and one setting covers every family SDK in your build:
+
+| Bundler | Option | Status |
+|---|---|---|
+| Vite | `resolve: { conditions: ["hm-self-hosted", ...defaultClientConditions] }` | Verified |
+| esbuild | `conditions: ["hm-self-hosted"]` | Verified |
+| webpack | `resolve.conditionNames` | Expected to work, not yet verified |
+| Rollup, with `@rollup/plugin-node-resolve` | `exportConditions` | Expected to work, not yet verified |
+| Next.js | `resolve.conditionNames`, through its `webpack` configuration | Expected to work, not yet verified |
+
+A build with the condition must pass `assetsUrl`: without it, starting a worker fails with `WORKER_START_FAILED`, whose `details` are `{ condition: "hm-self-hosted", missing: "assetsUrl" }`, never a silent failure.
+
 ### Errors
 
 Every failure is a `VideoError` with a stable `code` and structured `details`; `isVideoError(error, code)` checks one, across workers and copies of the package. Show people the text for the code from `videoMessages` through `createMessages`, never `error.message`.

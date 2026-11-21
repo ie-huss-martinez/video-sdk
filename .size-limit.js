@@ -12,6 +12,19 @@
 import { entryBudget, importBudget } from "@hussmartinez/sdk-config/size";
 
 /**
+ * An import budget, bundled as a host's bundler would: without this
+ * repository's tsconfig, whose paths point the package's own imports, such
+ * as #hm-video-media-worker, at the source for TypeScript. A host resolves
+ * them through package.json's imports, to the lazy chunks the budget leaves
+ * out (sdk-core ADR 0060).
+ */
+const forHosts = (budget) =>
+  importBudget({
+    ...budget,
+    modifyEsbuildConfig: (config) => ({ ...config, tsconfigRaw: "{}" }),
+  });
+
+/**
  * An application's import from the core entry, as sdk-config's
  * `importBudget` measures it (sdk-core ADR 0056): bundled and minified with
  * esbuild, without React, the family's packages and the lazy workers,
@@ -19,11 +32,11 @@ import { entryBudget, importBudget } from "@hussmartinez/sdk-config/size";
  * 0.1 kB, and is never raised; the others round up to the next 0.5 kB.
  */
 const coreImport = (name, imports, limit) =>
-  importBudget({ name, entry: "dist/index.js", imports, limit });
+  forHosts({ name, entry: "dist/index.js", imports, limit });
 
 /** An application's import from the React entry, measured the same way. */
 const reactImport = (name, imports, limit) =>
-  importBudget({ name, entry: "dist/react.js", imports, limit });
+  forHosts({ name, entry: "dist/react.js", imports, limit });
 
 export default [
   // 20 kB since the portable plan format (sdk-core ADR 0045): its strict
@@ -64,7 +77,7 @@ export default [
     // MP4 and Matroska readers (docs/adr/0001), decoding, and playback's
     // scheduler and drawing (docs/adr/0006). It measures about 53 kB.
     name: "Media worker, inlined (lazy)",
-    path: "dist/lazy/inline-worker-*.js",
+    path: "dist/lazy/inline-media-worker.js",
     brotli: true,
     limit: "60 kB",
   },
@@ -91,7 +104,7 @@ export default [
     // media worker, the compose step and mixer, and mediabunny's MP4 and
     // WebM muxers (docs/adr/0001).
     name: "Export worker, inlined (lazy)",
-    path: "dist/lazy/export-inline-worker-*.js",
+    path: "dist/lazy/inline-export-worker.js",
     brotli: true,
     limit: "90 kB",
   },

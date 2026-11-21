@@ -5,7 +5,7 @@ import {
   type WorkerLike,
   withProcessingTime,
 } from "@hussmartinez/sdk-core";
-import { asVideoError, throwIfAborted } from "../core/errors/error-helpers.js";
+import { asVideoError, startFailureOf, throwIfAborted } from "../core/errors/error-helpers.js";
 import { VideoError } from "../core/errors/video-error.js";
 import { type VideoFilePolicy, videoLimits } from "../core/errors/video-limits.js";
 import { sourceInfo, type VideoProbe } from "../core/model/source.js";
@@ -101,7 +101,9 @@ export function createVideoEngine(options: VideoEngineOptions = {}): VideoEngine
   return createEngine({
     loadWorker: base
       ? async () => selfHostedWorker(base, MEDIA_WORKER_ASSET, "hm-video-media")
-      : async () => (await import("./media-worker/inline-worker.js")).createInlineWorker,
+      : // The inlined worker, or a stub with the hm-self-hosted condition (sdk-core
+        // ADR 0060), through package.json's imports.
+        async () => (await import("#hm-video-media-worker")).createInlineWorker,
     ...(base ? { workerAsset: MEDIA_WORKER_ASSET } : {}),
     ...(options.idleTimeout === undefined ? {} : { idleTimeout: options.idleTimeout }),
     ...(options.startTimeout === undefined ? {} : { startTimeout: options.startTimeout }),
@@ -199,7 +201,8 @@ export function createEngine(environment: EngineEnvironment): VideoEngine {
     try {
       return await work();
     } catch (error) {
-      throw error instanceof TypeError ? error : asVideoError(error);
+      if (error instanceof TypeError) throw error;
+      throw startFailureOf(error) ?? asVideoError(error);
     }
   }
 

@@ -40,6 +40,16 @@
     "./formats/*": "./formats/*",
     "./package.json": "./package.json"
   },
+  "imports": {
+    "#hm-video-media-worker": {
+      "hm-self-hosted": "./dist/lazy/no-inline-workers.js",
+      "default": "./dist/lazy/inline-media-worker.js"
+    },
+    "#hm-video-export-worker": {
+      "hm-self-hosted": "./dist/lazy/no-inline-workers.js",
+      "default": "./dist/lazy/inline-export-worker.js"
+    }
+  },
   "files": [
     "dist",
     "formats",
