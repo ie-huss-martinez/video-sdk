@@ -3,6 +3,7 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
+import { keptCode } from "@hussmartinez/sdk-config/size";
 import { build, type Rolldown } from "vite";
 import { afterAll, describe, expect, it } from "vitest";
 import { externalPackages } from "./vite.config.js";
@@ -187,6 +188,19 @@ async function bundledImport(entry: string, name: string): Promise<string> {
   if (main?.type !== "chunk") throw new Error("expected the import's chunk");
   return main.code;
 }
+
+describe("importing one part of the core entry (sdk-core ADR 0056)", () => {
+  // Bundled by esbuild, as sdk-config's import budgets are: rolldown drops an
+  // object literal that spreads an import, where esbuild keeps it, so only
+  // esbuild shows that the catalogue's spread kept it in every import.
+  it.each(["{ frameTime }", "{ createPlan, planFrames }", "{ createVideoSession }"])(
+    "leaves the message catalogue out of %s",
+    async (imports) => {
+      const { calls } = await keptCode(join(await temporaryBuild, "index.js"), imports);
+      expect(calls.map(({ call }) => call)).not.toContain("defineMessages");
+    },
+  );
+});
 
 describe("importing one part of the React entry", () => {
   // Calls at a module's top level that a bundler can't prove free of side

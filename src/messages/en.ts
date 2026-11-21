@@ -264,10 +264,11 @@ export const videoOwnMessages = /* @__PURE__ */ defineMessages({
  *
  * @public
  */
-export const videoMessages = /* @__PURE__ */ defineMessages({
-  ...sdkCoreMessages,
-  ...videoOwnMessages,
-}) satisfies Record<`errors.${VideoErrorCode}`, MessageValue> &
+export const videoMessages = /* @__PURE__ */ (() =>
+  defineMessages({
+    ...sdkCoreMessages,
+    ...videoOwnMessages,
+  }))() satisfies Record<`errors.${VideoErrorCode}`, MessageValue> &
   Record<`warnings.${VideoLimitName}`, MessageValue>;
 
 /**

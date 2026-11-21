@@ -105,6 +105,7 @@
     "axe-core": "catalog:",
     "@vitest/browser-playwright": "catalog:",
     "dependency-cruiser": "catalog:",
+    "esbuild": "catalog:",
     "fast-check": "catalog:",
     "husky": "catalog:",
     "lint-staged": "catalog:",
