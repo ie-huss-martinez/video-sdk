@@ -98,7 +98,7 @@ pnpm changeset
 
 It asks how the package changed, then writes the file. Commit it with your change.
 
-- **When you need one:** whenever a pull request changes the package's published source or its `package.json`, meaning `src/` outside tests and fixtures.
+- **When you need one:** whenever a pull request changes the package's published source, meaning `src/` outside tests and fixtures, or a field of its `package.json` other than `devDependencies`, `scripts`, `packageManager` and `devEngines` ([sdk-core ADR 0027](https://github.com/ie-huss-martinez/sdk-core/blob/main/docs/adr/0027-dev-only-package-json-changes-need-no-changeset.md)). The `changeset` check applies the same rule.
 - **When you don't:** for tests, fixtures, examples, READMEs, documentation, CI and root tooling. If a change touches published files without affecting users, such as a pure refactor, add an empty changeset with `pnpm changeset --empty`.
 - **The bump:**
   - `patch` for fixes;
