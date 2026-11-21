@@ -53,6 +53,10 @@ export default defineConfig(({ mode }) => {
             // environment the capability matrix describes (docs/capabilities.md).
             // Playwright's image installs its browsers there.
             provide: { browserImage: process.env["PLAYWRIGHT_BROWSERS_PATH"] === "/ms-playwright" },
+            // Refuses to start a browser on the host, where Docker's network
+            // changes fail tests at random: run them through hm-in-image (sdk-core
+            // ADR 0049). HM_ALLOW_HOST_BROWSER=1 allows one debugging run.
+            globalSetup: ["@hussmartinez/sdk-config/testing/require-image"],
             include: ["src/**/*.browser.test.{ts,tsx}", "test/**/*.browser.test.ts"],
             browser: {
               enabled: true,

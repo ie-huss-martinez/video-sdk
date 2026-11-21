@@ -11,6 +11,9 @@ const ci = Boolean(process.env["CI"]);
  */
 export default defineConfig({
   testDir: "tests",
+  // Refuses to start a browser on the host, as the browser tests do: through
+  // hm-in-image only (sdk-core ADR 0049). The visual config has its own runner.
+  globalSetup: "@hussmartinez/sdk-config/testing/require-image",
   forbidOnly: ci,
   retries: 0,
   reporter: ci ? "line" : "list",
